@@ -8,6 +8,7 @@ use App\Domain\Collections\Models\Collection;
 use App\Infrastructure\Http\Controllers\ApiController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
 
 class CollectionController extends ApiController
@@ -17,6 +18,11 @@ class CollectionController extends ApiController
         $collections = Collection::get();
 
         return $this->successResponse($collections);
+    }
+
+    public function show(Collection $collection): JsonResponse
+    {
+        return $this->successResponse($collection);
     }
 
     public function store(Request $request): JsonResponse
@@ -59,7 +65,13 @@ class CollectionController extends ApiController
     public function update(Request $request, Collection $collection): JsonResponse
     {
         $valid = $request->validate([
-            'name' => 'required|string|max:255|regex:/^[a-zA-Z_]+$/|unique:collections,name,'.$collection->id,
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('collections', 'name')->ignore($collection->id, 'id'),
+                'regex:/^[a-zA-Z_]+$/',
+            ],
             'type' => ['required', new Enum(CollectionType::class)],
             'description' => 'nullable|string',
 
@@ -98,6 +110,7 @@ class CollectionController extends ApiController
     public function destroy(Collection $collection): JsonResponse
     {
         $collection->delete();
+
         return $this->successResponse([]);
     }
 }
