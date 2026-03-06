@@ -9,18 +9,16 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class GetRecordsAction
 {
-    public function execute(Collection $collection, array $filters = [], int $perPage = 15): LengthAwarePaginator
+    public function execute(Collection $collection, ?string $filters = '', int $perPage = 15): LengthAwarePaginator
     {
         try {
             $record = Record::forCollection($collection);
             $query = $record->newQuery();
 
-            // @TODO: Handle operator AND & OR
-            foreach ($filters as $field => $value) {
-                if ($value !== null) {
-                    $query->where($field, $value);
-                }
-            }
+            $query->filter($filters ?? '');
+
+            $maxPerPage = config('velo.records_per_page_max');
+            $perPage = $perPage > $maxPerPage ? $maxPerPage : $perPage;
 
             return $query->paginate($perPage);
         } catch (QueryException $e) {

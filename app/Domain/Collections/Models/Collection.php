@@ -36,6 +36,7 @@ class Collection extends Model
     public static function formatTableName($collectionName): string
     {
         $prefix = config('velo.collection_prefix');
-        return $prefix . $collectionName;
+
+        return $prefix.$collectionName;
     }
 }

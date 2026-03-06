@@ -29,7 +29,7 @@ class RecordController extends ApiController
             return $this->errorResponse('Auth collection operations are not allowed', 403);
         }
 
-        $filters = $request->except(['per_page', 'page']);
+        $filters = $request->input('filters', '');
         $perPage = $request->input('per_page', 15);
 
         $records = $this->getRecordsAction->execute($collection, $filters, $perPage);

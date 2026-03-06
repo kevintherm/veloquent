@@ -3,11 +3,13 @@
 namespace App\Domain\Records\Models;
 
 use App\Domain\Collections\Models\Collection;
+use App\Infrastructure\Traits\Filterable;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 
 class Record extends Model
 {
+    use Filterable;
     use HasUlids;
 
     protected $guarded = [];
