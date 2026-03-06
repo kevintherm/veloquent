@@ -32,8 +32,8 @@ readonly class SchemaDDLService
                 $this->columnBlueprint($blueprint, $column);
             }
 
-            $blueprint->timestamp('created')->useCurrent();
-            $blueprint->timestamp('updated')->useCurrent()->useCurrentOnUpdate();
+            $blueprint->timestamp('created_at')->useCurrent();
+            $blueprint->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
         });
     }
 

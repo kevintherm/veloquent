@@ -2,21 +2,20 @@
 
 namespace App\Domain\Auth\Models;
 
-use App\Domain\Collections\Models\Collection;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 
 /**
  * A dynamic User model mapped to a specific auth collection table.
  */
-class DynamicAuthUser extends Authenticatable implements JWTSubject
+class DynamicAuth extends Authenticatable implements JWTSubject
 {
     protected $guarded = [];
 
     /**
      * Set the table associated with the model dynamically.
      */
-    public function setTable($table): DynamicAuthUser|static
+    public function setTable($table): DynamicAuth|static
     {
         $this->table = $table;
 

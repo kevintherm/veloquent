@@ -2,12 +2,12 @@
 
 namespace App\Domain\Auth\Services;
 
+use App\Domain\Auth\Models\DynamicAuth;
 use App\Domain\Collections\Models\Collection;
-use App\Domain\Auth\Models\DynamicAuthUser;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
-class VeloAuthService
+class DynamicAuthService
 {
     /**
      * Authenticate a user against a specific auth collection.
@@ -17,8 +17,8 @@ class VeloAuthService
         // 1. Fetch dynamic user from this collection's specific table
         // Requires the collection's API rules to configure what the "username/email" field is logically called.
         // For simplicity, assuming "email" and "password" physical columns for now.
-        
-        $userModel = new DynamicAuthUser();
+
+        $userModel = new DynamicAuth();
         $userModel->setTable($collection->name);
 
         $user = $userModel->newQuery()->where('email', $credentials['email'])->first();
@@ -32,9 +32,9 @@ class VeloAuthService
         // 2. Generate hybrid tokens
         // By using `auth('api')` which is bound to jwt provider, we can log in.
         // However, we want to generate a token for our specific DynamicAuthUser model instance.
-        
+
         $token = auth('api')->login($user);
-        
+
         // Return structured Hybrid response
         return [
             'access_token' => $token,
@@ -43,20 +43,20 @@ class VeloAuthService
             // 'refresh_token' => ... (Set HttpOnly cookie in the controller layer)
         ];
     }
-    
+
     /**
      * Create a user in an auth collection
      */
-    public function register(Collection $collection, array $data): DynamicAuthUser
+    public function register(Collection $collection, array $data): DynamicAuth
     {
-         $userModel = new DynamicAuthUser();
+         $userModel = new DynamicAuth();
          $userModel->setTable($collection->name);
-         
+
          // Hash the password if provided
          if (isset($data['password'])) {
              $data['password'] = Hash::make($data['password']);
          }
-         
+
          return $userModel->newQuery()->create($data);
     }
 }

@@ -36,9 +36,13 @@ return [
     */
 
     'guards' => [
-        'web' => [
-            'driver' => 'session',
-            'provider' => 'users',
+        //        'web' => [
+        //            'driver' => 'session',
+        //            'provider' => 'users',
+        //        ],
+        'api' => [
+            'driver' => 'jwt',
+            'provider' => 'superusers',
         ],
     ],
 
@@ -62,7 +66,12 @@ return [
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            'model' => App\Models\Superuser::class,
+            'model' => \App\Models\Superuser::class,
+        ],
+
+        'superusers' => [
+            'driver' => 'eloquent',
+            'model' => \App\Models\Superuser::class,
         ],
 
         // 'users' => [
