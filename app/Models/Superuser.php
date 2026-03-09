@@ -2,15 +2,13 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\SuperuserFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
-use PHPOpenSourceSaver\JWTAuth\Contracts\JWTSubject;
 
-class Superuser extends Authenticatable implements JWTSubject
+class Superuser extends Model
 {
     /** @use HasFactory<SuperuserFactory> */
     use HasFactory, HasUlids, Notifiable;
@@ -55,15 +53,5 @@ class Superuser extends Authenticatable implements JWTSubject
     public function getIsSuperuserAttribute(): bool
     {
         return true;
-    }
-
-    public function getJWTIdentifier(): mixed
-    {
-        return $this->getKey();
-    }
-
-    public function getJWTCustomClaims(): array
-    {
-        return ['is_superuser' => true];
     }
 }

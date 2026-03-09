@@ -8,9 +8,11 @@ use App\Domain\Records\Actions\DeleteRecordAction;
 use App\Domain\Records\Actions\GetRecordAction;
 use App\Domain\Records\Actions\GetRecordsAction;
 use App\Domain\Records\Actions\UpdateRecordAction;
+use App\Domain\Records\Requests\StoreRecordRequest;
+use App\Domain\Records\Requests\UpdateRecordRequest;
 use App\Infrastructure\Http\Controllers\ApiController;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class RecordController extends ApiController
 {
@@ -22,79 +24,57 @@ class RecordController extends ApiController
         private DeleteRecordAction $deleteRecordAction
     ) {}
 
-    public function index(Request $request, Collection $collection): JsonResponse
+    public function index(Collection $collection): JsonResponse
     {
-        // Skip auth type collections
-        if ($collection->name === 'auth') {
-            return $this->errorResponse('Auth collection operations are not allowed', 403);
-        }
+        Gate::authorize('list-records', $collection);
 
-        $filters = $request->input('filters', '');
-        $perPage = $request->input('per_page', 15);
+        $filters = request()->input('filters', '');
+        $perPage = min(request()->input('per_page', 15), 100);
 
         $records = $this->getRecordsAction->execute($collection, $filters, $perPage);
 
         return $this->successResponse($records);
     }
 
-    public function store(Request $request, Collection $collection): JsonResponse
+    public function store(StoreRecordRequest $request, Collection $collection): JsonResponse
     {
-        // Skip auth type collections
-        if ($collection->name === 'auth') {
-            return $this->errorResponse('Auth collection operations are not allowed', 403);
-        }
+        Gate::authorize('create-records', $collection);
 
-        $data = $request->all();
-        $record = $this->createRecordAction->execute($collection, $data);
+        $record = $this->createRecordAction->execute(
+            $collection,
+            $request->getRecordData()
+        );
 
         return $this->successResponse($record, 'Record created successfully', 201);
     }
 
-    public function show(Collection $collection, string|int $record): JsonResponse
+    public function show(Collection $collection, string $record): JsonResponse
     {
-        // Skip auth type collections
-        if ($collection->name === 'auth') {
-            return $this->errorResponse('Auth collection operations are not allowed', 403);
-        }
+        Gate::authorize('view-records', $collection);
 
-        $recordData = $this->getRecordAction->execute($collection, $record);
+        $record = $this->getRecordAction->execute($collection, $record);
 
-        if (! $recordData) {
-            return $this->errorResponse('Record not found', 404);
-        }
-
-        return $this->successResponse($recordData);
+        return $this->successResponse($record);
     }
 
-    public function update(Request $request, Collection $collection, string|int $record): JsonResponse
+    public function update(UpdateRecordRequest $request, Collection $collection, string $record): JsonResponse
     {
-        // Skip auth type collections
-        if ($collection->name === 'auth') {
-            return $this->errorResponse('Auth collection operations are not allowed', 403);
-        }
+        Gate::authorize('update-records', $collection);
 
-        $data = $request->all();
-        $recordData = $this->updateRecordAction->execute($collection, $record, $data);
+        $updatedRecord = $this->updateRecordAction->execute(
+            $collection,
+            $record,
+            $request->getRecordData()
+        );
 
-        if (! $recordData) {
-            return $this->errorResponse('Record not found', 404);
-        }
-
-        return $this->successResponse($recordData, 'Record updated successfully');
+        return $this->successResponse($updatedRecord, 'Record updated successfully');
     }
 
-    public function destroy(Collection $collection, string|int $record): JsonResponse
+    public function destroy(Collection $collection, string $record): JsonResponse
     {
-        // Skip auth type collections
-        if ($collection->name === 'auth') {
-            return $this->errorResponse('Auth collection operations are not allowed', 403);
-        }
+        Gate::authorize('delete-records', $collection);
 
-        $deleted = $this->deleteRecordAction->execute($collection, $record);
-
-        if (! $deleted) {
-            return $this->errorResponse('Record not found', 404);
-        }
+        $this->deleteRecordAction->execute($collection, $record);
 
         return $this->successResponse([], 'Record deleted successfully');
     }
