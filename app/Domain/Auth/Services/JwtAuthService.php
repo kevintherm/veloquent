@@ -1,0 +1,136 @@
+<?php
+
+namespace App\Domain\Auth\Services;
+
+use App\Domain\Collections\Enums\CollectionType;
+use App\Domain\Collections\Models\Collection;
+use App\Domain\Records\Models\Record;
+use Firebase\JWT\BeforeValidException;
+use Firebase\JWT\ExpiredException;
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
+use Firebase\JWT\SignatureInvalidException;
+use Illuminate\Http\Request;
+
+class JwtAuthService
+{
+    private string $secret;
+
+    private string $algorithm;
+
+    private int $ttl;
+
+    public function __construct()
+    {
+        $this->secret = config('jwt.secret');
+        $this->algorithm = config('jwt.algorithm', 'HS256');
+        $this->ttl = config('jwt.ttl', 60);
+    }
+
+    /**
+     * Generate a JWT for a Record user scoped to a collection.
+     *
+     * @return array{token: string, expires_in: int, user: array, collection_name: string}
+     */
+    public function generateToken(Record $user): array
+    {
+        $payload = [
+            'iss' => config('app.url'),
+            'sub' => $user->id,
+            'iat' => time(),
+            'exp' => time() + ($this->ttl * 60),
+            'collection_name' => $user->collection->name,
+            'user' => [
+                'id' => $user->id,
+                'email' => $user->email,
+                'name' => $user->name ?? null,
+            ],
+        ];
+
+        $token = JWT::encode($payload, $this->secret, $this->algorithm);
+
+        return [
+            'token' => $token,
+            'expires_in' => $this->ttl * 60,
+            'user' => $payload['user'],
+            'collection_name' => $user->collection->name,
+        ];
+    }
+
+    /**
+     * Validate and decode a JWT, returning the payload as an array.
+     *
+     * @return array<string, mixed>
+     */
+    public function validateToken(string $token): array
+    {
+        try {
+            $decoded = JWT::decode($token, new Key($this->secret, $this->algorithm));
+
+            return (array) $decoded;
+        } catch (ExpiredException) {
+            throw new \Exception('Token has expired');
+        } catch (BeforeValidException) {
+            throw new \Exception('Token is not valid yet');
+        } catch (SignatureInvalidException) {
+            throw new \Exception('Token signature is invalid');
+        } catch (\Exception) {
+            throw new \Exception('Invalid token');
+        }
+    }
+
+    /**
+     * Authenticate a token and return the corresponding Record.
+     * Only works for auth-type collections.
+     */
+    public function authenticate(string $token): ?Record
+    {
+        $payload = $this->validateToken($token);
+
+        if (! isset($payload['sub'], $payload['collection_name'])) {
+            return null;
+        }
+
+        $collection = Collection::where('name', $payload['collection_name'])
+            ->where('type', CollectionType::Auth)
+            ->first();
+
+        if (! $collection) {
+            return null;
+        }
+
+        return Record::forCollection($collection)->find($payload['sub']);
+    }
+
+    /**
+     * Refresh a token by issuing a new one for the same user.
+     *
+     * @return array{token: string, expires_in: int, user: array, collection_name: string}
+     */
+    public function refreshToken(string $token): array
+    {
+        $payload = $this->validateToken($token);
+
+        $collection = Collection::where('name', $payload['collection_name'])
+            ->where('type', CollectionType::Auth)
+            ->firstOrFail();
+
+        $user = Record::forCollection($collection)->findOrFail($payload['sub']);
+
+        return $this->generateToken($user);
+    }
+
+    /**
+     * Extract the bearer token from a request.
+     */
+    public function extractTokenFromRequest(Request $request): ?string
+    {
+        $header = $request->header('Authorization');
+
+        if ($header && str_starts_with($header, 'Bearer ')) {
+            return substr($header, 7);
+        }
+
+        return $request->input('token');
+    }
+}

@@ -5,9 +5,9 @@ namespace App\Domain\Records\Models;
 use App\Domain\Collections\Models\Collection;
 use App\Infrastructure\Traits\Filterable;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 
-class Record extends Model
+class Record extends Authenticatable
 {
     use Filterable;
     use HasUlids;
@@ -16,15 +16,31 @@ class Record extends Model
 
     public $timestamps = true;
 
+    public ?Collection $collection = null;
+
+    private static bool $allowDirectInstantiation = false;
+
+    public function __construct(array $attributes = [])
+    {
+        if (! static::$allowDirectInstantiation) {
+            throw new \RuntimeException('Record must be instantiated using Record::forCollection($collection)');
+        }
+
+        parent::__construct($attributes);
+    }
+
     /**
      * Create a new Record instance for a specific collection
      */
     public static function forCollection(Collection $collection): self
     {
+        static::$allowDirectInstantiation = true;
         $instance = new self;
+        static::$allowDirectInstantiation = false;
+
+        $instance->collection = $collection;
         $instance->setTable($collection->getPhysicalTableName());
 
-        // Set casts based on collection fields
         $casts = [];
         foreach ($collection->fields ?? [] as $field) {
             $fieldName = $field['name'];
@@ -43,6 +59,26 @@ class Record extends Model
         $instance->casts = $casts;
 
         return $instance;
+    }
+
+    /**
+     * Override newInstance so Laravel's query builder hydrates records through
+     * forCollection rather than calling `new static` directly.
+     */
+    public function newInstance($attributes = [], $exists = false): static
+    {
+        if ($this->collection === null) {
+            throw new \RuntimeException('Record must be instantiated using Record::forCollection($collection)');
+        }
+
+        $model = static::forCollection($this->collection);
+        $model->exists = $exists;
+        $model->setConnection($this->getConnectionName());
+        $model->setTable($this->getTable());
+        $model->mergeCasts($this->casts);
+        $model->fill((array) $attributes);
+
+        return $model;
     }
 
     /**

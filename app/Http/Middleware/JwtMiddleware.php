@@ -2,16 +2,16 @@
 
 namespace App\Http\Middleware;
 
+use App\Domain\Auth\Services\JwtAuthService;
 use Closure;
 use Illuminate\Http\Request;
-use PHPOpenSourceSaver\JWTAuth\Exceptions\JWTException;
-use PHPOpenSourceSaver\JWTAuth\Exceptions\TokenExpiredException;
-use PHPOpenSourceSaver\JWTAuth\Exceptions\TokenInvalidException;
-use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 class JwtMiddleware
 {
+    public function __construct(private JwtAuthService $jwtService) {}
+
     /**
      * Handle an incoming request.
      *
@@ -19,19 +19,14 @@ class JwtMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        try {
-            $user = JWTAuth::parseToken()->authenticate();
+        $token = $this->jwtService->extractTokenFromRequest($request);
 
-            if (! $user) {
-                return response()->json(['error' => 'User not found'], 404);
-            }
+        if (! $token) {
+            return $next($request);
+        }
 
-        } catch (TokenExpiredException $e) {
-            return response()->json(['error' => 'Token expired'], 401);
-        } catch (TokenInvalidException $e) {
-            return response()->json(['error' => 'Token invalid'], 401);
-        } catch (JWTException $e) {
-            return response()->json(['error' => 'Token not provided'], 401);
+        if ($user = $this->jwtService->authenticate($token)) {
+            Auth::setUser($user);
         }
 
         return $next($request);

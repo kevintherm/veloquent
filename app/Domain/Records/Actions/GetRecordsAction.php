@@ -22,7 +22,7 @@ class GetRecordsAction
 
             return $query->paginate($perPage);
         } catch (QueryException $e) {
-            throw new \Exception("Table {$record->getTable()} not found or inaccessible");
+            throw new \Exception('Data not found or inaccessible');
         }
     }
 }

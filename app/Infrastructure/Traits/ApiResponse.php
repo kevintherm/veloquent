@@ -39,4 +39,12 @@ trait ApiResponse
             'errors' => $errors,
         ], $code);
     }
+
+    protected function forbiddenResponse(string $message, mixed $errors = null): JsonResponse
+    {
+        return response()->json([
+            'message' => $message,
+            'errors' => $errors,
+        ], Response::HTTP_FORBIDDEN);
+    }
 }

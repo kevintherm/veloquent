@@ -12,6 +12,10 @@ enum CollectionFieldType: string
     case Decimal = 'decimal';
     case Boolean = 'boolean';
     case Datetime = 'datetime';
+    case Timestamp = 'timestamp';
     case Json = 'json';
-
+    case Longtext = 'longtext';
+    case Bigint = 'bigint';
+    case Tinyint = 'tinyint';
+    case Char = 'char';
 }

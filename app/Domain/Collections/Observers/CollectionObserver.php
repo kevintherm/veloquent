@@ -41,7 +41,7 @@ readonly class CollectionObserver
         $this->startJob($collection, SchemaOperation::Update);
 
         if ($collection->isDirty('name')) {
-            $oldTableName = Collection::formatTableName($collection->getOriginal('name'));
+            $oldTableName = Collection::formatTableName($collection->getOriginal('name'), $collection->is_system);
             $this->ddlService->renameTable($oldTableName, $collection->getPhysicalTableName());
             $collection->schema_updated_at = now();
         }

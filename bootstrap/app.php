@@ -1,6 +1,7 @@
 <?php
 
 use App\Domain\Collections\Models\Collection;
+use App\Http\Middleware\JwtMiddleware;
 use App\Infrastructure\Traits\ApiResponse;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
@@ -20,13 +21,13 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {
-            Route::model('collection', Collection::class);
+            Route::bind('collection', function ($value) {
+                return Collection::where('id', $value)->orWhere('name', $value)->firstOrFail();
+            });
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->alias([
-            'jwt.auth' => \App\Http\Middleware\JwtMiddleware::class,
-        ]);
+        $middleware->append(JwtMiddleware::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (Throwable $e, $request) {
@@ -54,7 +55,7 @@ return Application::configure(basePath: dirname(__DIR__))
                         }
 
                         return $this->errorResponse(
-                            config('app.debug') ? $e->getMessage() : 'Server Error',
+                            config('app.debug') ? $e->getMessage() : 'Something went wrong',
                             500,
                             config('app.debug') ? [
                                 'exception' => get_class($e),

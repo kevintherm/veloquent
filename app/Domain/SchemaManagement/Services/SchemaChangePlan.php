@@ -16,11 +16,20 @@ final class SchemaChangePlan
     private static function compatibleTypeChanges(): array
     {
         return [
-            CollectionFieldType::String->value => [CollectionFieldType::Text],
-            CollectionFieldType::Integer->value => [CollectionFieldType::Float, CollectionFieldType::Double, CollectionFieldType::Decimal, CollectionFieldType::Text],
+            CollectionFieldType::String->value => [CollectionFieldType::Text, CollectionFieldType::Char],
+            CollectionFieldType::Char->value => [CollectionFieldType::String, CollectionFieldType::Text],
+            CollectionFieldType::Text->value => [],
+            CollectionFieldType::Integer->value => [CollectionFieldType::Float, CollectionFieldType::Double, CollectionFieldType::Decimal, CollectionFieldType::Bigint, CollectionFieldType::Text],
             CollectionFieldType::Float->value => [CollectionFieldType::Double, CollectionFieldType::Decimal, CollectionFieldType::Text],
             CollectionFieldType::Double->value => [CollectionFieldType::Decimal, CollectionFieldType::Text],
             CollectionFieldType::Decimal->value => [CollectionFieldType::Text],
+            CollectionFieldType::Bigint->value => [CollectionFieldType::Text],
+            CollectionFieldType::Tinyint->value => [CollectionFieldType::Integer, CollectionFieldType::Float, CollectionFieldType::Double, CollectionFieldType::Decimal, CollectionFieldType::Bigint, CollectionFieldType::Text],
+            CollectionFieldType::Boolean->value => [CollectionFieldType::Text],
+            CollectionFieldType::Datetime->value => [CollectionFieldType::Timestamp, CollectionFieldType::Text],
+            CollectionFieldType::Timestamp->value => [CollectionFieldType::Datetime, CollectionFieldType::Text],
+            CollectionFieldType::Json->value => [CollectionFieldType::Text, CollectionFieldType::Longtext],
+            CollectionFieldType::Longtext->value => [CollectionFieldType::Text, CollectionFieldType::Json],
         ];
     }
 
@@ -35,6 +44,7 @@ final class SchemaChangePlan
      * Diff $before and $after field arrays into a change plan.
      *
      * Fields are matched by name. A name change appears as a drop + add.
+     *
      * @throws InvalidArgumentException
      */
     public static function buildPlan(array $before, array $after): self
