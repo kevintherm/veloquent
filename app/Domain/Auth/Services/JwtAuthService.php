@@ -6,12 +6,14 @@ use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Records\Models\Record;
 use App\Exceptions\JwtException;
+use App\Models\RefreshToken;
 use Firebase\JWT\BeforeValidException;
 use Firebase\JWT\ExpiredException;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Firebase\JWT\SignatureInvalidException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class JwtAuthService
 {
@@ -31,7 +33,7 @@ class JwtAuthService
     /**
      * Generate a JWT for a Record user scoped to a collection.
      *
-     * @return array{token: string, expires_in: int, collection_name: string}
+     * @return array{token: string, refresh_token: string, expires_in: int, collection_name: string}
      */
     public function generateToken(Record $user): array
     {
@@ -46,9 +48,20 @@ class JwtAuthService
 
         $token = JWT::encode($payload, $this->secret, $this->algorithm);
 
+        $refreshTTL = config('auth.refresh_token_ttl', 30); // days
+        $refresh = bin2hex(random_bytes(32));
+        $refreshToken = RefreshToken::create([
+            'collection_name' => $user->collection->name,
+            'record_id' => $user->id,
+            'token' => hash('sha256', $refresh),
+            'expires_at' => now()->addDays($refreshTTL),
+        ]);
+
         return [
             'token' => $token,
+            'refresh_token' => $refresh,
             'expires_in' => $this->ttl * 60,
+            'refresh_token_expires_in' => $refreshToken->expires_at->timestamp,
             'collection_name' => $user->collection->name,
         ];
     }
@@ -103,18 +116,27 @@ class JwtAuthService
      *
      * @return array{token: string, expires_in: int, collection_name: string}
      */
-    public function refreshToken(string $token): array
+    public function refresh(string $token): array
     {
-        return [];
-        // $payload = $this->validateToken($token);
+        $hashedToken = hash('sha256', $token);
 
-        // $collection = Collection::where('name', $payload['collection_name'])
-        //     ->where('type', CollectionType::Auth)
-        //     ->firstOrFail();
+        $refreshToken = RefreshToken::where('token', $hashedToken)
+            ->where('expires_at', '>', now())
+            ->first();
 
-        // $user = Record::forCollection($collection)->findOrFail($payload['sub']);
+        if (! $refreshToken) {
+            throw new JwtException('Invalid or expired refresh token');
+        }
 
-        // return $this->generateToken($user);
+        $collection = Collection::where('name', $refreshToken->collection_name)
+            ->where('type', CollectionType::Auth)
+            ->firstOrFail();
+
+        $user = Record::forCollection($collection)->findOrFail($refreshToken->record_id);
+
+        $refreshToken->delete();
+
+        return $this->generateToken($user);
     }
 
     /**

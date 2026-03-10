@@ -23,4 +23,6 @@ return [
         ],
     ],
 
+    'refresh_token_ttl' => 30, // in days
+
 ];

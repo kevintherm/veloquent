@@ -4,11 +4,12 @@ namespace App\Infrastructure\Traits;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\Response;
 
 trait ApiResponse
 {
-    protected function successResponse(mixed $data, string $message = 'Success', int $code = Response::HTTP_OK): JsonResponse
+    protected function successResponse(mixed $data, string $message = 'Success', int $code = Response::HTTP_OK, ?Cookie $cookie = null): JsonResponse
     {
         $response = [
             'message' => $message,
@@ -29,7 +30,13 @@ trait ApiResponse
             $response['data'] = $data;
         }
 
-        return response()->json($response, $code);
+        $resp = response()->json($response, $code);
+
+        if ($cookie instanceof Cookie) {
+            $resp->cookie($cookie);
+        }
+
+        return $resp;
     }
 
     protected function errorResponse(string $message, int $code, mixed $errors = null): JsonResponse
