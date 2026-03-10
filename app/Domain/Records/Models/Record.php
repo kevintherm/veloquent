@@ -4,10 +4,13 @@ namespace App\Domain\Records\Models;
 
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
+use App\Domain\Records\Observers\RecordObserver;
 use App\Infrastructure\Traits\Filterable;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
+#[ObservedBy([RecordObserver::class])]
 class Record extends Authenticatable
 {
     use Filterable;

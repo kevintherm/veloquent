@@ -19,8 +19,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('users', function (Blueprint $table) {
+        Schema::create('_velo_users', function (Blueprint $table) {
             $table->ulid('id')->primary();
+            $table->string('name')->nullable();
             $table->string('email')->unique();
             $table->string('password');
             $table->string('token_key');
@@ -46,6 +47,13 @@ return new class extends Migration
                     'length' => 26,
                 ],
                 [
+                    'name' => 'name',
+                    'type' => CollectionFieldType::String->value,
+                    'nullable' => true,
+                    'unique' => false,
+                    'length' => 255,
+                ],
+                [
                     'name' => 'email',
                     'type' => CollectionFieldType::String->value,
                     'nullable' => false,
@@ -69,14 +77,14 @@ return new class extends Migration
                 [
                     'name' => 'verified',
                     'type' => CollectionFieldType::Boolean->value,
-                    'nullable' => false,
+                    'nullable' => true,
                     'unique' => false,
                     'default' => false,
                 ],
                 [
                     'name' => 'email_visibility',
                     'type' => CollectionFieldType::Boolean->value,
-                    'nullable' => false,
+                    'nullable' => true,
                     'unique' => false,
                     'default' => true,
                 ],

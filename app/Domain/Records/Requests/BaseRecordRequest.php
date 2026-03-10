@@ -2,6 +2,7 @@
 
 namespace App\Domain\Records\Requests;
 
+use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -19,7 +20,7 @@ abstract class BaseRecordRequest extends FormRequest
         $rules = [];
         $fields = $collection->fields ?? [];
 
-        $autoFillFields = ['id', 'created_at', 'updated_at'];
+        $autoFillFields = ['id', 'token_key', 'token', 'created_at', 'updated_at'];
 
         foreach ($fields as $field) {
             $fieldName = $field['name'];
@@ -44,6 +45,7 @@ abstract class BaseRecordRequest extends FormRequest
             }
 
             $fieldRules[] = $this->getFieldTypeRule($field['type']);
+            $fieldRules = [...$fieldRules, ...$this->getSpecialFieldsRules($collection, $field)];
 
             if ($intervene) {
                 $intervene($fieldName, $fieldRules);
@@ -74,5 +76,19 @@ abstract class BaseRecordRequest extends FormRequest
             'char' => 'string',
             default => 'string',
         };
+    }
+
+    protected function getSpecialFieldsRules(Collection $collection, array $field): array
+    {
+        $isAuthCollection = $collection->type === CollectionType::Auth;
+        if ($isAuthCollection && $field['name'] === 'email') {
+            return ['email:rfc,dns,spoof'];
+        }
+
+        if ($isAuthCollection && $field['name'] === 'password') {
+            return ['string', 'min:8', 'confirmed'];
+        }
+
+        return [];
     }
 }

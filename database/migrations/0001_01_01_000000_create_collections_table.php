@@ -19,6 +19,8 @@ return new class extends Migration
 
             $table->timestamp('schema_updated_at')->nullable();
             $table->timestamps();
+
+            $table->index(['type', 'name']);
         });
     }
 

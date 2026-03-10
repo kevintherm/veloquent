@@ -31,7 +31,7 @@ class JwtAuthService
     /**
      * Generate a JWT for a Record user scoped to a collection.
      *
-     * @return array{token: string, expires_in: int, user: array, collection_name: string}
+     * @return array{token: string, expires_in: int, collection_name: string}
      */
     public function generateToken(Record $user): array
     {
@@ -41,11 +41,7 @@ class JwtAuthService
             'iat' => time(),
             'exp' => time() + ($this->ttl * 60),
             'collection_name' => $user->collection->name,
-            'user' => [
-                'id' => $user->id,
-                'email' => $user->email,
-                'name' => $user->name ?? null,
-            ],
+            'token_key' => $user->token_key,
         ];
 
         $token = JWT::encode($payload, $this->secret, $this->algorithm);
@@ -53,7 +49,6 @@ class JwtAuthService
         return [
             'token' => $token,
             'expires_in' => $this->ttl * 60,
-            'user' => $payload['user'],
             'collection_name' => $user->collection->name,
         ];
     }
@@ -88,7 +83,7 @@ class JwtAuthService
     {
         $payload = $this->validateToken($token);
 
-        if (! isset($payload['sub'], $payload['collection_name'])) {
+        if (! isset($payload['sub'], $payload['collection_name'], $payload['token_key'])) {
             return null;
         }
 
@@ -100,25 +95,26 @@ class JwtAuthService
             return null;
         }
 
-        return Record::forCollection($collection)->find($payload['sub']);
+        return Record::forCollection($collection)->where('token_key', $payload['token_key'])->where('id', $payload['sub'])->first();
     }
 
     /**
      * Refresh a token by issuing a new one for the same user.
      *
-     * @return array{token: string, expires_in: int, user: array, collection_name: string}
+     * @return array{token: string, expires_in: int, collection_name: string}
      */
     public function refreshToken(string $token): array
     {
-        $payload = $this->validateToken($token);
+        return [];
+        // $payload = $this->validateToken($token);
 
-        $collection = Collection::where('name', $payload['collection_name'])
-            ->where('type', CollectionType::Auth)
-            ->firstOrFail();
+        // $collection = Collection::where('name', $payload['collection_name'])
+        //     ->where('type', CollectionType::Auth)
+        //     ->firstOrFail();
 
-        $user = Record::forCollection($collection)->findOrFail($payload['sub']);
+        // $user = Record::forCollection($collection)->findOrFail($payload['sub']);
 
-        return $this->generateToken($user);
+        // return $this->generateToken($user);
     }
 
     /**
