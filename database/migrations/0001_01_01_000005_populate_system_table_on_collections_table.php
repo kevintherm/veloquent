@@ -27,6 +27,7 @@ return new class extends Migration
                     'type' => CollectionFieldType::Char->value,
                     'nullable' => false,
                     'unique' => true,
+                    'length' => 26,
                 ],
                 [
                     'name' => 'name',
@@ -122,12 +123,14 @@ return new class extends Migration
                     'type' => CollectionFieldType::Char->value,
                     'nullable' => false,
                     'unique' => true,
+                    'length' => 26,
                 ],
                 [
                     'name' => 'user_id',
                     'type' => CollectionFieldType::Char->value,
                     'nullable' => false,
                     'unique' => false,
+                    'length' => 26,
                 ],
                 [
                     'name' => 'token',
@@ -243,6 +246,7 @@ return new class extends Migration
                     'type' => CollectionFieldType::Char->value,
                     'nullable' => false,
                     'unique' => true,
+                    'length' => 26,
                 ],
                 [
                     'name' => 'queue',
@@ -378,6 +382,7 @@ return new class extends Migration
                     'type' => CollectionFieldType::Char->value,
                     'nullable' => false,
                     'unique' => true,
+                    'length' => 26,
                 ],
                 [
                     'name' => 'uuid',
@@ -436,12 +441,14 @@ return new class extends Migration
                     'type' => CollectionFieldType::Char->value,
                     'nullable' => false,
                     'unique' => true,
+                    'length' => 26,
                 ],
                 [
                     'name' => 'collection_id',
                     'type' => CollectionFieldType::Char->value,
                     'nullable' => false,
                     'unique' => false,
+                    'length' => 26,
                 ],
                 [
                     'name' => 'operation',
