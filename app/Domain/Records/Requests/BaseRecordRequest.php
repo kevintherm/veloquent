@@ -2,75 +2,54 @@
 
 namespace App\Domain\Records\Requests;
 
-use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
 use Illuminate\Foundation\Http\FormRequest;
 
 abstract class BaseRecordRequest extends FormRequest
 {
-    protected Collection $collection;
-
     public function authorize(): bool
     {
-        $this->collection = $this->route('collection');
-
-        // Allow superusers to access any collection
-        $jwtService = app(\App\Domain\Auth\Services\JwtAuthService::class);
-        $token = $jwtService->extractTokenFromRequest($this);
-
-        $user = null;
-        if ($token) {
-            try {
-                $user = $jwtService->authenticate($token);
-            } catch (\Exception $e) {
-            }
-        }
-
-        $isSuperuser = $user && $user->collection?->name === 'superusers';
-        if ($isSuperuser) {
-            return true;
-        }
-
-        // Protect system collections
-        if ($this->collection->is_system) {
-            return false;
-        }
-
-        // Protect auth collections from direct record manipulation
-        if ($this->collection->type === CollectionType::Auth) {
-            return false;
-        }
-
         return true;
     }
 
-    protected function getDynamicValidationRules(): array
+    protected function getDynamicValidationRules(?Collection $collection = null, ?callable $intervene = null): array
     {
+        $collection ??= $this->route('collection');
+
         $rules = [];
-        $fields = $this->collection->fields ?? [];
+        $fields = $collection->fields ?? [];
+
+        $autoFillFields = ['id', 'created_at', 'updated_at'];
 
         foreach ($fields as $field) {
+            $fieldName = $field['name'];
             $fieldRules = [];
 
-            // Basic type validation
-            $fieldRules[] = $this->getFieldTypeRule($field['type']);
-
-            // Nullable validation
-            if (! $field['nullable']) {
+            if (! in_array($fieldName, $autoFillFields) && (! $field['nullable'] ?? false)) {
                 $fieldRules[] = 'required';
+            } else {
+                $fieldRules[] = 'nullable';
             }
 
-            // Unique validation
-            if ($field['unique']) {
-                $fieldRules[] = 'unique:'.$this->collection->getPhysicalTableName().','.$field['name'];
+            if ($field['unique'] ?? false) {
+                $uniqueRule = 'unique:'.$collection->getPhysicalTableName().','.$fieldName;
+                if (method_exists($this, 'getRecordId') && $this->getRecordId()) {
+                    $uniqueRule .= ','.$this->getRecordId();
+                }
+                $fieldRules[] = $uniqueRule;
             }
 
-            // Length validation
             if (isset($field['length']) && $field['length']) {
                 $fieldRules[] = 'max:'.$field['length'];
             }
 
-            $rules[$field['name']] = $fieldRules;
+            $fieldRules[] = $this->getFieldTypeRule($field['type']);
+
+            if ($intervene) {
+                $intervene($fieldName, $fieldRules);
+            }
+
+            $rules[$fieldName] = $fieldRules;
         }
 
         return $rules;

@@ -5,6 +5,7 @@ namespace App\Domain\Auth\Services;
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Records\Models\Record;
+use App\Exceptions\JwtException;
 use Firebase\JWT\BeforeValidException;
 use Firebase\JWT\ExpiredException;
 use Firebase\JWT\JWT;
@@ -69,13 +70,13 @@ class JwtAuthService
 
             return (array) $decoded;
         } catch (ExpiredException) {
-            throw new \Exception('Token has expired');
+            throw new JwtException('Token has expired');
         } catch (BeforeValidException) {
-            throw new \Exception('Token is not valid yet');
+            throw new JwtException('Token is not valid yet');
         } catch (SignatureInvalidException) {
-            throw new \Exception('Token signature is invalid');
+            throw new JwtException('Token signature is invalid');
         } catch (\Exception) {
-            throw new \Exception('Invalid token');
+            throw new JwtException('Invalid token');
         }
     }
 

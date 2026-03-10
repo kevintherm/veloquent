@@ -2,6 +2,7 @@
 
 namespace App\Domain\Records\Models;
 
+use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
 use App\Infrastructure\Traits\Filterable;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -44,6 +45,12 @@ class Record extends Authenticatable
         $casts = [];
         foreach ($collection->fields ?? [] as $field) {
             $fieldName = $field['name'];
+
+            if ($fieldName == 'password' && $collection->type === CollectionType::Auth) {
+                $casts[$fieldName] = 'hashed';
+
+                continue;
+            }
 
             match ($field['type']) {
                 'boolean' => $casts[$fieldName] = 'boolean',
