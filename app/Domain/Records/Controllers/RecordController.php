@@ -26,7 +26,7 @@ class RecordController extends ApiController
         Gate::authorize('list-records', $collection);
 
         $filters = request()->input('filters', '');
-        $perPage = min(request()->input('per_page', 15), 100);
+        $perPage = max(0, min(request()->input('per_page', 15), 100));
 
         $records = $this->getRecordsAction->execute($collection, $filters, $perPage);
 
@@ -57,8 +57,9 @@ class RecordController extends ApiController
         Gate::authorize('update-records', $collection);
 
         $updatedRecord = $this->updateRecordAction->execute(
+            $collection,
             $record,
-            $request->getRecordData()
+            $request->getRecordData(),
         );
 
         return $this->successResponse($updatedRecord, 'Record updated successfully');

@@ -44,10 +44,11 @@ return new class extends Migration
                     'length' => 255,
                 ],
                 [
-                    'name' => 'email_verified_at',
-                    'type' => CollectionFieldType::Timestamp->value,
-                    'nullable' => true,
-                    'unique' => false,
+                    'name' => 'token_key',
+                    'type' => CollectionFieldType::String->value,
+                    'nullable' => false,
+                    'unique' => true,
+                    'length' => 64,
                 ],
                 [
                     'name' => 'password',

@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Domain\Collections\Enums\CollectionType;
+use App\Domain\Collections\Models\Collection;
+use App\Domain\Records\Models\Record;
 use App\Infrastructure\Http\Controllers\ApiController;
-use App\Models\Superuser;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -12,8 +14,15 @@ class OnboardingController extends ApiController
 {
     public function createSuperuser(Request $request): JsonResponse
     {
-        // Check if superuser already exists
-        if (Superuser::exists()) {
+        $collection = Collection::where('type', CollectionType::Auth)->where('name', 'superusers')->first();
+
+        if (! $collection) {
+            return $this->errorResponse('Superusers collection not found', Response::HTTP_NOT_FOUND);
+        }
+
+        $superuser = Record::forCollection($collection);
+
+        if ($superuser->exists()) {
             return $this->errorResponse('Superuser already exists', Response::HTTP_CONFLICT);
         }
 
@@ -23,7 +32,7 @@ class OnboardingController extends ApiController
             'password' => ['required', 'string', 'min:8'],
         ]);
 
-        $superuser = Superuser::create([
+        $superuser = $superuser->create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => $validated['password'],

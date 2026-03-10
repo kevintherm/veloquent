@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Records\Models\Record;
+use App\Infrastructure\Guards\JwtGuard;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -15,6 +17,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->registerGates();
+        $this->registerAuth();
     }
 
     /**
@@ -23,6 +26,13 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         //
+    }
+
+    private function registerAuth(): void
+    {
+        Auth::extend('jwt', function ($app, $name, array $config) {
+            return new JwtGuard;
+        });
     }
 
     private function registerGates(): void

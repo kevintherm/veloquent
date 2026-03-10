@@ -10,6 +10,7 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Infrastructure\Http\Controllers\ApiController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -40,22 +41,19 @@ class AuthController extends ApiController
 
     public function logout(): JsonResponse
     {
+        Auth::logout();
         return $this->successResponse([], 'Logged out successfully.');
     }
 
-    public function me(Request $request): JsonResponse
+    public function me(): JsonResponse
     {
-        $user = $request->user();
+        $user = Auth::user();
 
         if (! $user) {
             return $this->errorResponse('User not authenticated.', Response::HTTP_UNAUTHORIZED);
         }
 
-        return $this->successResponse([
-            'id' => $user->id,
-            'name' => $user->name ?? null,
-            'email' => $user->email,
-        ]);
+        return $this->successResponse($user);
     }
 
     public function refresh(Request $request): JsonResponse
@@ -84,7 +82,6 @@ class AuthController extends ApiController
             'access_token' => $tokenData['token'],
             'token_type' => 'bearer',
             'expires_in' => $tokenData['expires_in'],
-            'user' => $tokenData['user'],
             'collection_name' => $tokenData['collection_name'],
         ], 'Success', $code);
     }
