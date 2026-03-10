@@ -1,7 +1,6 @@
 
 ## TODO
 
-- Refresh tokens
 - Handle truncation when changing field type
 - Handle schema jobs failure
     - Rebuild associated table
@@ -11,3 +10,4 @@
     - to: fetch collection join record where collection name = ? and record id = ?
 - Hide fields e.g password, token_key from responses
 - Add manage_rule to allow updating password field for auth collections
+- Make jwt:secret command to generate jwt secret

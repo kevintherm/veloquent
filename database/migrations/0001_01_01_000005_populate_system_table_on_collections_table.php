@@ -127,11 +127,18 @@ return new class extends Migration
                     'length' => 26,
                 ],
                 [
-                    'name' => 'user_id',
-                    'type' => CollectionFieldType::Char->value,
+                    'name' => 'collection_name',
+                    'type' => CollectionFieldType::String->value,
                     'nullable' => false,
                     'unique' => false,
-                    'length' => 26,
+                    'length' => 255,
+                ],
+                [
+                    'name' => 'record_id',
+                    'type' => CollectionFieldType::String->value,
+                    'nullable' => false,
+                    'unique' => false,
+                    'length' => 255,
                 ],
                 [
                     'name' => 'token',

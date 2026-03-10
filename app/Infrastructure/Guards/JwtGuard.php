@@ -52,7 +52,9 @@ class JwtGuard implements Guard
 
     public function logout(): void
     {
-        if (! $this->check()) return;
+        if (! $this->check()) {
+            return;
+        }
 
         $this->user->token_key = Str::random(64);
         $this->user->save();

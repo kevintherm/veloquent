@@ -8,10 +8,12 @@ use App\Domain\Collections\Models\Collection;
 use App\Domain\Records\Models\Record;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Infrastructure\Http\Controllers\ApiController;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\Response;
 
 class AuthController extends ApiController
@@ -39,9 +41,10 @@ class AuthController extends ApiController
         return $this->tokenResponse($tokenData);
     }
 
-    public function logout(): JsonResponse
+    public function logoutAll(): JsonResponse
     {
         Auth::logout();
+
         return $this->successResponse([], 'Logged out successfully.');
     }
 
@@ -58,19 +61,13 @@ class AuthController extends ApiController
 
     public function refresh(Request $request): JsonResponse
     {
-        try {
-            $token = $this->jwtService->extractTokenFromRequest($request);
+        $request->validate([
+            'refresh_token' => 'required|string|size:64',
+        ]);
 
-            if (! $token) {
-                return $this->errorResponse('Token not provided.', Response::HTTP_UNAUTHORIZED);
-            }
+        $tokenData = $this->jwtService->refresh($request->input('refresh_token'));
 
-            $tokenData = $this->jwtService->refreshToken($token);
-
-            return $this->tokenResponse($tokenData);
-        } catch (\Exception $e) {
-            return $this->errorResponse('Token refresh failed: '.$e->getMessage(), Response::HTTP_UNAUTHORIZED);
-        }
+        return $this->tokenResponse($tokenData);
     }
 
     /**
@@ -78,11 +75,28 @@ class AuthController extends ApiController
      */
     private function tokenResponse(array $tokenData, int $code = Response::HTTP_OK): JsonResponse
     {
-        return $this->successResponse([
-            'access_token' => $tokenData['token'],
-            'token_type' => 'bearer',
-            'expires_in' => $tokenData['expires_in'],
-            'collection_name' => $tokenData['collection_name'],
-        ], 'Success', $code);
+        $cookie = new Cookie(
+            name: 'refresh_token',
+            value: $tokenData['refresh_token'],
+            expire: $tokenData['refresh_token_expires_in'],
+            path: '/',
+            domain: null,
+            secure: true,
+            httpOnly: true,
+            raw: false,
+            sameSite: Cookie::SAMESITE_STRICT,
+        );
+
+        return $this->successResponse(
+            [
+                'access_token' => $tokenData['token'],
+                'refresh_token' => $tokenData['refresh_token'],
+                'expires_in' => $tokenData['expires_in'],
+                'collection_name' => $tokenData['collection_name'],
+            ],
+            'Success',
+            $code,
+            cookie: $cookie
+        );
     }
 }
