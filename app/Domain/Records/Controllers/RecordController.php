@@ -11,6 +11,7 @@ use App\Domain\Records\Requests\StoreRecordRequest;
 use App\Domain\Records\Requests\UpdateRecordRequest;
 use App\Infrastructure\Http\Controllers\ApiController;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
 class RecordController extends ApiController
@@ -21,14 +22,15 @@ class RecordController extends ApiController
         private UpdateRecordAction $updateRecordAction,
     ) {}
 
-    public function index(Collection $collection): JsonResponse
+    public function index(Request $request, Collection $collection): JsonResponse
     {
         Gate::authorize('list-records', $collection);
 
-        $filters = request()->input('filters', '');
-        $perPage = max(0, min(request()->input('per_page', 15), 100));
-
-        $records = $this->getRecordsAction->execute($collection, $filters, $perPage);
+        $records = $this->getRecordsAction->execute(
+            $collection,
+            $request->input('filters', ''),
+            $request->input('per_page', 15)
+        );
 
         return $this->successResponse($records);
     }
