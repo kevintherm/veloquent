@@ -19,7 +19,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('_velo_users', function (Blueprint $table) {
+        $defaultAuthCollectionName = config('velo.default_auth_collection');
+
+        Schema::create('_velo_'.$defaultAuthCollectionName, function (Blueprint $table) {
             $table->ulid('id')->primary();
             $table->string('name')->nullable();
             $table->string('email')->unique();
@@ -32,11 +34,10 @@ return new class extends Migration
         });
 
         $now = now();
-
         DB::table('collections')->insert([
             'id' => Str::ulid(),
             'type' => 'auth',
-            'name' => 'users',
+            'name' => $defaultAuthCollectionName,
             'description' => 'Default users collection',
             'fields' => json_encode([
                 [
@@ -101,7 +102,13 @@ return new class extends Migration
                     'unique' => false,
                 ],
             ]),
-            'api_rules' => null,
+            'api_rules' => json_encode([
+                'index' => null,
+                'show' => null,
+                'store' => null,
+                'update' => null,
+                'destroy' => null,
+            ]),
             'schema_updated_at' => $now,
             'created_at' => $now,
             'updated_at' => $now,

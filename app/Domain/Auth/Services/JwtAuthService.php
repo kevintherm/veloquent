@@ -13,7 +13,6 @@ use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Firebase\JWT\SignatureInvalidException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 
 class JwtAuthService
 {

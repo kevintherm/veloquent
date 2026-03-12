@@ -76,7 +76,6 @@ return new class extends Migration
             'updated_at' => $now,
         ]);
 
-        // Password reset tokens collection
         DB::table('collections')->insert([
             'id' => Str::ulid(),
             'type' => 'base',
@@ -111,7 +110,6 @@ return new class extends Migration
             'updated_at' => $now,
         ]);
 
-        // Refresh tokens collection
         DB::table('collections')->insert([
             'id' => Str::ulid(),
             'type' => 'base',
@@ -125,13 +123,6 @@ return new class extends Migration
                     'nullable' => false,
                     'unique' => true,
                     'length' => 26,
-                ],
-                [
-                    'name' => 'collection_name',
-                    'type' => CollectionFieldType::String->value,
-                    'nullable' => false,
-                    'unique' => false,
-                    'length' => 255,
                 ],
                 [
                     'name' => 'record_id',
@@ -172,7 +163,6 @@ return new class extends Migration
             'updated_at' => $now,
         ]);
 
-        // Cache collection
         DB::table('collections')->insert([
             'id' => Str::ulid(),
             'type' => 'base',
