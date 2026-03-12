@@ -19,6 +19,8 @@ readonly class CollectionObserver
      */
     public function creating(Collection $collection): void
     {
+        $this->validateApiRules($collection);
+
         $this->startJob($collection, SchemaOperation::Create);
         $this->ddlService->createTable($collection->getPhysicalTableName(), $collection->fields);
         $collection->schema_updated_at = now();
@@ -90,5 +92,23 @@ readonly class CollectionObserver
     private function endJob(Collection $collection): void
     {
         SchemaJob::where('table_name', $collection->getPhysicalTableName())->delete();
+    }
+
+    private function validateApiRules(Collection $collection): void
+    {
+        $collection->api_rules = array_merge([
+            'index' => null,
+            'show' => null,
+            'store' => null,
+            'update' => null,
+            'delete' => null,
+        ], $collection->api_rules ?? []);
+
+        $validKeys = ['index', 'show', 'store', 'update', 'delete'];
+        $invalidKeys = array_diff(array_keys($collection->api_rules ?? []), $validKeys);
+
+        if (!empty($invalidKeys)) {
+            throw new \InvalidArgumentException('Invalid api rules keys: ' . implode(', ', $invalidKeys));
+        }
     }
 }

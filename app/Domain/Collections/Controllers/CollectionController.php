@@ -63,6 +63,11 @@ class CollectionController extends ApiController
     {
         Gate::authorize('delete-collections', $request->user(), $collection);
 
+        $defaultAuthCollection = config('velo.default_auth_collection');
+        if ($collection->name === $defaultAuthCollection) {
+            return $this->errorResponse('Cannot delete default auth collection', 400);
+        }
+
         $collection->delete();
 
         return $this->successResponse([], 'Collection deleted successfully.');

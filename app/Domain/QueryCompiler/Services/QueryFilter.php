@@ -305,7 +305,7 @@ class QueryFilter
                             break;
                         }
 
-continue;
+                        continue;
                     }
                     $val .= $src[$j++];
                 }

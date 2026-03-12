@@ -30,11 +30,12 @@ return new class extends Migration
 
         Schema::create('refresh_tokens', function (Blueprint $table) {
             $table->id();
-            $table->string('collection_name');
             $table->ulid('record_id');
             $table->string('token', 64)->unique();
             $table->timestamp('expires_at');
             $table->timestamps();
+
+            $table->index(['record_id', 'token']);
         });
     }
 

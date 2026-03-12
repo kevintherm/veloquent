@@ -24,7 +24,7 @@ Route::prefix('collections/{collection}/records')->group(function () {
 });
 
 Route::prefix('collections/{collection}/auth')->name('collections.auth.')->group(function () {
-    Route::post('/authenticate', [AuthController::class, 'login'])->name('authenticate');
+    Route::post('/login', [AuthController::class, 'login'])->name('authenticate');
     Route::delete('/logout-all', [AuthController::class, 'logoutAll'])->name('logout-all');
     Route::get('/me', [AuthController::class, 'me'])->name('me');
     Route::post('/refresh', [AuthController::class, 'refresh'])->name('refresh');

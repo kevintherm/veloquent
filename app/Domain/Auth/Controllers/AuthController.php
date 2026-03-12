@@ -8,7 +8,6 @@ use App\Domain\Collections\Models\Collection;
 use App\Domain\Records\Models\Record;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Infrastructure\Http\Controllers\ApiController;
-use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
