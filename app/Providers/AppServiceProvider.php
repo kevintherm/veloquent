@@ -46,11 +46,11 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Gate::define('create-collections', function (?Record $user, array|Collection $data) {
-            return $user && $user->getTable() === 'superusers' && $data['is_system'] === false;
+            return $user && $user->getTable() === 'superusers' && ($data['is_system'] ?? false) === false;
         });
 
         Gate::define('update-collections', function (?Record $user, array|Collection $data) {
-            return $user && $user->getTable() === 'superusers' && $data['is_system'] === false;
+            return $user && $user->getTable() === 'superusers' && ($data['is_system'] ?? false) === false;
         });
 
         Gate::define('delete-collections', function (?Record $user, array|Collection $data) {

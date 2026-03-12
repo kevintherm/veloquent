@@ -11,8 +11,11 @@
             - Fetch Data
             - Evaluate expression
             - Return data based on truthy value
-- Handle truncation when changing field type
-    - strict mode on mysql throws an exception
+- Handle field editing
+    - Rename field as old field
+    - Creates new field
+    - Backfill data
+    - Delete old field
 - Handle schema jobs failure
     - Rebuild associated table
     - Add routes for managing failed schema jobs

@@ -9,6 +9,61 @@ use App\Infrastructure\Exceptions\InvalidArgumentException;
 final class SchemaChangePlan
 {
     /**
+     * System field names that are auto-managed and should be ignored from requests.
+     */
+    private const SYSTEM_FIELD_NAMES = ['id', 'created_at', 'updated_at'];
+
+    /**
+     * Clean fields array by removing any system fields.
+     * System fields coming from request are silently ignored.
+     */
+    public static function cleanFields(array $fields): array
+    {
+        return array_values(array_filter($fields, function ($field) {
+            return ! in_array($field['name'] ?? '', self::SYSTEM_FIELD_NAMES, true);
+        }));
+    }
+
+    /**
+     * Get system fields with proper metadata for storage.
+     */
+    public static function getSystemFields(): array
+    {
+        return [
+            [
+                'name' => 'id',
+                'type' => CollectionFieldType::Text,
+                'nullable' => false,
+                'unique' => true,
+                'length' => 26,
+            ],
+            [
+                'name' => 'created_at',
+                'type' => CollectionFieldType::Datetime,
+                'nullable' => false,
+                'unique' => false,
+            ],
+            [
+                'name' => 'updated_at',
+                'type' => CollectionFieldType::Datetime,
+                'nullable' => false,
+                'unique' => false,
+            ],
+        ];
+    }
+
+    /**
+     * Merge system fields with user fields for metadata storage.
+     * System fields are always prepended.
+     */
+    public static function mergeWithSystemFields(array $fields): array
+    {
+        $cleaned = self::cleanFields($fields);
+
+        return array_merge(self::getSystemFields(), $cleaned);
+    }
+
+    /**
      * Type changes that are always safe (no data loss, no cast ambiguity).
      *
      * @return array<string, CollectionFieldType[]>
@@ -16,20 +71,14 @@ final class SchemaChangePlan
     private static function compatibleTypeChanges(): array
     {
         return [
-            CollectionFieldType::String->value => [CollectionFieldType::Text, CollectionFieldType::Char],
-            CollectionFieldType::Char->value => [CollectionFieldType::String, CollectionFieldType::Text],
-            CollectionFieldType::Text->value => [],
-            CollectionFieldType::Integer->value => [CollectionFieldType::Float, CollectionFieldType::Double, CollectionFieldType::Decimal, CollectionFieldType::Bigint, CollectionFieldType::Text],
-            CollectionFieldType::Float->value => [CollectionFieldType::Double, CollectionFieldType::Decimal, CollectionFieldType::Text],
-            CollectionFieldType::Double->value => [CollectionFieldType::Decimal, CollectionFieldType::Text],
-            CollectionFieldType::Decimal->value => [CollectionFieldType::Text],
-            CollectionFieldType::Bigint->value => [CollectionFieldType::Text],
-            CollectionFieldType::Tinyint->value => [CollectionFieldType::Integer, CollectionFieldType::Float, CollectionFieldType::Double, CollectionFieldType::Decimal, CollectionFieldType::Bigint, CollectionFieldType::Text],
-            CollectionFieldType::Boolean->value => [CollectionFieldType::Text],
-            CollectionFieldType::Datetime->value => [CollectionFieldType::Timestamp, CollectionFieldType::Text],
-            CollectionFieldType::Timestamp->value => [CollectionFieldType::Datetime, CollectionFieldType::Text],
-            CollectionFieldType::Json->value => [CollectionFieldType::Text, CollectionFieldType::Longtext],
-            CollectionFieldType::Longtext->value => [CollectionFieldType::Text, CollectionFieldType::Json],
+            CollectionFieldType::Text->value => [CollectionFieldType::Text],
+            CollectionFieldType::Number->value => [CollectionFieldType::Number],
+            CollectionFieldType::Boolean->value => [CollectionFieldType::Boolean],
+            CollectionFieldType::Datetime->value => [CollectionFieldType::Datetime],
+            CollectionFieldType::Email->value => [CollectionFieldType::Email],
+            CollectionFieldType::Url->value => [CollectionFieldType::Url],
+            CollectionFieldType::Json->value => [CollectionFieldType::Json],
+            CollectionFieldType::Relation->value => [CollectionFieldType::Relation],
         ];
     }
 

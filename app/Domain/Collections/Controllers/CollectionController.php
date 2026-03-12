@@ -21,23 +21,24 @@ class CollectionController extends ApiController
 
     public function index(Request $request): JsonResponse
     {
-        Gate::authorize('list-collections', $request->user());
+        Gate::authorize('list-collections');
 
-        $collections = Collection::get();
+        $filters = $request->input('filter') ?? '';
+        $collections = Collection::filter($filters)->get();
 
         return $this->successResponse($collections);
     }
 
-    public function show(Request $request, Collection $collection): JsonResponse
+    public function show(Collection $collection): JsonResponse
     {
-        Gate::authorize('view-collections', $request->user());
+        Gate::authorize('view-collections');
 
         return $this->successResponse($collection);
     }
 
     public function store(StoreCollectionRequest $request): JsonResponse
     {
-        Gate::authorize('create-collections', $request->user(), $request->validated());
+        Gate::authorize('create-collections', [$request->validated()]);
 
         $collection = $this->createCollectionAction->execute([
             ...$request->validated(),
@@ -49,7 +50,7 @@ class CollectionController extends ApiController
 
     public function update(UpdateCollectionRequest $request, Collection $collection): JsonResponse
     {
-        Gate::authorize('update-collections', $request->user(), $collection);
+        Gate::authorize('update-collections', [$collection]);
 
         $collection = $this->updateCollectionAction->execute($collection, [
             ...$request->validated(),
@@ -59,9 +60,9 @@ class CollectionController extends ApiController
         return $this->successResponse($collection);
     }
 
-    public function destroy(Request $request, Collection $collection): JsonResponse
+    public function destroy(Collection $collection): JsonResponse
     {
-        Gate::authorize('delete-collections', $request->user(), $collection);
+        Gate::authorize('delete-collections', [$collection]);
 
         $defaultAuthCollection = config('velo.default_auth_collection');
         if ($collection->name === $defaultAuthCollection) {

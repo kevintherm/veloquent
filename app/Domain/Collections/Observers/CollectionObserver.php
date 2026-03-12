@@ -5,6 +5,7 @@ namespace App\Domain\Collections\Observers;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\SchemaManagement\Enums\SchemaOperation;
 use App\Domain\SchemaManagement\Models\SchemaJob;
+use App\Domain\SchemaManagement\Services\SchemaChangePlan;
 use App\Domain\SchemaManagement\Services\SchemaDDLService;
 use App\Infrastructure\Exceptions\InvalidArgumentException;
 
@@ -22,12 +23,15 @@ readonly class CollectionObserver
         $this->validateApiRules($collection);
 
         $this->startJob($collection, SchemaOperation::Create);
-        $this->ddlService->createTable($collection->getPhysicalTableName(), $collection->fields);
+
+        $userFields = SchemaChangePlan::cleanFields($collection->fields);
+        $this->ddlService->createTable($collection->getPhysicalTableName(), $userFields);
         $collection->schema_updated_at = now();
     }
 
     public function created(Collection $collection): void
     {
+        $collection->fields = SchemaChangePlan::mergeWithSystemFields($collection->fields ?? []);
         $this->endJob($collection);
     }
 
@@ -36,8 +40,14 @@ readonly class CollectionObserver
      */
     public function updating(Collection $collection): void
     {
+        $this->validateApiRules($collection);
+
         if ($collection->isDirty('type')) {
             throw new InvalidArgumentException('Collection type cannot be changed');
+        }
+
+        if ($collection->isDirty('fields')) {
+            $collection->fields = SchemaChangePlan::mergeWithSystemFields($collection->fields ?? []);
         }
 
         $this->startJob($collection, SchemaOperation::Update);
@@ -49,13 +59,16 @@ readonly class CollectionObserver
         }
 
         if ($collection->isDirty('fields')) {
-            $originalFields = $collection->getOriginal('fields');
-            $newFields = $collection->fields;
+            $originalFields = $collection->getOriginal('fields') ?? [];
+            $newFields = $collection->fields ?? [];
+
+            $originalFieldsCleaned = SchemaChangePlan::cleanFields($originalFields);
+            $newFieldsCleaned = SchemaChangePlan::cleanFields($newFields);
 
             $this->ddlService->updateTable(
                 $collection->getPhysicalTableName(),
-                $originalFields,
-                $newFields
+                $originalFieldsCleaned,
+                $newFieldsCleaned
             );
         }
 
@@ -97,18 +110,18 @@ readonly class CollectionObserver
     private function validateApiRules(Collection $collection): void
     {
         $collection->api_rules = array_merge([
-            'index' => null,
-            'show' => null,
-            'store' => null,
+            'list' => null,
+            'view' => null,
+            'create' => null,
             'update' => null,
             'delete' => null,
         ], $collection->api_rules ?? []);
 
-        $validKeys = ['index', 'show', 'store', 'update', 'delete'];
+        $validKeys = ['list', 'view', 'create', 'update', 'delete'];
         $invalidKeys = array_diff(array_keys($collection->api_rules ?? []), $validKeys);
 
-        if (!empty($invalidKeys)) {
-            throw new \InvalidArgumentException('Invalid api rules keys: ' . implode(', ', $invalidKeys));
+        if (! empty($invalidKeys)) {
+            throw new \InvalidArgumentException('Invalid api rules keys: '.implode(', ', $invalidKeys));
         }
     }
 }

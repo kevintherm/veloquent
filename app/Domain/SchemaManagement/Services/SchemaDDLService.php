@@ -21,9 +21,7 @@ readonly class SchemaDDLService
     {
         $this->namingPolicy->assertValidTableName($table);
 
-        if (Schema::hasTable($table)) {
-            return;
-        }
+        // Conflict action: fail if table exists
 
         Schema::create($table, function (Blueprint $blueprint) use ($columns) {
             $blueprint->ulid('id')->primary();
@@ -66,12 +64,14 @@ readonly class SchemaDDLService
         $type = CollectionFieldType::tryFrom($column['type']);
 
         $col = match ($type) {
-            CollectionFieldType::String => $blueprint->string($name, $column['length'] ?? 255),
             CollectionFieldType::Text => $blueprint->text($name),
-            CollectionFieldType::Integer => $blueprint->integer($name),
+            CollectionFieldType::Number => $blueprint->float($name),
             CollectionFieldType::Boolean => $blueprint->boolean($name),
-            CollectionFieldType::Float => $blueprint->float($name),
-            CollectionFieldType::Datetime => $blueprint->dateTime($name),
+            CollectionFieldType::Datetime => $blueprint->timestamp($name),
+            CollectionFieldType::Email => $blueprint->text($name),
+            CollectionFieldType::Url => $blueprint->text($name),
+            CollectionFieldType::Json => $blueprint->json($name),
+            CollectionFieldType::Relation => $blueprint->char($name, 26),
             default => throw new InvalidArgumentException('Unsupported column type: '.$type)
         };
 

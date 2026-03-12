@@ -4,6 +4,7 @@ namespace App\Domain\Collections\Models;
 
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Observers\CollectionObserver;
+use App\Infrastructure\Traits\Filterable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 #[ObservedBy(CollectionObserver::class)]
 class Collection extends Model
 {
-    use HasUlids;
+    use HasUlids, Filterable;
 
     protected $fillable = ['type', 'name', 'description', 'fields', 'api_rules', 'is_system', 'schema_updated_at'];
 

@@ -7,12 +7,6 @@ use App\Infrastructure\Exceptions\InvalidArgumentException;
 
 final class SchemaPolicy
 {
-    private const FORBIDDEN_COLUMNS = [
-        'id',
-        'created',
-        'updated',
-    ];
-
     public function assertValidTableName(string $table): void
     {
         if (! preg_match('/^[a-zA-Z_]+$/', $table)) {
@@ -30,12 +24,6 @@ final class SchemaPolicy
         if (! preg_match('/^[a-zA-Z_]+$/', $column)) {
             throw new InvalidArgumentException(
                 "Invalid column name '{$column}'. Only letters and underscore allowed."
-            );
-        }
-
-        if (in_array($column, self::FORBIDDEN_COLUMNS, true)) {
-            throw new InvalidArgumentException(
-                "Column name '{$column}' is reserved and cannot be used."
             );
         }
     }
