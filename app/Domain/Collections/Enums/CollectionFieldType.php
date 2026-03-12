@@ -4,18 +4,12 @@ namespace App\Domain\Collections\Enums;
 
 enum CollectionFieldType: string
 {
-    case String = 'string';
     case Text = 'text';
-    case Integer = 'integer';
-    case Float = 'float';
-    case Double = 'double';
-    case Decimal = 'decimal';
+    case Number = 'number';
     case Boolean = 'boolean';
-    case Datetime = 'datetime';
-    case Timestamp = 'timestamp';
+    case Datetime = 'timestamp';
+    case Email = 'email';
+    case Url = 'url';
     case Json = 'json';
-    case Longtext = 'longtext';
-    case Bigint = 'bigint';
-    case Tinyint = 'tinyint';
-    case Char = 'char';
+    case Relation = 'relation';
 }
