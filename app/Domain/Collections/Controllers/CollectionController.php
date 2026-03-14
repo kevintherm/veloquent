@@ -24,7 +24,7 @@ class CollectionController extends ApiController
         Gate::authorize('list-collections');
 
         $filters = $request->input('filter') ?? '';
-        $collections = Collection::filter($filters)->get();
+        $collections = Collection::query()->applyFilter($filters)->get();
 
         return $this->successResponse($collections);
     }

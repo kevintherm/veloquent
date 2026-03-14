@@ -1,7 +1,6 @@
 <?php
 
 use App\Domain\Collections\Models\Collection;
-use App\Domain\Records\Models\Record;
 use App\Exceptions\JwtException;
 use App\Http\Middleware\JwtMiddleware;
 use App\Infrastructure\Traits\ApiResponse;
@@ -11,6 +10,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
@@ -31,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(JwtMiddleware::class);
+        $middleware->remove(ConvertEmptyStringsToNull::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (Throwable $e, $request) {

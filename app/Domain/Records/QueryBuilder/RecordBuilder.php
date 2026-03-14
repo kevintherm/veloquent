@@ -16,6 +16,7 @@ class RecordBuilder extends Builder
         }
 
         $rule = $collection->api_rules[$action] ?? null;
+
         if ($rule === null) {
             $this->whereRaw('1 = 0');
 

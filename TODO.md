@@ -1,6 +1,9 @@
 
 ## TODO
 
+- Prevent modifying reserved fields on auth collection
+    - e.g modifying/deleting email, email_visibility, verified, and password field
+
 - Handle field editing
     - Rename field as old field
     - Creates new field
@@ -11,7 +14,6 @@
     - Add routes for managing failed schema jobs
 - Optimize Record model
     - cache collections
-- Hide fields e.g password, token_key from responses
 - Add manage_rule to allow updating password field for auth collections
 - Make jwt:secret command to generate jwt secret
 

@@ -26,15 +26,15 @@ class UpdateCollectionAction
                 ->all();
         }
 
-        $allFields = SchemaChangePlan::mergeWithSystemFields(array_merge($collection->fields, $data['fields']));
+        $allFields = SchemaChangePlan::mergeWithSystemFields(array_merge($collection->fields, $data['fields'] ?? []));
         $this->validateApiRules($data['api_rules'], Arr::pluck($allFields, 'name'));
-        
+
         $collection->update($data);
         $collection->refresh();
 
         return $collection;
     }
-    
+
     private function validateApiRules(array $apiRules, array $fields): void
     {
         $expectedKeys = ['list', 'create', 'view', 'update', 'delete'];
