@@ -4,7 +4,6 @@ namespace App\Domain\QueryCompiler\Services;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Arr;
 
 class QueryFilter
 {
@@ -13,6 +12,10 @@ class QueryFilter
     private array $tokens = [];
 
     private int $pos = 0;
+
+    private array $allowedFields = [];
+
+    private const VALUE_KEYWORDS = ['true', 'false', 'null'];
 
     private const OPERATORS = [
         'is not null', 'not like', 'not in', '!=', '>=', '<=', 'is null', 'like', 'in', '>', '<', '=',
@@ -40,28 +43,28 @@ class QueryFilter
 
     // -------------------------------------------------------------------------
 
-    public function __construct(Builder $query)
+    public function __construct(Builder $query, array $allowedFields)
     {
         $this->query = $query;
+        $this->allowedFields = $allowedFields;
     }
 
-    public static function for(Builder $query): self
+    public static function for(Builder $query, array $allowedFields): self
     {
-        return new self($query);
+        return new self($query, $allowedFields);
     }
 
-    public function validateFields(array $allowedFields): void
+    public function lint(?string $filter = null): void
     {
-        $fieldsInToken = collect(Arr::pluck(
-            Arr::filter($this->tokens, fn (array $token) => $token['type'] === 'FIELD'),
-            'value'
-        ));
-
-        $invalidFields = $fieldsInToken->diff($allowedFields);
-
-        if (! $invalidFields->isEmpty()) {
-            throw new \InvalidArgumentException('Invalid fields in expression. Innvvalid fields: '.implode(', ', $invalidFields->toArray()));
+        $filter = trim($filter ?? '');
+        if ($filter === '') {
+            return;
         }
+
+        $this->tokens = $this->tokenize($filter);
+        $this->pos = 0;
+
+        $this->applyExpr($this->query, false);
     }
 
     public function run(string $filter): Builder
@@ -213,13 +216,13 @@ class QueryFilter
             }
 
             return match ($name) {
-                'daysago' => now()->subDays($arg),
-                'daysfromnow' => now()->addDays($arg),
-                'weeksago' => now()->subWeeks($arg),
+                'daysago'      => now()->subDays($arg),
+                'daysfromnow'  => now()->addDays($arg),
+                'weeksago'     => now()->subWeeks($arg),
                 'weeksfromnow' => now()->addWeeks($arg),
-                'monthsago' => now()->subMonths($arg),
-                'monthsfromnow' => now()->addMonths($arg),
-                'yearsago' => now()->subYears($arg),
+                'monthsago'    => now()->subMonths($arg),
+                'monthsfromnow'=> now()->addMonths($arg),
+                'yearsago'     => now()->subYears($arg),
                 'yearsfromnow' => now()->addYears($arg),
             };
         }
@@ -229,27 +232,27 @@ class QueryFilter
         }
 
         return match ($name) {
-            'now' => now(),
-            'today' => now()->startOfDay(),
-            'yesterday' => now()->subDay()->startOfDay(),
-            'tomorrow' => now()->addDay()->startOfDay(),
-            'thisweek' => now()->startOfWeek(),
-            'lastweek' => now()->subWeek()->startOfWeek(),
-            'nextweek' => now()->addWeek()->startOfWeek(),
-            'thismonth' => now()->startOfMonth(),
-            'lastmonth' => now()->subMonth()->startOfMonth(),
-            'nextmonth' => now()->addMonth()->startOfMonth(),
-            'thisyear' => now()->startOfYear(),
-            'lastyear' => now()->subYear()->startOfYear(),
-            'nextyear' => now()->addYear()->startOfYear(),
-            'startofday' => now()->startOfDay(),
-            'endofday' => now()->endOfDay(),
-            'startofweek' => now()->startOfWeek(),
-            'endofweek' => now()->endOfWeek(),
+            'now'          => now(),
+            'today'        => now()->startOfDay(),
+            'yesterday'    => now()->subDay()->startOfDay(),
+            'tomorrow'     => now()->addDay()->startOfDay(),
+            'thisweek'     => now()->startOfWeek(),
+            'lastweek'     => now()->subWeek()->startOfWeek(),
+            'nextweek'     => now()->addWeek()->startOfWeek(),
+            'thismonth'    => now()->startOfMonth(),
+            'lastmonth'    => now()->subMonth()->startOfMonth(),
+            'nextmonth'    => now()->addMonth()->startOfMonth(),
+            'thisyear'     => now()->startOfYear(),
+            'lastyear'     => now()->subYear()->startOfYear(),
+            'nextyear'     => now()->addYear()->startOfYear(),
+            'startofday'   => now()->startOfDay(),
+            'endofday'     => now()->endOfDay(),
+            'startofweek'  => now()->startOfWeek(),
+            'endofweek'    => now()->endOfWeek(),
             'startofmonth' => now()->startOfMonth(),
-            'endofmonth' => now()->endOfMonth(),
-            'startofyear' => now()->startOfYear(),
-            'endofyear' => now()->endOfYear(),
+            'endofmonth'   => now()->endOfMonth(),
+            'startofyear'  => now()->startOfYear(),
+            'endofyear'    => now()->endOfYear(),
         };
     }
 
@@ -319,32 +322,6 @@ class QueryFilter
                 continue;
             }
 
-            // in(...) list value — only when the previous token was an OP
-            if ($src[$i] === '(' && ! empty($tokens) && ($tokens[array_key_last($tokens)]['type'] ?? '') === 'OP') {
-                $j = $i;
-                $depth = 0;
-                $val = '';
-                while ($j < $len) {
-                    if ($src[$j] === '(') {
-                        $depth++;
-                    }
-                    if ($src[$j] === ')') {
-                        $depth--;
-                        $val .= $src[$j++];
-                        if ($depth === 0) {
-                            break;
-                        }
-
-                        continue;
-                    }
-                    $val .= $src[$j++];
-                }
-                $tokens[] = ['type' => 'VALUE', 'value' => $val];
-                $i = $j;
-
-                continue;
-            }
-
             // comparison operators (longest match first)
             $matched = false;
             foreach (self::OPERATORS as $op) {
@@ -359,10 +336,22 @@ class QueryFilter
                 continue;
             }
 
-            // Read a bare word (stops at whitespace, parens, or logical chars)
-            // NOTE: we stop at '(' so function names are read separately from their arg list
+            // Numeric literal (bare, e.g. 42 or 3.14)
+            if (ctype_digit($src[$i]) || ($src[$i] === '-' && isset($src[$i + 1]) && ctype_digit($src[$i + 1]))) {
+                $num = '';
+                if ($src[$i] === '-') {
+                    $num .= $src[$i++];
+                }
+                while ($i < $len && (ctype_digit($src[$i]) || $src[$i] === '.')) {
+                    $num .= $src[$i++];
+                }
+                $tokens[] = ['type' => 'VALUE', 'value' => $num];
+                continue;
+            }
+
+            // Read a bare word (stops at whitespace, parens, or logical symbols)
             $word = '';
-            while ($i < $len && ! ctype_space($src[$i]) && ! in_array($src[$i], ['(', ')', '&', '|'])) {
+            while ($i < $len && ! ctype_space($src[$i]) && ! in_array($src[$i], ['(', ')', '&', '|'], true)) {
                 $word .= $src[$i++];
             }
 
@@ -372,20 +361,23 @@ class QueryFilter
 
             $lower = strtolower($word);
 
+            // Keyword logical operators (word form)
             if ($lower === 'and') {
                 $tokens[] = ['type' => 'AND', 'value' => '&&'];
-
                 continue;
             }
             if ($lower === 'or') {
-                $tokens[] = ['type' => 'OR',  'value' => '||'];
-
+                $tokens[] = ['type' => 'OR', 'value' => '||'];
                 continue;
             }
 
-            // If followed by '(' it must be a function call
+            // Function call — word followed immediately by '('
             if (isset($src[$i]) && $src[$i] === '(') {
-                // Capture the full argument list including parens
+                if (! in_array($lower, $allDateFuncs, true)) {
+                    throw new \InvalidArgumentException("Unknown function: {$lower}()");
+                }
+
+                // Capture the full argument list including surrounding parens
                 $j = $i;
                 $depth = 0;
                 $args = '';
@@ -399,21 +391,25 @@ class QueryFilter
                         if ($depth === 0) {
                             break;
                         }
-
                         continue;
                     }
                     $args .= $src[$j++];
                 }
                 $i = $j;
 
-                // Validate: must be a known date function
-                if (! in_array($lower, $allDateFuncs, true)) {
-                    throw new \InvalidArgumentException("Unknown function: {$lower}()");
-                }
-
-                $tokens[] = ['type' => 'DATE_FUNC', 'value' => $lower.$args];
-
+                $tokens[] = ['type' => 'DATE_FUNC', 'value' => $lower . $args];
                 continue;
+            }
+
+            // Value keywords: true, false, null — always valid as bare words on the RHS
+            if (in_array($lower, self::VALUE_KEYWORDS, true)) {
+                $tokens[] = ['type' => 'VALUE', 'value' => $lower];
+                continue;
+            }
+
+            // Everything else must be a known field name
+            if (! in_array($word, $this->allowedFields, true)) {
+                throw new \InvalidArgumentException("Unknown field or variable: {$word}");
             }
 
             $tokens[] = ['type' => 'FIELD', 'value' => $word];

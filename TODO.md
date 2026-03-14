@@ -1,9 +1,6 @@
 
 ## TODO
 
-- Add API rules
-    - Use symfony/expression-language [Deprecated]
-    - Fix bug: lint api rules on create n update
 - Handle field editing
     - Rename field as old field
     - Creates new field
@@ -17,3 +14,7 @@
 - Hide fields e.g password, token_key from responses
 - Add manage_rule to allow updating password field for auth collections
 - Make jwt:secret command to generate jwt secret
+
+- QueryFilter validation against allowed fields will check for both FIELD and VALUE
+    - e.g id = id // pass id on the right will be parsed as string
+    - e.g id = foo // failed, foo is not on the context/allowed fields

@@ -13,7 +13,7 @@ class GetRecordsAction
     {
         Gate::authorize('list-records', $collection);
 
-        $query = Record::of($collection)
+        $record = Record::of($collection)
             ->applyRule('list')
             ->applyFilter($filters ?? '');
 
@@ -21,6 +21,6 @@ class GetRecordsAction
         $perPage = max(0, min($perPage, 100));
         $perPage = $perPage > $maxPerPage ? $maxPerPage : $perPage;
 
-        return $query->paginate($perPage);
+        return $record->paginate($perPage);
     }
 }

@@ -4,6 +4,7 @@ namespace App\Domain\Records\QueryBuilder;
 
 use App\Domain\QueryCompiler\Services\QueryFilter;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Arr;
 use RuntimeException;
 
 class RecordBuilder extends Builder
@@ -21,7 +22,8 @@ class RecordBuilder extends Builder
             return $this;
         }
 
-        $this->where(fn ($q) => QueryFilter::for($q)->run($rule));
+        $allowedFields = Arr::pluck($collection->fields, 'name');
+        $this->where(fn ($q) => QueryFilter::for($q, $allowedFields)->run($rule));
 
         return $this;
     }
@@ -32,6 +34,12 @@ class RecordBuilder extends Builder
             return $this;
         }
 
-        return $this->where(fn ($q) => QueryFilter::for($q)->run($filter));
+        if (! $collection = $this->getModel()?->collection) {
+            throw new RuntimeException("Model's collection is not set");
+        }
+
+        $allowedFields = Arr::pluck($collection->fields ?? [], 'name');
+
+        return $this->where(fn ($q) => QueryFilter::for($q, $allowedFields)->run($filter));
     }
 }
