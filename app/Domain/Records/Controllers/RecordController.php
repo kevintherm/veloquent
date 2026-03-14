@@ -8,7 +8,6 @@ use App\Domain\Records\Actions\DeleteRecordAction;
 use App\Domain\Records\Actions\GetRecordsAction;
 use App\Domain\Records\Actions\ShowRecordAction;
 use App\Domain\Records\Actions\UpdateRecordAction;
-use App\Domain\Records\Models\Record;
 use App\Domain\Records\Requests\StoreRecordRequest;
 use App\Domain\Records\Requests\UpdateRecordRequest;
 use App\Infrastructure\Http\Controllers\ApiController;

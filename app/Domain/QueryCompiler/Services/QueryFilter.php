@@ -216,13 +216,13 @@ class QueryFilter
             }
 
             return match ($name) {
-                'daysago'      => now()->subDays($arg),
-                'daysfromnow'  => now()->addDays($arg),
-                'weeksago'     => now()->subWeeks($arg),
+                'daysago' => now()->subDays($arg),
+                'daysfromnow' => now()->addDays($arg),
+                'weeksago' => now()->subWeeks($arg),
                 'weeksfromnow' => now()->addWeeks($arg),
-                'monthsago'    => now()->subMonths($arg),
-                'monthsfromnow'=> now()->addMonths($arg),
-                'yearsago'     => now()->subYears($arg),
+                'monthsago' => now()->subMonths($arg),
+                'monthsfromnow' => now()->addMonths($arg),
+                'yearsago' => now()->subYears($arg),
                 'yearsfromnow' => now()->addYears($arg),
             };
         }
@@ -232,27 +232,27 @@ class QueryFilter
         }
 
         return match ($name) {
-            'now'          => now(),
-            'today'        => now()->startOfDay(),
-            'yesterday'    => now()->subDay()->startOfDay(),
-            'tomorrow'     => now()->addDay()->startOfDay(),
-            'thisweek'     => now()->startOfWeek(),
-            'lastweek'     => now()->subWeek()->startOfWeek(),
-            'nextweek'     => now()->addWeek()->startOfWeek(),
-            'thismonth'    => now()->startOfMonth(),
-            'lastmonth'    => now()->subMonth()->startOfMonth(),
-            'nextmonth'    => now()->addMonth()->startOfMonth(),
-            'thisyear'     => now()->startOfYear(),
-            'lastyear'     => now()->subYear()->startOfYear(),
-            'nextyear'     => now()->addYear()->startOfYear(),
-            'startofday'   => now()->startOfDay(),
-            'endofday'     => now()->endOfDay(),
-            'startofweek'  => now()->startOfWeek(),
-            'endofweek'    => now()->endOfWeek(),
+            'now' => now(),
+            'today' => now()->startOfDay(),
+            'yesterday' => now()->subDay()->startOfDay(),
+            'tomorrow' => now()->addDay()->startOfDay(),
+            'thisweek' => now()->startOfWeek(),
+            'lastweek' => now()->subWeek()->startOfWeek(),
+            'nextweek' => now()->addWeek()->startOfWeek(),
+            'thismonth' => now()->startOfMonth(),
+            'lastmonth' => now()->subMonth()->startOfMonth(),
+            'nextmonth' => now()->addMonth()->startOfMonth(),
+            'thisyear' => now()->startOfYear(),
+            'lastyear' => now()->subYear()->startOfYear(),
+            'nextyear' => now()->addYear()->startOfYear(),
+            'startofday' => now()->startOfDay(),
+            'endofday' => now()->endOfDay(),
+            'startofweek' => now()->startOfWeek(),
+            'endofweek' => now()->endOfWeek(),
             'startofmonth' => now()->startOfMonth(),
-            'endofmonth'   => now()->endOfMonth(),
-            'startofyear'  => now()->startOfYear(),
-            'endofyear'    => now()->endOfYear(),
+            'endofmonth' => now()->endOfMonth(),
+            'startofyear' => now()->startOfYear(),
+            'endofyear' => now()->endOfYear(),
         };
     }
 
@@ -346,6 +346,7 @@ class QueryFilter
                     $num .= $src[$i++];
                 }
                 $tokens[] = ['type' => 'VALUE', 'value' => $num];
+
                 continue;
             }
 
@@ -364,10 +365,12 @@ class QueryFilter
             // Keyword logical operators (word form)
             if ($lower === 'and') {
                 $tokens[] = ['type' => 'AND', 'value' => '&&'];
+
                 continue;
             }
             if ($lower === 'or') {
                 $tokens[] = ['type' => 'OR', 'value' => '||'];
+
                 continue;
             }
 
@@ -391,19 +394,22 @@ class QueryFilter
                         if ($depth === 0) {
                             break;
                         }
+
                         continue;
                     }
                     $args .= $src[$j++];
                 }
                 $i = $j;
 
-                $tokens[] = ['type' => 'DATE_FUNC', 'value' => $lower . $args];
+                $tokens[] = ['type' => 'DATE_FUNC', 'value' => $lower.$args];
+
                 continue;
             }
 
             // Value keywords: true, false, null — always valid as bare words on the RHS
             if (in_array($lower, self::VALUE_KEYWORDS, true)) {
                 $tokens[] = ['type' => 'VALUE', 'value' => $lower];
+
                 continue;
             }
 

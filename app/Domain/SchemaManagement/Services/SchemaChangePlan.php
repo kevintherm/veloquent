@@ -54,13 +54,17 @@ final class SchemaChangePlan
 
     /**
      * Merge system fields with user fields for metadata storage.
-     * System fields are always prepended.
+     * Places id first, user fields in middle, and timestamps last.
      */
     public static function mergeWithSystemFields(array $fields): array
     {
         $cleaned = self::cleanFields($fields);
-
-        return array_merge(self::getSystemFields(), $cleaned);
+        
+        $systemFields = self::getSystemFields();
+        $idField = [$systemFields[0]]; // id
+        $timestampFields = [$systemFields[1], $systemFields[2]]; // created_at, updated_at
+        
+        return [...$idField, ...$cleaned, ...$timestampFields];
     }
 
     /**
