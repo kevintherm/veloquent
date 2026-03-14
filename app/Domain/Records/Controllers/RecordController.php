@@ -10,6 +10,7 @@ use App\Domain\Records\Actions\ShowRecordAction;
 use App\Domain\Records\Actions\UpdateRecordAction;
 use App\Domain\Records\Requests\StoreRecordRequest;
 use App\Domain\Records\Requests\UpdateRecordRequest;
+use App\Domain\Records\Resources\RecordResource;
 use App\Infrastructure\Http\Controllers\ApiController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -32,6 +33,8 @@ class RecordController extends ApiController
             $request->input('per_page', 15)
         );
 
+        $records->through(fn ($record) => RecordResource::make($record));
+
         return $this->successResponse($records);
     }
 
@@ -42,14 +45,18 @@ class RecordController extends ApiController
             $request->getRecordData()
         );
 
+        $record = RecordResource::make($record);
+
         return $this->successResponse($record, 'Record created successfully', 201);
     }
 
     public function show(Collection $collection, string $recordId): JsonResponse
     {
-        $recordData = $this->showRecordAction->execute($collection, $recordId);
+        $record = $this->showRecordAction->execute($collection, $recordId);
 
-        return $this->successResponse($recordData);
+        $record = RecordResource::make($record);
+
+        return $this->successResponse($record);
     }
 
     public function update(UpdateRecordRequest $request, Collection $collection, string $recordId): JsonResponse
@@ -60,7 +67,9 @@ class RecordController extends ApiController
             $request->getRecordData(),
         );
 
-        return $this->successResponse($updatedRecord, 'Record updated successfully');
+        $record = RecordResource::make($updatedRecord);
+
+        return $this->successResponse($record, 'Record updated successfully');
     }
 
     public function destroy(Collection $collection, string $recordId): JsonResponse
