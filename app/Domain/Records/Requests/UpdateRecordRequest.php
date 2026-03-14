@@ -27,6 +27,6 @@ class UpdateRecordRequest extends BaseRecordRequest
 
     public function getRecordId(): string
     {
-        return $this->route('record')->id;
+        return $this->route('record');
     }
 }

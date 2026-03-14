@@ -3,6 +3,7 @@
 use App\Domain\Auth\Controllers\AuthController;
 use App\Domain\Collections\Controllers\CollectionController;
 use App\Domain\Records\Controllers\RecordController;
+use App\Http\Controllers\OnboardingController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('collections')->group(function () {
@@ -30,4 +31,4 @@ Route::prefix('collections/{collection}/auth')->name('collections.auth.')->group
     Route::post('/refresh', [AuthController::class, 'refresh'])->name('refresh');
 });
 
-Route::post('onboarding/superuser', [\App\Http\Controllers\OnboardingController::class, 'createSuperuser'])->name('onboarding.superuser.create');
+Route::post('onboarding/superuser', [OnboardingController::class, 'createSuperuser'])->name('onboarding.superuser.create');

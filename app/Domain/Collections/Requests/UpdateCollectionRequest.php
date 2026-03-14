@@ -27,6 +27,12 @@ class UpdateCollectionRequest extends FormRequest
             ],
             'type' => ['sometimes', new Enum(CollectionType::class)],
             'description' => 'nullable|string',
+            'api_rules' => 'nullable|array',
+            'api_rules.list' => 'nullable|string',
+            'api_rules.view' => 'nullable|string',
+            'api_rules.create' => 'nullable|string',
+            'api_rules.update' => 'nullable|string',
+            'api_rules.delete' => 'nullable|string',
 
             'fields' => 'sometimes|array|min:1',
             'fields.*' => ['required', 'array'],

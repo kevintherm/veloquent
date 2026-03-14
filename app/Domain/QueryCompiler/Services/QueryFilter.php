@@ -4,6 +4,7 @@ namespace App\Domain\QueryCompiler\Services;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Arr;
 
 class QueryFilter
 {
@@ -42,6 +43,25 @@ class QueryFilter
     public function __construct(Builder $query)
     {
         $this->query = $query;
+    }
+
+    public static function for(Builder $query): self
+    {
+        return new self($query);
+    }
+
+    public function validateFields(array $allowedFields): void
+    {
+        $fieldsInToken = collect(Arr::pluck(
+            Arr::filter($this->tokens, fn (array $token) => $token['type'] === 'FIELD'),
+            'value'
+        ));
+
+        $invalidFields = $fieldsInToken->diff($allowedFields);
+
+        if (! $invalidFields->isEmpty()) {
+            throw new \InvalidArgumentException('Invalid fields in expression. Innvvalid fields: '.implode(', ', $invalidFields->toArray()));
+        }
     }
 
     public function run(string $filter): Builder
@@ -106,8 +126,18 @@ class QueryFilter
 
     private function applyCondition(Builder $q, bool $isOr): void
     {
-        $field = $this->consume()['value'];
-        $op = strtolower($this->consume()['value']);
+        $fieldToken = $this->consume();
+        if ($fieldToken['type'] !== 'FIELD') {
+            throw new \RuntimeException("Expected field name, got '{$fieldToken['value']}'");
+        }
+
+        $opToken = $this->consume();
+        if ($opToken['type'] !== 'OP') {
+            throw new \RuntimeException("Expected operator, got '{$opToken['value']}'");
+        }
+
+        $field = $fieldToken['value'];
+        $op = strtolower($opToken['value']);
 
         switch ($op) {
             case 'is null':

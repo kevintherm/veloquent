@@ -28,7 +28,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | The name of the default authentication collection.
-    | Used to create the default users table and 
+    | Used to create the default users table and
     | point the collection to the physical table.
     |
     | ! Changing this on runtime will cause issues with existing collections.

@@ -13,6 +13,7 @@ class UpdateCollectionAction
                 ->map(fn ($field) => [
                     'name' => $field['name'],
                     'type' => $field['type'],
+                    'api_rules' => $field['api_rules'] ?? [],
                     'nullable' => $field['nullable'] ?? false,
                     'unique' => $field['unique'] ?? false,
                     'default' => $field['default'] ?? null,

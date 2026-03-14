@@ -5,11 +5,14 @@ namespace App\Domain\Records\Models;
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Records\Observers\RecordObserver;
+use App\Domain\Records\QueryBuilder\RecordBuilder;
 use App\Infrastructure\Traits\Filterable;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Attributes\UseEloquentBuilder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
+#[UseEloquentBuilder(RecordBuilder::class)]
 #[ObservedBy([RecordObserver::class])]
 class Record extends Authenticatable
 {
@@ -27,7 +30,7 @@ class Record extends Authenticatable
     public function __construct(array $attributes = [])
     {
         if (! static::$allowDirectInstantiation) {
-            throw new \RuntimeException('Record must be instantiated using Record::forCollection($collection)');
+            throw new \RuntimeException('Record must be instantiated using Record::of($collection)');
         }
 
         parent::__construct($attributes);
@@ -36,7 +39,7 @@ class Record extends Authenticatable
     /**
      * Create a new Record instance for a specific collection
      */
-    public static function forCollection(Collection $collection): self
+    public static function of(Collection $collection): self
     {
         static::$allowDirectInstantiation = true;
         $instance = new self;
@@ -73,15 +76,15 @@ class Record extends Authenticatable
 
     /**
      * Override newInstance so Laravel's query builder hydrates records through
-     * forCollection rather than calling `new static` directly.
+     * of($collection) rather than calling `new static` directly.
      */
     public function newInstance($attributes = [], $exists = false): static
     {
         if ($this->collection === null) {
-            throw new \RuntimeException('Record must be instantiated using Record::forCollection($collection)');
+            throw new \RuntimeException('Record must be instantiated using Record::of($collection)');
         }
 
-        $model = static::forCollection($this->collection);
+        $model = static::of($this->collection);
         $model->exists = $exists;
         $model->setConnection($this->getConnectionName());
         $model->setTable($this->getTable());

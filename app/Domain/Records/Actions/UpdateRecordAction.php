@@ -6,15 +6,22 @@ use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Records\Models\Record;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 class UpdateRecordAction
 {
-    public function execute(Collection $collection, Record $record, array $data): ?array
+    public function execute(Collection $collection, string $recordId, array $data): ?array
     {
+        Gate::authorize('update-records', $collection);
+
         $isAuthCollection = $collection->type === CollectionType::Auth;
         $bypassSuperuser = Auth::user()?->getTable() === 'superusers';
+
+        $record = Record::of($collection)
+            ->applyRule('update')
+            ->findOrFail($recordId);
 
         if ($isAuthCollection
             && ! $bypassSuperuser
