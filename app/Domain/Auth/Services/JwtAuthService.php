@@ -107,7 +107,7 @@ class JwtAuthService
             return null;
         }
 
-        return Record::forCollection($collection)->where('token_key', $payload['token_key'])->where('id', $payload['sub'])->first();
+        return Record::of($collection)->where('token_key', $payload['token_key'])->where('id', $payload['sub'])->first();
     }
 
     /**
@@ -131,7 +131,7 @@ class JwtAuthService
             ->where('type', CollectionType::Auth)
             ->firstOrFail();
 
-        $user = Record::forCollection($collection)->findOrFail($refreshToken->record_id);
+        $user = Record::of($collection)->findOrFail($refreshToken->record_id);
 
         $refreshToken->delete();
 

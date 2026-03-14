@@ -4,7 +4,9 @@ namespace App\Domain\Records\Controllers;
 
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Records\Actions\CreateRecordAction;
+use App\Domain\Records\Actions\DeleteRecordAction;
 use App\Domain\Records\Actions\GetRecordsAction;
+use App\Domain\Records\Actions\ShowRecordAction;
 use App\Domain\Records\Actions\UpdateRecordAction;
 use App\Domain\Records\Models\Record;
 use App\Domain\Records\Requests\StoreRecordRequest;
@@ -12,23 +14,22 @@ use App\Domain\Records\Requests\UpdateRecordRequest;
 use App\Infrastructure\Http\Controllers\ApiController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
 
 class RecordController extends ApiController
 {
     public function __construct(
         private GetRecordsAction $getRecordsAction,
         private CreateRecordAction $createRecordAction,
+        private ShowRecordAction $showRecordAction,
         private UpdateRecordAction $updateRecordAction,
+        private DeleteRecordAction $deleteRecordAction,
     ) {}
 
     public function index(Request $request, Collection $collection): JsonResponse
     {
-        Gate::authorize('list-records', $collection);
-
         $records = $this->getRecordsAction->execute(
             $collection,
-            $request->input('filters', ''),
+            $request->input('filter', ''),
             $request->input('per_page', 15)
         );
 
@@ -37,8 +38,6 @@ class RecordController extends ApiController
 
     public function store(StoreRecordRequest $request, Collection $collection): JsonResponse
     {
-        Gate::authorize('create-records', $collection);
-
         $record = $this->createRecordAction->execute(
             $collection,
             $request->getRecordData()
@@ -47,31 +46,27 @@ class RecordController extends ApiController
         return $this->successResponse($record, 'Record created successfully', 201);
     }
 
-    public function show(Collection $collection, Record $record): JsonResponse
+    public function show(Collection $collection, string $recordId): JsonResponse
     {
-        Gate::authorize('view-records', $collection);
+        $recordData = $this->showRecordAction->execute($collection, $recordId);
 
-        return $this->successResponse($record);
+        return $this->successResponse($recordData);
     }
 
-    public function update(UpdateRecordRequest $request, Collection $collection, Record $record): JsonResponse
+    public function update(UpdateRecordRequest $request, Collection $collection, string $recordId): JsonResponse
     {
-        Gate::authorize('update-records', $collection);
-
         $updatedRecord = $this->updateRecordAction->execute(
             $collection,
-            $record,
+            $recordId,
             $request->getRecordData(),
         );
 
         return $this->successResponse($updatedRecord, 'Record updated successfully');
     }
 
-    public function destroy(Collection $collection, Record $record): JsonResponse
+    public function destroy(Collection $collection, string $recordId): JsonResponse
     {
-        Gate::authorize('delete-records', $collection);
-
-        $record->delete();
+        $this->deleteRecordAction->execute($collection, $recordId);
 
         return $this->successResponse([], 'Record deleted successfully.');
     }

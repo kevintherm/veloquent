@@ -20,7 +20,7 @@ class OnboardingController extends ApiController
             return $this->errorResponse('Superusers collection not found', Response::HTTP_NOT_FOUND);
         }
 
-        $superuser = Record::forCollection($collection);
+        $superuser = Record::of($collection);
 
         if ($superuser->exists()) {
             return $this->errorResponse('Superuser already exists', Response::HTTP_CONFLICT);

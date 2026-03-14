@@ -29,7 +29,7 @@ class AuthController extends ApiController
 
         $credentials = $request->only('email', 'password');
 
-        $user = Record::forCollection($collection)->where('email', $credentials['email'])->first();
+        $user = Record::of($collection)->where('email', $credentials['email'])->first();
 
         if (! $user || ! Hash::check($credentials['password'], $user->password)) {
             return $this->errorResponse('Invalid credentials.', Response::HTTP_UNAUTHORIZED);

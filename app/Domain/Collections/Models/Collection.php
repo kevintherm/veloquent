@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 #[ObservedBy(CollectionObserver::class)]
 class Collection extends Model
 {
-    use HasUlids, Filterable;
+    use Filterable, HasUlids;
 
     protected $fillable = ['type', 'name', 'description', 'fields', 'api_rules', 'is_system', 'schema_updated_at'];
 

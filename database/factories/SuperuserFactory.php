@@ -2,11 +2,12 @@
 
 namespace Database\Factories;
 
+use App\Models\Superuser;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Superuser>
+ * @extends Factory<Superuser>
  */
 class SuperuserFactory extends Factory
 {

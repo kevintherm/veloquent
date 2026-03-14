@@ -2,15 +2,8 @@
 ## TODO
 
 - Add API rules
-    - Use symfony/expression-language
-    - Flow:
-        - Read:
-            - Use query filtering to filter records
-        - Write:
-            - Use query filtering to filter records (e.g request.auth.user == id && status == 1)
-            - Fetch Data
-            - Evaluate expression
-            - Return data based on truthy value
+    - Use symfony/expression-language [Deprecated]
+    - Fix bug: lint api rules on create n update
 - Handle field editing
     - Rename field as old field
     - Creates new field

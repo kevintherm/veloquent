@@ -27,15 +27,6 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::bind('collection', function ($value) {
                 return Collection::where('id', $value)->orWhere('name', $value)->firstOrFail();
             });
-
-            Route::bind('record', function ($value, $route) {
-                $collection = $route->parameter('collection');
-                if (! $collection) {
-                    throw new ModelNotFoundException('Collection not found');
-                }
-
-                return Record::forCollection($collection)->findOrFail($value);
-            });
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
