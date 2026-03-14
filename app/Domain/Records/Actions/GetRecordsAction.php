@@ -4,7 +4,6 @@ namespace App\Domain\Records\Actions;
 
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Records\Models\Record;
-use App\Domain\Records\Resources\RecordResource;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Gate;
 
@@ -19,9 +18,8 @@ class GetRecordsAction
             ->applyFilter($filters ?? '');
 
         $maxPerPage = config('velo.records_per_page_max');
-        $perPage = max(0, min($perPage, 100));
-        $perPage = $perPage > $maxPerPage ? $maxPerPage : $perPage;
+        $perPage = max(0, min($perPage, $maxPerPage));
 
-        return $record->paginate($perPage)->through(fn ($record) => RecordResource::make($record));
+        return $record->paginate($perPage);
     }
 }
