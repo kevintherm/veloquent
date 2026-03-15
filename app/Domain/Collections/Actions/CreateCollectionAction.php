@@ -14,28 +14,15 @@ class CreateCollectionAction
     {
         $isAuthCollection = ($data['type'] ?? null) === CollectionType::Auth->value;
 
-        $fields = collect($data['fields'])
-            ->map(fn ($field) => [
-                'name' => $field['name'],
-                'type' => $field['type'],
-                'nullable' => $field['nullable'] ?? false,
-                'unique' => $field['unique'] ?? false,
-                'default' => $field['default'] ?? null,
-                'length' => $field['length'] ?? null,
-            ])
-            ->values()
-            ->all();
-
-        $cleanedFields = SchemaChangePlan::cleanFields($fields, $isAuthCollection);
+        $mergedFields = SchemaChangePlan::mergeWithSystemFields($data['fields'], $isAuthCollection);
 
         if (isset($data['api_rules'])) {
-            $allFields = SchemaChangePlan::mergeWithSystemFields($cleanedFields);
-            $this->validateApiRules($data['api_rules'], Arr::pluck($allFields, 'name'));
+            $this->validateApiRules($data['api_rules'], Arr::pluck($mergedFields, 'name'));
         }
 
         return Collection::create([
             ...$data,
-            'fields' => $cleanedFields,
+            'fields' => $mergedFields,
         ]);
     }
 

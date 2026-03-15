@@ -52,10 +52,12 @@ class CollectionController extends ApiController
     {
         Gate::authorize('update-collections', [$collection]);
 
-        $collection = $this->updateCollectionAction->execute($collection, [
-            ...$request->validated(),
-            'fields' => $request->getFields(),
-        ]);
+        $payload = $request->validated();
+        if ($request->has('fields')) {
+            $payload['fields'] = $request->getFields();
+        }
+
+        $collection = $this->updateCollectionAction->execute($collection, $payload);
 
         return $this->successResponse($collection);
     }

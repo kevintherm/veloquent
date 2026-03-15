@@ -1,6 +1,8 @@
 
 ## TODO
 
+- Bypass API Rule when auth user is superuser
+- Fix QueryFilter tokenizer cannot catch list
 - Revamp fields handling
     - No silent ignore all properties
     - Save order
@@ -24,11 +26,17 @@
 - Optimize Record model
     - cache collections
 - Add manage_rule to allow updating password field for auth collections
-- Make jwt:secret command to generate jwt secret
 - Testing
 - Documentation
 
+- Migrate away from JWT to Sessions
 - Inconsistent RecordResource usage
 - QueryFilter validation against allowed fields will check for both FIELD and VALUE
     - e.g id = id // pass id on the right will be parsed as string
     - e.g id = foo // failed, foo is not on the context/allowed fields
+
+## Known Issue
+
+- Possibility of partial updating table if later statements fails. (MYSQL)
+    - Solution: 
+        - Recreate entire table

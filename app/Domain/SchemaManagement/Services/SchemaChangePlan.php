@@ -3,6 +3,7 @@
 namespace App\Domain\SchemaManagement\Services;
 
 use App\Domain\Collections\Enums\CollectionFieldType;
+use App\Domain\Collections\ValueObjects\Field;
 use App\Domain\SchemaManagement\Policies\SchemaPolicy;
 use App\Infrastructure\Exceptions\InvalidArgumentException;
 
@@ -17,19 +18,6 @@ final class SchemaChangePlan
      * Auth-specific reserved field names that cannot be modified or deleted.
      */
     private const AUTH_RESERVED_FIELD_NAMES = ['email', 'password', 'email_visibility', 'verified', 'token_key'];
-
-    /**
-     * Clean fields array by removing any reserved fields.
-     * Reserved fields coming from request are silently ignored.
-     */
-    public static function cleanFields(array $fields, bool $isAuthCollection = false): array
-    {
-        $reservedFields = self::getAllReservedFields($isAuthCollection);
-
-        return array_values(array_filter($fields, function ($field) use ($reservedFields) {
-            return ! in_array($field['name'] ?? '', $reservedFields, true);
-        }));
-    }
 
     /**
      * Get auth reserved field names.
@@ -59,41 +47,137 @@ final class SchemaChangePlan
     public static function getSystemFields(): array
     {
         return [
-            [
+            self::normalizeFieldDefinition([
                 'name' => 'id',
-                'type' => CollectionFieldType::Text,
+                'type' => CollectionFieldType::Text->value,
                 'nullable' => false,
                 'unique' => true,
                 'length' => 26,
-            ],
-            [
+            ]),
+            self::normalizeFieldDefinition([
                 'name' => 'created_at',
-                'type' => CollectionFieldType::Datetime,
+                'type' => CollectionFieldType::Datetime->value,
                 'nullable' => false,
                 'unique' => false,
-            ],
-            [
+            ]),
+            self::normalizeFieldDefinition([
                 'name' => 'updated_at',
-                'type' => CollectionFieldType::Datetime,
+                'type' => CollectionFieldType::Datetime->value,
                 'nullable' => false,
                 'unique' => false,
-            ],
+            ]),
+        ];
+    }
+
+    /**
+     * Get auth reserved fields with proper metadata for storage.
+     */
+    public static function getAuthSystemFields(): array
+    {
+        return [
+            self::normalizeFieldDefinition([
+                'name' => 'email',
+                'type' => CollectionFieldType::Email->value,
+                'nullable' => false,
+                'unique' => true,
+                'length' => 255,
+            ]),
+            self::normalizeFieldDefinition([
+                'name' => 'password',
+                'type' => CollectionFieldType::Text->value,
+                'nullable' => false,
+                'unique' => false,
+                'length' => 255,
+            ]),
+            self::normalizeFieldDefinition([
+                'name' => 'email_visibility',
+                'type' => CollectionFieldType::Boolean->value,
+                'nullable' => true,
+                'unique' => false,
+                'default' => true,
+            ]),
+            self::normalizeFieldDefinition([
+                'name' => 'verified',
+                'type' => CollectionFieldType::Boolean->value,
+                'nullable' => true,
+                'unique' => false,
+                'default' => false,
+            ]),
+            self::normalizeFieldDefinition([
+                'name' => 'token_key',
+                'type' => CollectionFieldType::Text->value,
+                'nullable' => false,
+                'unique' => false,
+                'length' => 255,
+            ]),
         ];
     }
 
     /**
      * Merge system fields with user fields for metadata storage.
-     * Places id first, user fields in middle, and timestamps last.
+     * Places id first, auth system fields second (for auth collections), user fields next, and timestamps last.
      */
-    public static function mergeWithSystemFields(array $fields): array
+    public static function mergeWithSystemFields(array $userFields, bool $isAuthCollection = false): array
     {
-        $cleaned = self::cleanFields($fields);
+        $reservedDefinitions = self::getReservedFieldDefinitions($isAuthCollection);
+        $reservedNames = array_keys($reservedDefinitions);
 
-        $systemFields = self::getSystemFields();
-        $idField = [$systemFields[0]]; // id
-        $timestampFields = [$systemFields[1], $systemFields[2]]; // created_at, updated_at
+        $normalizedUserFields = collect($userFields)
+            ->map(fn (array|Field $field) => self::normalizeInputField($field))
+            ->reject(fn (array $field) => in_array($field['name'], $reservedNames, true))
+            ->values()
+            ->all();
 
-        return [...$idField, ...$cleaned, ...$timestampFields];
+        $merged = [
+            $reservedDefinitions['id'],
+            ...($isAuthCollection ? self::getAuthSystemFields() : []),
+            ...$normalizedUserFields,
+            $reservedDefinitions['created_at'],
+            $reservedDefinitions['updated_at'],
+        ];
+
+        return collect($merged)
+            ->values()
+            ->map(function (array $field, int $index): array {
+                $field['order'] = $index;
+
+                return $field;
+            })
+            ->all();
+    }
+
+    /**
+     * Get canonical reserved field definitions keyed by field name.
+     */
+    public static function getReservedFieldDefinitions(bool $isAuthCollection = false): array
+    {
+        $base = collect(self::getSystemFields())->keyBy('name')->all();
+
+        if (! $isAuthCollection) {
+            return $base;
+        }
+
+        return [
+            ...$base,
+            ...collect(self::getAuthSystemFields())->keyBy('name')->all(),
+        ];
+    }
+
+    /**
+     * Prepare fields for DDL operations by stripping base reserved fields and metadata-only properties.
+     */
+    public static function stripForDDL(array $fields): array
+    {
+        return collect($fields)
+            ->map(fn (array|Field $field) => self::normalizeInputField($field))
+            ->reject(fn (array $field) => in_array($field['name'], self::BASE_RESERVED_FIELD_NAMES, true))
+            ->map(function (array $field): array {
+                unset($field['order'], $field['collection']);
+
+                return $field;
+            })
+            ->values()
+            ->all();
     }
 
     /**
@@ -104,7 +188,8 @@ final class SchemaChangePlan
     private static function compatibleTypeChanges(): array
     {
         return [
-            CollectionFieldType::Text->value => [CollectionFieldType::Text],
+            CollectionFieldType::Text->value => [CollectionFieldType::Text, CollectionFieldType::LongText],
+            CollectionFieldType::LongText->value => [CollectionFieldType::LongText, CollectionFieldType::Text],
             CollectionFieldType::Number->value => [CollectionFieldType::Number],
             CollectionFieldType::Boolean->value => [CollectionFieldType::Boolean],
             CollectionFieldType::Datetime->value => [CollectionFieldType::Datetime],
@@ -165,11 +250,19 @@ final class SchemaChangePlan
         }
 
         foreach ($plan->modifies as [$old, $new]) {
+            if ($isAuthCollection && in_array($old['name'], self::AUTH_RESERVED_FIELD_NAMES, true)) {
+                throw new \LogicException("Cannot modify auth reserved field '{$old['name']}'.");
+            }
+
             $this->assertValidField($new);
             $this->assertCompatibleChange($old, $new);
         }
 
         foreach ($plan->drops as $field) {
+            if ($isAuthCollection && in_array($field['name'], self::AUTH_RESERVED_FIELD_NAMES, true)) {
+                throw new \LogicException("Cannot drop auth reserved field '{$field['name']}'.");
+            }
+
             if ($field['required'] ?? false) {
                 throw new \LogicException(
                     "Cannot drop required field '{$field['name']}'."
@@ -205,5 +298,25 @@ final class SchemaChangePlan
                 "Incompatible type change on field '{$new['name']}': cannot change '{$from->value}' to '{$to->value}'."
             );
         }
+    }
+
+    private static function normalizeFieldDefinition(array $field): array
+    {
+        $type = CollectionFieldType::from($field['type']);
+
+        return [
+            ...$type->defaultShape(),
+            ...$field,
+            'type' => $type->value,
+        ];
+    }
+
+    private static function normalizeInputField(array|Field $field): array
+    {
+        if ($field instanceof Field) {
+            return $field->toArray();
+        }
+
+        return self::normalizeFieldDefinition($field);
     }
 }

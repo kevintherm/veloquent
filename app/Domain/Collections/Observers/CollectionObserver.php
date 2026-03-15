@@ -9,6 +9,7 @@ use App\Domain\SchemaManagement\Models\SchemaJob;
 use App\Domain\SchemaManagement\Services\SchemaChangePlan;
 use App\Domain\SchemaManagement\Services\SchemaDDLService;
 use App\Infrastructure\Exceptions\InvalidArgumentException;
+use Illuminate\Support\Facades\DB;
 
 readonly class CollectionObserver
 {
@@ -25,15 +26,23 @@ readonly class CollectionObserver
 
         $this->startJob($collection, SchemaOperation::Create);
 
-        $isAuthCollection = $collection->type === CollectionType::Auth;
-        $userFields = SchemaChangePlan::cleanFields($collection->fields, $isAuthCollection);
-        $this->ddlService->createTable($collection->getPhysicalTableName(), $userFields);
-        $collection->schema_updated_at = now();
+        $tableName = $collection->getPhysicalTableName();
+
+        try {
+            $fieldsForDDL = SchemaChangePlan::stripForDDL($collection->fields ?? []);
+            $this->ddlService->createTable($tableName, $fieldsForDDL);
+            $collection->schema_updated_at = now();
+        } catch (\Throwable $e) {
+            if (! $this->isMySQL()) {
+                SchemaJob::where('table_name', $tableName)->delete();
+            }
+
+            throw $e;
+        }
     }
 
     public function created(Collection $collection): void
     {
-        $collection->fields = SchemaChangePlan::mergeWithSystemFields($collection->fields ?? []);
         $this->endJob($collection);
     }
 
@@ -48,35 +57,41 @@ readonly class CollectionObserver
             throw new InvalidArgumentException('Collection type cannot be changed');
         }
 
-        if ($collection->isDirty('fields')) {
-            $collection->fields = SchemaChangePlan::mergeWithSystemFields($collection->fields ?? []);
-        }
-
         $this->startJob($collection, SchemaOperation::Update);
 
-        if ($collection->isDirty('name')) {
-            $oldTableName = Collection::formatTableName($collection->getOriginal('name'), $collection->is_system);
-            $this->ddlService->renameTable($oldTableName, $collection->getPhysicalTableName());
+        $tableName = $collection->getPhysicalTableName();
+
+        try {
+            if ($collection->isDirty('name')) {
+                $oldTableName = Collection::formatTableName($collection->getOriginal('name'), $collection->is_system);
+                $this->ddlService->renameTable($oldTableName, $collection->getPhysicalTableName());
+                $collection->schema_updated_at = now();
+            }
+
+            if ($collection->isDirty('fields')) {
+                $originalFields = $this->extractFields($collection->getOriginal('fields'));
+                $newFields = $this->extractFields($collection->fields ?? []);
+
+                $isAuthCollection = $collection->type === CollectionType::Auth;
+                $originalFieldsForDDL = SchemaChangePlan::stripForDDL($originalFields);
+                $newFieldsForDDL = SchemaChangePlan::stripForDDL($newFields);
+
+                $this->ddlService->updateTable(
+                    $tableName,
+                    $originalFieldsForDDL,
+                    $newFieldsForDDL,
+                    $isAuthCollection
+                );
+            }
+
             $collection->schema_updated_at = now();
+        } catch (\Throwable $e) {
+            if (! $this->isMySQL()) {
+                SchemaJob::where('table_name', $tableName)->delete();
+            }
+
+            throw $e;
         }
-
-        if ($collection->isDirty('fields')) {
-            $originalFields = $collection->getOriginal('fields') ?? [];
-            $newFields = $collection->fields ?? [];
-
-            $isAuthCollection = $collection->type === CollectionType::Auth;
-            $originalFieldsCleaned = SchemaChangePlan::cleanFields($originalFields, $isAuthCollection);
-            $newFieldsCleaned = SchemaChangePlan::cleanFields($newFields, $isAuthCollection);
-
-            $this->ddlService->updateTable(
-                $collection->getPhysicalTableName(),
-                $originalFieldsCleaned,
-                $newFieldsCleaned,
-                $isAuthCollection
-            );
-        }
-
-        $collection->schema_updated_at = now();
     }
 
     public function updated(Collection $collection): void
@@ -127,5 +142,25 @@ readonly class CollectionObserver
         if (! empty($invalidKeys)) {
             throw new \InvalidArgumentException('Invalid api rules keys: '.implode(', ', $invalidKeys));
         }
+    }
+
+    private function isMySQL(): bool
+    {
+        return DB::getDriverName() === 'mysql';
+    }
+
+    private function extractFields(mixed $fields): array
+    {
+        if (is_array($fields)) {
+            return $fields;
+        }
+
+        if (is_string($fields) && $fields !== '') {
+            $decoded = json_decode($fields, true);
+
+            return is_array($decoded) ? $decoded : [];
+        }
+
+        return [];
     }
 }

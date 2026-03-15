@@ -2,6 +2,7 @@
 
 namespace App\Domain\Records\Models;
 
+use App\Domain\Collections\Enums\CollectionFieldType;
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Records\Observers\RecordObserver;
@@ -21,11 +22,15 @@ class Record extends Authenticatable
     use HasUlids;
 
     protected $guarded = [];
+
     public $timestamps = true;
+
     public ?Collection $collection = null;
+
     private static bool $allowDirectInstantiation = false;
+
     protected $hidden = [];
-    
+
     public function __construct(array $attributes = [])
     {
         if (! static::$allowDirectInstantiation) {
@@ -57,15 +62,10 @@ class Record extends Authenticatable
                 continue;
             }
 
-            match ($field['type']) {
-                'boolean' => $casts[$fieldName] = 'boolean',
-                'integer' => $casts[$fieldName] = 'integer',
-                'float', 'double' => $casts[$fieldName] = 'float',
-                'date' => $casts[$fieldName] = 'date',
-                'datetime' => $casts[$fieldName] = 'datetime',
-                'json', 'array' => $casts[$fieldName] = 'json',
-                default => null
-            };
+            $cast = CollectionFieldType::tryFrom($field['type'])?->eloquentCast();
+            if ($cast !== null) {
+                $casts[$fieldName] = $cast;
+            }
         }
 
         $instance->casts = $casts;

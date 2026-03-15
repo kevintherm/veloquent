@@ -4,8 +4,10 @@ namespace App\Domain\Collections\Requests;
 
 use App\Domain\Collections\Enums\CollectionFieldType;
 use App\Domain\Collections\Enums\CollectionType;
+use App\Domain\SchemaManagement\Services\SchemaChangePlan;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Enum;
+use Illuminate\Validation\Validator;
 
 class StoreCollectionRequest extends FormRequest
 {
@@ -16,7 +18,7 @@ class StoreCollectionRequest extends FormRequest
 
     public function rules(): array
     {
-        return [
+        $rules = [
             'name' => 'required|string|max:255|unique:collections,name|regex:/^[a-zA-Z_]+$/',
             'type' => ['required', new Enum(CollectionType::class)],
             'description' => 'nullable|string',
@@ -34,22 +36,68 @@ class StoreCollectionRequest extends FormRequest
             'fields.*.nullable' => 'sometimes|boolean',
             'fields.*.unique' => 'sometimes|boolean',
             'fields.*.default' => 'sometimes',
-            'fields.*.length' => 'sometimes|integer|min:1',
         ];
+
+        foreach ($this->input('fields', []) as $index => $field) {
+            $type = CollectionFieldType::tryFrom($field['type'] ?? '');
+
+            if ($type === null) {
+                continue;
+            }
+
+            foreach ($type->typeValidationRules("fields.{$index}") as $key => $value) {
+                $rules[$key] = $value;
+            }
+        }
+
+        return $rules;
     }
 
     public function getFields(): array
     {
         return collect($this->validated()['fields'])
-            ->map(fn ($field) => [
-                'name' => $field['name'],
-                'type' => $field['type'],
-                'nullable' => $field['nullable'] ?? false,
-                'unique' => $field['unique'] ?? false,
-                'default' => $field['default'] ?? null,
-                'length' => $field['length'] ?? null,
-            ])
+            ->values()
+            ->map(function (array $field, int $index): array {
+                $type = CollectionFieldType::from($field['type']);
+
+                return collect([
+                    ...$type->defaultShape(),
+                    ...$field,
+                    'type' => $type->value,
+                    'order' => $index,
+                ])->only($type->allowedProperties())->all();
+            })
             ->values()
             ->all();
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            $type = CollectionType::tryFrom((string) $this->input('type'));
+            $isAuthCollection = $type === CollectionType::Auth;
+            $reservedNames = SchemaChangePlan::getAllReservedFields($isAuthCollection);
+
+            foreach ($this->input('fields', []) as $index => $field) {
+                $fieldName = $field['name'] ?? null;
+                if (is_string($fieldName) && in_array($fieldName, $reservedNames, true)) {
+                    $validator->errors()->add("fields.{$index}.name", 'Reserved field names cannot be defined manually.');
+                }
+
+                $fieldType = CollectionFieldType::tryFrom($field['type'] ?? '');
+                if ($fieldType === null || ! is_array($field)) {
+                    continue;
+                }
+
+                $unknownProperties = array_diff(array_keys($field), $fieldType->allowedProperties());
+
+                if ($unknownProperties !== []) {
+                    $validator->errors()->add(
+                        "fields.{$index}",
+                        'Unknown properties for field type '.$fieldType->value.': '.implode(', ', $unknownProperties)
+                    );
+                }
+            }
+        });
     }
 }
