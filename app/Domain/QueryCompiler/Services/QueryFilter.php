@@ -258,12 +258,43 @@ class QueryFilter
 
     private function parseListValue(): array
     {
-        $raw = $this->consume()['value'];
+        $this->expect('LPAREN');
 
-        return array_map(
-            fn ($v) => $this->castValue(trim($v)),
-            explode(',', trim($raw, '()'))
-        );
+        $values = [];
+
+        while (true) {
+            if ($this->peek('RPAREN')) {
+                $this->consume();
+
+                break;
+            }
+
+            $token = $this->consume();
+
+            if (! in_array($token['type'], ['VALUE', 'DATE_FUNC'], true)) {
+                throw new \RuntimeException("Expected list value, got '{$token['type']}' ('{$token['value']}')");
+            }
+
+            $values[] = $token['type'] === 'DATE_FUNC'
+                ? $this->resolveDateFunction($token['value'])
+                : $this->castValue($token['value']);
+
+            if ($this->peek('COMMA')) {
+                $this->consume();
+
+                continue;
+            }
+
+            $this->expect('RPAREN');
+
+            break;
+        }
+
+        if ($values === []) {
+            throw new \RuntimeException('List operator requires at least one value');
+        }
+
+        return $values;
     }
 
     // ── Tokenizer ─────────────────────────────────────────────────────────────
@@ -290,6 +321,12 @@ class QueryFilter
             }
             if ($src[$i] === ')') {
                 $tokens[] = ['type' => 'RPAREN', 'value' => ')'];
+                $i++;
+
+                continue;
+            }
+            if ($src[$i] === ',') {
+                $tokens[] = ['type' => 'COMMA', 'value' => ','];
                 $i++;
 
                 continue;
@@ -352,7 +389,7 @@ class QueryFilter
 
             // Read a bare word (stops at whitespace, parens, or logical symbols)
             $word = '';
-            while ($i < $len && ! ctype_space($src[$i]) && ! in_array($src[$i], ['(', ')', '&', '|'], true)) {
+            while ($i < $len && ! ctype_space($src[$i]) && ! in_array($src[$i], ['(', ')', ',', '&', '|'], true)) {
                 $word .= $src[$i++];
             }
 
