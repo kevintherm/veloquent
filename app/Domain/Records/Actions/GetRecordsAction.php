@@ -18,7 +18,7 @@ class GetRecordsAction
             ->applyFilter($filters ?? '');
 
         $maxPerPage = config('velo.records_per_page_max');
-        $perPage = max(0, min($perPage, $maxPerPage));
+        $perPage = max(1, min($perPage, $maxPerPage));
 
         return $record->paginate($perPage);
     }

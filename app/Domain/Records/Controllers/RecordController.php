@@ -34,7 +34,6 @@ class RecordController extends ApiController
         );
 
         $records = RecordResource::collection($records);
-
         return $this->successResponse($records);
     }
 
@@ -46,7 +45,6 @@ class RecordController extends ApiController
         );
 
         $record = new RecordResource($record);
-
         return $this->successResponse($record, 'Record created successfully', 201);
     }
 
@@ -55,7 +53,6 @@ class RecordController extends ApiController
         $record = $this->showRecordAction->execute($collection, $recordId);
 
         $record = new RecordResource($record);
-
         return $this->successResponse($record);
     }
 
@@ -68,7 +65,6 @@ class RecordController extends ApiController
         );
 
         $record = new RecordResource($updatedRecord);
-
         return $this->successResponse($record, 'Record updated successfully');
     }
 
