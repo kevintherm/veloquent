@@ -1,7 +1,7 @@
 
 ## TODO
 
-- Fix QueryFilter tokenizer cannot catch list
+- Apply api_rule to create record action
 - Revamp fields handling
     - No silent ignore all properties
     - Save order
