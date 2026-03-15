@@ -2,6 +2,7 @@
 
 namespace App\Domain\Collections\Models;
 
+use App\Domain\Collections\Casts\FieldCollectionCast;
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Observers\CollectionObserver;
 use App\Domain\Collections\QueryBuilder\CollectionBuilder;
@@ -22,7 +23,7 @@ class Collection extends Model
     {
         return [
             'type' => CollectionType::class,
-            'fields' => 'array',
+            'fields' => FieldCollectionCast::class,
             'api_rules' => 'array',
             'is_system' => 'boolean',
             'schema_updated_at' => 'datetime',

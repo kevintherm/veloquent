@@ -2,8 +2,10 @@
 
 namespace App\Domain\Records\Requests;
 
+use App\Domain\Collections\Enums\CollectionFieldType;
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
+use App\Domain\Collections\ValueObjects\Field;
 use Illuminate\Foundation\Http\FormRequest;
 
 abstract class BaseRecordRequest extends FormRequest
@@ -59,34 +61,18 @@ abstract class BaseRecordRequest extends FormRequest
 
     protected function getFieldTypeRule(string $fieldType): string
     {
-        return match ($fieldType) {
-            'string' => 'string',
-            'text' => 'string',
-            'integer' => 'integer',
-            'bigint' => 'integer',
-            'tinyint' => 'integer',
-            'float' => 'numeric',
-            'double' => 'numeric',
-            'decimal' => 'numeric',
-            'boolean' => 'boolean',
-            'datetime' => 'date',
-            'timestamp' => 'date',
-            'json' => 'json',
-            'longtext' => 'string',
-            'char' => 'string',
-            default => 'string',
-        };
+        return CollectionFieldType::tryFrom($fieldType)?->recordValidationRule() ?? 'string';
     }
 
-    protected function getSpecialFieldsRules(Collection $collection, array $field): array
+    protected function getSpecialFieldsRules(Collection $collection, Field $field): array
     {
         $isAuthCollection = $collection->type === CollectionType::Auth;
-        if ($isAuthCollection && $field['name'] === 'email') {
+        if ($isAuthCollection && $field->name === 'email') {
             return ['email:rfc,dns,spoof'];
         }
 
-        if ($isAuthCollection && $field['name'] === 'password') {
-            return ['string', 'min:8', 'confirmed'];
+        if ($isAuthCollection && $field->name === 'password') {
+            return ['string', 'min:8'];
         }
 
         return [];
