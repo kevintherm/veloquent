@@ -20,7 +20,7 @@ class UpdateRecordAction
         $authenticatedUser = Auth::user();
         $bypassSuperuser = $authenticatedUser instanceof Record && $authenticatedUser->isSuperuser();
 
-        $query = Record::of($collection);
+        $query = Record::of($collection)->newQuery();
 
         if (! $bypassSuperuser) {
             $query->applyRule('update');

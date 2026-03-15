@@ -4,6 +4,7 @@ namespace App\Domain\QueryCompiler\Services;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 
 class QueryFilter
 {
@@ -14,6 +15,14 @@ class QueryFilter
     private int $pos = 0;
 
     private array $allowedFields = [];
+
+    private array $evaluationContext = [];
+
+    private bool $allowUnknownFields = false;
+
+    private bool $isEvaluating = false;
+
+    private bool $resolveSystemReferences = false;
 
     private const VALUE_KEYWORDS = ['true', 'false', 'null'];
 
@@ -67,19 +76,59 @@ class QueryFilter
         $this->applyExpr($this->query, false);
     }
 
-    public function run(string $filter): Builder
+    public function run(string $filter, array $context = []): Builder
     {
         $filter = trim($filter);
         if ($filter === '') {
             return $this->query;
         }
 
-        $this->tokens = $this->tokenize($filter);
-        $this->pos = 0;
+        $this->evaluationContext = $context !== []
+            ? $context
+            : $this->buildRuntimeContext();
+        $this->resolveSystemReferences = true;
 
-        $this->applyExpr($this->query, false);
+        try {
+            $this->tokens = $this->tokenize($filter);
+            $this->pos = 0;
+
+            $this->applyExpr($this->query, false);
+        } finally {
+            $this->resolveSystemReferences = false;
+            $this->evaluationContext = [];
+        }
 
         return $this->query;
+    }
+
+    public function evaluate(string $filter, array $context = []): bool
+    {
+        $filter = trim($filter);
+        if ($filter === '') {
+            return true;
+        }
+
+        $this->evaluationContext = $context;
+        $this->allowUnknownFields = true;
+        $this->isEvaluating = true;
+
+        try {
+            $this->tokens = $this->tokenize($filter);
+            $this->pos = 0;
+
+            $result = $this->evaluateExpr();
+
+            if (isset($this->tokens[$this->pos])) {
+                $token = $this->tokens[$this->pos];
+                throw new \RuntimeException("Unexpected token '{$token['value']}'");
+            }
+
+            return $result;
+        } finally {
+            $this->allowUnknownFields = false;
+            $this->isEvaluating = false;
+            $this->evaluationContext = [];
+        }
     }
 
     // ── Recursive descent ─────────────────────────────────────────────────────
@@ -87,6 +136,11 @@ class QueryFilter
     private function applyExpr(Builder $q, bool $isOr): void
     {
         $this->applyOr($q, $isOr);
+    }
+
+    private function evaluateExpr(): bool
+    {
+        return $this->evaluateOr();
     }
 
     private function applyOr(Builder $q, bool $isOr): void
@@ -99,6 +153,18 @@ class QueryFilter
         }
     }
 
+    private function evaluateOr(): bool
+    {
+        $result = $this->evaluateAnd();
+
+        while ($this->peek('OR')) {
+            $this->consume();
+            $result = $result || $this->evaluateAnd();
+        }
+
+        return $result;
+    }
+
     private function applyAnd(Builder $q, bool $isOr): void
     {
         $this->applyPrimary($q, $isOr);
@@ -107,6 +173,18 @@ class QueryFilter
             $this->consume();
             $this->applyPrimary($q, false);
         }
+    }
+
+    private function evaluateAnd(): bool
+    {
+        $result = $this->evaluatePrimary();
+
+        while ($this->peek('AND')) {
+            $this->consume();
+            $result = $result && $this->evaluatePrimary();
+        }
+
+        return $result;
     }
 
     private function applyPrimary(Builder $q, bool $isOr): void
@@ -127,11 +205,28 @@ class QueryFilter
         $this->applyCondition($q, $isOr);
     }
 
+    private function evaluatePrimary(): bool
+    {
+        if ($this->peek('LPAREN')) {
+            $this->consume();
+            $result = $this->evaluateExpr();
+            $this->expect('RPAREN');
+
+            return $result;
+        }
+
+        return $this->evaluateCondition();
+    }
+
     private function applyCondition(Builder $q, bool $isOr): void
     {
         $fieldToken = $this->consume();
         if ($fieldToken['type'] !== 'FIELD') {
             throw new \RuntimeException("Expected field name, got '{$fieldToken['value']}'");
+        }
+
+        if ($this->isSystemReference($fieldToken['value'])) {
+            throw new \InvalidArgumentException('Invalid rule expression: expected FIELD OP VALUE and field cannot be @-prefixed.');
         }
 
         $opToken = $this->consume();
@@ -165,16 +260,107 @@ class QueryFilter
 
                 return;
 
+            case '=':
+                $value = $this->parseScalarValue();
+
+                if ($value === null) {
+                    $isOr ? $q->orWhereNull($field) : $q->whereNull($field);
+
+                    return;
+                }
+
+                $isOr
+                    ? $q->orWhere($field, '=', $value)
+                    : $q->where($field, '=', $value);
+
+                return;
+
+            case '!=':
+                $value = $this->parseScalarValue();
+
+                if ($value === null) {
+                    $isOr ? $q->orWhereNotNull($field) : $q->whereNotNull($field);
+
+                    return;
+                }
+
+                $isOr
+                    ? $q->orWhere($field, '!=', $value)
+                    : $q->where($field, '!=', $value);
+
+                return;
+
             default:
-                $token = $this->consume();
-                $value = $token['type'] === 'DATE_FUNC'
-                    ? $this->resolveDateFunction($token['value'])
-                    : $this->castValue($token['value']);
+                $value = $this->parseScalarValue();
 
                 $isOr
                     ? $q->orWhere($field, $op, $value)
                     : $q->where($field, $op, $value);
         }
+    }
+
+    private function evaluateCondition(): bool
+    {
+        $fieldToken = $this->consume();
+        if ($fieldToken['type'] !== 'FIELD') {
+            throw new \RuntimeException("Expected field name, got '{$fieldToken['value']}'");
+        }
+
+        if ($this->isSystemReference($fieldToken['value'])) {
+            throw new \InvalidArgumentException('Invalid rule expression: expected FIELD OP VALUE and field cannot be @-prefixed.');
+        }
+
+        $opToken = $this->consume();
+        if ($opToken['type'] !== 'OP') {
+            throw new \RuntimeException("Expected operator, got '{$opToken['value']}'");
+        }
+
+        $fieldValue = $this->resolveContextValue($fieldToken['value']);
+        $op = strtolower($opToken['value']);
+
+        return match ($op) {
+            'is null' => $fieldValue === null,
+            'is not null' => $fieldValue !== null,
+            'in' => in_array($fieldValue, $this->parseListValue(), false),
+            'not in' => ! in_array($fieldValue, $this->parseListValue(), false),
+            'like' => $this->matchesLike($fieldValue, $this->parseScalarValue()),
+            'not like' => ! $this->matchesLike($fieldValue, $this->parseScalarValue()),
+            '=', '!=', '>', '<', '>=', '<=' => $this->compareValues($fieldValue, $op, $this->parseScalarValue()),
+            default => throw new \RuntimeException("Unsupported operator '{$op}' for evaluation"),
+        };
+    }
+
+    private function resolveContextValue(string $field): mixed
+    {
+        $path = str_starts_with($field, '@')
+            ? substr($field, 1)
+            : $field;
+
+        return data_get($this->evaluationContext, $path);
+    }
+
+    private function buildRuntimeContext(): array
+    {
+        $request = request();
+        $authenticatedUser = Auth::user();
+
+        $authContext = is_object($authenticatedUser) && method_exists($authenticatedUser, 'getAttributes')
+            ? $authenticatedUser->getAttributes()
+            : null;
+
+        return [
+            'request' => [
+                'body' => $request->all(),
+                'param' => $request->route()?->parameters() ?? [],
+                'query' => $request->query(),
+                'auth' => $authContext,
+            ],
+        ];
+    }
+
+    private function shouldResolveSystemReferences(): bool
+    {
+        return $this->isEvaluating || $this->resolveSystemReferences;
     }
 
     // ── Value helpers ─────────────────────────────────────────────────────────
@@ -271,13 +457,19 @@ class QueryFilter
 
             $token = $this->consume();
 
-            if (! in_array($token['type'], ['VALUE', 'DATE_FUNC'], true)) {
+            if (! in_array($token['type'], ['VALUE', 'DATE_FUNC', 'FIELD'], true)) {
                 throw new \RuntimeException("Expected list value, got '{$token['type']}' ('{$token['value']}')");
             }
 
-            $values[] = $token['type'] === 'DATE_FUNC'
-                ? $this->resolveDateFunction($token['value'])
-                : $this->castValue($token['value']);
+            if ($token['type'] === 'DATE_FUNC') {
+                $values[] = $this->resolveDateFunction($token['value']);
+            } elseif ($token['type'] === 'FIELD' && $this->isSystemReference($token['value'])) {
+                $values[] = $this->shouldResolveSystemReferences()
+                    ? $this->resolveContextValue($token['value'])
+                    : $token['value'];
+            } else {
+                $values[] = $this->castValue($token['value']);
+            }
 
             if ($this->peek('COMMA')) {
                 $this->consume();
@@ -295,6 +487,69 @@ class QueryFilter
         }
 
         return $values;
+    }
+
+    private function parseScalarValue(): mixed
+    {
+        $token = $this->consume();
+
+        if (! in_array($token['type'], ['VALUE', 'DATE_FUNC', 'FIELD'], true)) {
+            throw new \RuntimeException("Expected value token, got '{$token['type']}' ('{$token['value']}')");
+        }
+
+        if ($token['type'] === 'FIELD') {
+            if (! $this->isSystemReference($token['value'])) {
+                throw new \RuntimeException("Expected value token, got 'FIELD' ('{$token['value']}')");
+            }
+
+            return $this->shouldResolveSystemReferences()
+                ? $this->resolveContextValue($token['value'])
+                : $token['value'];
+        }
+
+        return $token['type'] === 'DATE_FUNC'
+            ? $this->resolveDateFunction($token['value'])
+            : $this->castValue($token['value']);
+    }
+
+    private function isSystemReference(string $value): bool
+    {
+        return str_starts_with($value, '@');
+    }
+
+    private function matchesLike(mixed $subject, mixed $pattern): bool
+    {
+        if ($subject === null || $pattern === null) {
+            return false;
+        }
+
+        $subject = (string) $subject;
+        $pattern = (string) $pattern;
+
+        $regex = '/^'.str_replace(['%', '_'], ['.*', '.'], preg_quote($pattern, '/')).'$/u';
+
+        return preg_match($regex, $subject) === 1;
+    }
+
+    private function compareValues(mixed $left, string $op, mixed $right): bool
+    {
+        if ($left instanceof Carbon) {
+            $left = $left->getTimestamp();
+        }
+
+        if ($right instanceof Carbon) {
+            $right = $right->getTimestamp();
+        }
+
+        return match ($op) {
+            '=' => $left == $right,
+            '!=' => $left != $right,
+            '>' => $left > $right,
+            '<' => $left < $right,
+            '>=' => $left >= $right,
+            '<=' => $left <= $right,
+            default => throw new \RuntimeException("Unsupported comparison operator '{$op}'"),
+        };
     }
 
     // ── Tokenizer ─────────────────────────────────────────────────────────────
@@ -451,7 +706,9 @@ class QueryFilter
             }
 
             // Everything else must be a known field name
-            if (! in_array($word, $this->allowedFields, true)) {
+            $isSystemField = $this->isSystemReference($word);
+
+            if (! in_array($word, $this->allowedFields, true) && ! $this->allowUnknownFields && ! $isSystemField) {
                 throw new \InvalidArgumentException("Unknown field or variable: {$word}");
             }
 
