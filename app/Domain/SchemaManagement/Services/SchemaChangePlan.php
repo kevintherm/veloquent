@@ -9,23 +9,52 @@ use App\Infrastructure\Exceptions\InvalidArgumentException;
 final class SchemaChangePlan
 {
     /**
-     * System field names that are auto-managed and should be ignored from requests.
+     * Base reserved field names that are auto-managed and should be ignored from requests.
      */
-    private const SYSTEM_FIELD_NAMES = ['id', 'created_at', 'updated_at'];
+    private const BASE_RESERVED_FIELD_NAMES = ['id', 'created_at', 'updated_at'];
 
     /**
-     * Clean fields array by removing any system fields.
-     * System fields coming from request are silently ignored.
+     * Auth-specific reserved field names that cannot be modified or deleted.
      */
-    public static function cleanFields(array $fields): array
+    private const AUTH_RESERVED_FIELD_NAMES = ['email', 'password', 'email_visibility', 'verified', 'token_key'];
+
+    /**
+     * Clean fields array by removing any reserved fields.
+     * Reserved fields coming from request are silently ignored.
+     */
+    public static function cleanFields(array $fields, bool $isAuthCollection = false): array
     {
-        return array_values(array_filter($fields, function ($field) {
-            return ! in_array($field['name'] ?? '', self::SYSTEM_FIELD_NAMES, true);
+        $reservedFields = self::getAllReservedFields($isAuthCollection);
+
+        return array_values(array_filter($fields, function ($field) use ($reservedFields) {
+            return ! in_array($field['name'] ?? '', $reservedFields, true);
         }));
     }
 
     /**
-     * Get system fields with proper metadata for storage.
+     * Get auth reserved field names.
+     */
+    public static function getAuthReservedFields(): array
+    {
+        return self::AUTH_RESERVED_FIELD_NAMES;
+    }
+
+    /**
+     * Get all reserved field names for a given collection type.
+     */
+    public static function getAllReservedFields(bool $isAuthCollection = false): array
+    {
+        $fields = self::BASE_RESERVED_FIELD_NAMES;
+
+        if ($isAuthCollection) {
+            $fields = [...$fields, ...self::AUTH_RESERVED_FIELD_NAMES];
+        }
+
+        return $fields;
+    }
+
+    /**
+     * Get base reserved fields with proper metadata for storage.
      */
     public static function getSystemFields(): array
     {
@@ -59,11 +88,11 @@ final class SchemaChangePlan
     public static function mergeWithSystemFields(array $fields): array
     {
         $cleaned = self::cleanFields($fields);
-        
+
         $systemFields = self::getSystemFields();
         $idField = [$systemFields[0]]; // id
         $timestampFields = [$systemFields[1], $systemFields[2]]; // created_at, updated_at
-        
+
         return [...$idField, ...$cleaned, ...$timestampFields];
     }
 
@@ -100,7 +129,7 @@ final class SchemaChangePlan
      *
      * @throws InvalidArgumentException
      */
-    public static function buildPlan(array $before, array $after): self
+    public static function buildPlan(array $before, array $after, bool $isAuthCollection = false): self
     {
         $plan = new self;
 
@@ -121,7 +150,7 @@ final class SchemaChangePlan
             }
         }
 
-        $plan->validatePlan($plan);
+        $plan->validatePlan($plan, $isAuthCollection);
 
         return $plan;
     }
@@ -129,7 +158,7 @@ final class SchemaChangePlan
     /**
      * @throws InvalidArgumentException
      */
-    private function validatePlan(self $plan): void
+    private function validatePlan(self $plan, bool $isAuthCollection = false): void
     {
         foreach ($plan->adds as $field) {
             $this->assertValidField($field);

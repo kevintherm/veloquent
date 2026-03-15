@@ -97,9 +97,9 @@ readonly class SchemaDDLService
     /**
      * @throws InvalidArgumentException
      */
-    public function updateTable(string $table, array $before, array $after): void
+    public function updateTable(string $table, array $before, array $after, bool $isAuthCollection = false): void
     {
-        $plan = SchemaChangePlan::buildPlan($before, $after);
+        $plan = SchemaChangePlan::buildPlan($before, $after, $isAuthCollection);
 
         Schema::table($table, function (Blueprint $t) use ($plan) {
             foreach ($plan->renames as [$from, $to]) {

@@ -8,13 +8,10 @@ use Illuminate\Support\Facades\Gate;
 
 class CreateRecordAction
 {
-    public function execute(Collection $collection, array $data): array
+    public function execute(Collection $collection, array $data): Record
     {
         Gate::authorize('create-records', $collection);
 
-        $record = Record::of($collection);
-        $created = $record->create($data);
-
-        return $created->toArray();
+        return Record::of($collection)->create($data);
     }
 }

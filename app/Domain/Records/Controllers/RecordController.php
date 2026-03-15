@@ -33,7 +33,7 @@ class RecordController extends ApiController
             $request->input('per_page', 15)
         );
 
-        $records->through(fn ($record) => RecordResource::make($record));
+        $records = RecordResource::collection($records);
 
         return $this->successResponse($records);
     }
@@ -45,7 +45,7 @@ class RecordController extends ApiController
             $request->getRecordData()
         );
 
-        $record = RecordResource::make($record);
+        $record = new RecordResource($record);
 
         return $this->successResponse($record, 'Record created successfully', 201);
     }
@@ -54,7 +54,7 @@ class RecordController extends ApiController
     {
         $record = $this->showRecordAction->execute($collection, $recordId);
 
-        $record = RecordResource::make($record);
+        $record = new RecordResource($record);
 
         return $this->successResponse($record);
     }
@@ -67,7 +67,7 @@ class RecordController extends ApiController
             $request->getRecordData(),
         );
 
-        $record = RecordResource::make($updatedRecord);
+        $record = new RecordResource($updatedRecord);
 
         return $this->successResponse($record, 'Record updated successfully');
     }

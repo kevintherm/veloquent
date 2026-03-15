@@ -2,6 +2,7 @@
 
 namespace App\Domain\Collections\Actions;
 
+use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\QueryCompiler\Services\QueryFilter;
 use App\Domain\SchemaManagement\Services\SchemaChangePlan;
@@ -11,6 +12,8 @@ class CreateCollectionAction
 {
     public function execute(array $data): Collection
     {
+        $isAuthCollection = ($data['type'] ?? null) === CollectionType::Auth->value;
+
         $fields = collect($data['fields'])
             ->map(fn ($field) => [
                 'name' => $field['name'],
@@ -23,12 +26,16 @@ class CreateCollectionAction
             ->values()
             ->all();
 
-        $allFields = SchemaChangePlan::mergeWithSystemFields($fields);
-        $this->validateApiRules($data['api_rules'], Arr::pluck($allFields, 'name'));
+        $cleanedFields = SchemaChangePlan::cleanFields($fields, $isAuthCollection);
+
+        if (isset($data['api_rules'])) {
+            $allFields = SchemaChangePlan::mergeWithSystemFields($cleanedFields);
+            $this->validateApiRules($data['api_rules'], Arr::pluck($allFields, 'name'));
+        }
 
         return Collection::create([
             ...$data,
-            'fields' => $fields,
+            'fields' => $cleanedFields,
         ]);
     }
 
