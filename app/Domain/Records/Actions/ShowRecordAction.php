@@ -16,7 +16,7 @@ class ShowRecordAction
         $authenticatedUser = Auth::user();
         $bypassApiRules = $authenticatedUser instanceof Record && $authenticatedUser->isSuperuser();
 
-        $query = Record::of($collection);
+        $query = Record::of($collection)->newQuery();
 
         if (! $bypassApiRules) {
             $query->applyRule('view');

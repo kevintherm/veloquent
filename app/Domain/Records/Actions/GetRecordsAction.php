@@ -17,17 +17,19 @@ class GetRecordsAction
         $authenticatedUser = Auth::user();
         $bypassApiRules = $authenticatedUser instanceof Record && $authenticatedUser->isSuperuser();
 
-        $record = Record::of($collection);
+        $query = Record::of($collection)->newQuery();
 
         if (! $bypassApiRules) {
-            $record->applyRule('list');
+            $query->applyRule('list');
         }
 
-        $record->applyFilter($filters ?? '');
+        $query->applyFilter($filters ?? '');
 
         $maxPerPage = config('velo.records_per_page_max');
         $perPage = max(1, min($perPage, $maxPerPage));
 
-        return $record->paginate($perPage);
+        // dd($query->toSql(), $query->getBindings() ?? []);
+
+        return $query->paginate($perPage);
     }
 }

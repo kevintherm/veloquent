@@ -1,7 +1,6 @@
 
 ## TODO
 
-- Apply api_rule to create record action
 - Revamp fields handling
     - No silent ignore all properties
     - Save order
