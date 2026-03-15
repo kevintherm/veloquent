@@ -2,6 +2,7 @@
 
 namespace App\Domain\Collections\Actions;
 
+use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\QueryCompiler\Services\QueryFilter;
 use App\Domain\SchemaManagement\Services\SchemaChangePlan;
@@ -12,6 +13,8 @@ class UpdateCollectionAction
     public function execute(Collection $collection, array $data): Collection
     {
         if (isset($data['fields'])) {
+            $isAuthCollection = $collection->type === CollectionType::Auth;
+
             $data['fields'] = collect($data['fields'])
                 ->map(fn ($field) => [
                     'name' => $field['name'],
@@ -24,6 +27,8 @@ class UpdateCollectionAction
                 ])
                 ->values()
                 ->all();
+
+            $data['fields'] = SchemaChangePlan::cleanFields($data['fields'], $isAuthCollection);
         }
 
         $allFields = SchemaChangePlan::mergeWithSystemFields(array_merge($collection->fields, $data['fields'] ?? []));

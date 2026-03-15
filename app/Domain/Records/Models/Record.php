@@ -6,11 +6,14 @@ use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Records\Observers\RecordObserver;
 use App\Domain\Records\QueryBuilder\RecordBuilder;
+use App\Domain\Records\Resources\RecordResource;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Attributes\UseEloquentBuilder;
+use Illuminate\Database\Eloquent\Attributes\UseResource;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
+#[UseResource(RecordResource::class)]
 #[UseEloquentBuilder(RecordBuilder::class)]
 #[ObservedBy([RecordObserver::class])]
 class Record extends Authenticatable
@@ -18,13 +21,11 @@ class Record extends Authenticatable
     use HasUlids;
 
     protected $guarded = [];
-
     public $timestamps = true;
-
     public ?Collection $collection = null;
-
     private static bool $allowDirectInstantiation = false;
-
+    protected $hidden = [];
+    
     public function __construct(array $attributes = [])
     {
         if (! static::$allowDirectInstantiation) {
@@ -69,6 +70,10 @@ class Record extends Authenticatable
 
         $instance->casts = $casts;
 
+        if ($collection->type === CollectionType::Auth) {
+            $instance->hidden = ['password', 'token_key'];
+        }
+
         return $instance;
     }
 
@@ -87,6 +92,7 @@ class Record extends Authenticatable
         $model->setConnection($this->getConnectionName());
         $model->setTable($this->getTable());
         $model->mergeCasts($this->casts);
+        $model->hidden = $this->hidden;
         $model->fill((array) $attributes);
 
         return $model;

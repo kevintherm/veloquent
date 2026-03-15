@@ -8,14 +8,12 @@ use Illuminate\Support\Facades\Gate;
 
 class ShowRecordAction
 {
-    public function execute(Collection $collection, string $recordId): array
+    public function execute(Collection $collection, string $recordId): Record
     {
         Gate::authorize('view-records', $collection);
 
-        $record = Record::of($collection)
+        return Record::of($collection)
             ->applyRule('view')
             ->findOrFail($recordId);
-
-        return $record->toArray();
     }
 }

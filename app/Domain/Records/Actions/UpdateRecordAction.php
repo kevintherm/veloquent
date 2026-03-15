@@ -12,7 +12,7 @@ use Illuminate\Validation\ValidationException;
 
 class UpdateRecordAction
 {
-    public function execute(Collection $collection, string $recordId, array $data): ?array
+    public function execute(Collection $collection, string $recordId, array $data): Record
     {
         Gate::authorize('update-records', $collection);
 
@@ -44,7 +44,8 @@ class UpdateRecordAction
         }
 
         $record->update($data);
+        $record->fresh();
 
-        return $record->fresh()->toArray();
+        return $record;
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Domain\Collections\Observers;
 
+use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\SchemaManagement\Enums\SchemaOperation;
 use App\Domain\SchemaManagement\Models\SchemaJob;
@@ -24,7 +25,8 @@ readonly class CollectionObserver
 
         $this->startJob($collection, SchemaOperation::Create);
 
-        $userFields = SchemaChangePlan::cleanFields($collection->fields);
+        $isAuthCollection = $collection->type === CollectionType::Auth;
+        $userFields = SchemaChangePlan::cleanFields($collection->fields, $isAuthCollection);
         $this->ddlService->createTable($collection->getPhysicalTableName(), $userFields);
         $collection->schema_updated_at = now();
     }
@@ -62,13 +64,15 @@ readonly class CollectionObserver
             $originalFields = $collection->getOriginal('fields') ?? [];
             $newFields = $collection->fields ?? [];
 
-            $originalFieldsCleaned = SchemaChangePlan::cleanFields($originalFields);
-            $newFieldsCleaned = SchemaChangePlan::cleanFields($newFields);
+            $isAuthCollection = $collection->type === CollectionType::Auth;
+            $originalFieldsCleaned = SchemaChangePlan::cleanFields($originalFields, $isAuthCollection);
+            $newFieldsCleaned = SchemaChangePlan::cleanFields($newFields, $isAuthCollection);
 
             $this->ddlService->updateTable(
                 $collection->getPhysicalTableName(),
                 $originalFieldsCleaned,
-                $newFieldsCleaned
+                $newFieldsCleaned,
+                $isAuthCollection
             );
         }
 
