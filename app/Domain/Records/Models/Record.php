@@ -105,4 +105,9 @@ class Record extends Authenticatable
     {
         return $this->table ?? parent::getTable();
     }
+
+    public function isSuperuser(): bool
+    {
+        return $this->getTable() === 'superusers';
+    }
 }

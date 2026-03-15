@@ -1,7 +1,6 @@
 
 ## TODO
 
-- Bypass API Rule when auth user is superuser
 - Fix QueryFilter tokenizer cannot catch list
 - Revamp fields handling
     - No silent ignore all properties

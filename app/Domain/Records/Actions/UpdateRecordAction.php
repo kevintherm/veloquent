@@ -17,11 +17,16 @@ class UpdateRecordAction
         Gate::authorize('update-records', $collection);
 
         $isAuthCollection = $collection->type === CollectionType::Auth;
-        $bypassSuperuser = Auth::user()?->getTable() === 'superusers';
+        $authenticatedUser = Auth::user();
+        $bypassSuperuser = $authenticatedUser instanceof Record && $authenticatedUser->isSuperuser();
 
-        $record = Record::of($collection)
-            ->applyRule('update')
-            ->findOrFail($recordId);
+        $query = Record::of($collection);
+
+        if (! $bypassSuperuser) {
+            $query->applyRule('update');
+        }
+
+        $record = $query->findOrFail($recordId);
 
         if ($isAuthCollection
             && ! $bypassSuperuser

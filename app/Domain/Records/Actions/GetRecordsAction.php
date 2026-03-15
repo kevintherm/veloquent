@@ -5,6 +5,7 @@ namespace App\Domain\Records\Actions;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Records\Models\Record;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 
 class GetRecordsAction
@@ -13,9 +14,16 @@ class GetRecordsAction
     {
         Gate::authorize('list-records', $collection);
 
-        $record = Record::of($collection)
-            ->applyRule('list')
-            ->applyFilter($filters ?? '');
+        $authenticatedUser = Auth::user();
+        $bypassApiRules = $authenticatedUser instanceof Record && $authenticatedUser->isSuperuser();
+
+        $record = Record::of($collection);
+
+        if (! $bypassApiRules) {
+            $record->applyRule('list');
+        }
+
+        $record->applyFilter($filters ?? '');
 
         $maxPerPage = config('velo.records_per_page_max');
         $perPage = max(1, min($perPage, $maxPerPage));

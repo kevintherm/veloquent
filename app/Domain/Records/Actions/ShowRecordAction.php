@@ -4,6 +4,7 @@ namespace App\Domain\Records\Actions;
 
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Records\Models\Record;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 
 class ShowRecordAction
@@ -12,8 +13,15 @@ class ShowRecordAction
     {
         Gate::authorize('view-records', $collection);
 
-        return Record::of($collection)
-            ->applyRule('view')
-            ->findOrFail($recordId);
+        $authenticatedUser = Auth::user();
+        $bypassApiRules = $authenticatedUser instanceof Record && $authenticatedUser->isSuperuser();
+
+        $query = Record::of($collection);
+
+        if (! $bypassApiRules) {
+            $query->applyRule('view');
+        }
+
+        return $query->findOrFail($recordId);
     }
 }
