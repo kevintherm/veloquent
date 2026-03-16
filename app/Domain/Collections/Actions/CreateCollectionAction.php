@@ -23,6 +23,7 @@ class CreateCollectionAction
         return Collection::create([
             ...$data,
             'fields' => $mergedFields,
+            'indexes' => $data['indexes'] ?? [],
         ]);
     }
 

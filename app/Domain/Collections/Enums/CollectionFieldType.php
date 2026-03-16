@@ -77,6 +77,11 @@ enum CollectionFieldType: string
         };
     }
 
+    public function isIndexable(): bool
+    {
+        return ! in_array($this, [self::Json, self::LongText, self::Url], true);
+    }
+
     public static function commonPropertyNames(): array
     {
         return ['id', 'name', 'type', 'order', 'nullable', 'unique', 'default'];

@@ -43,6 +43,7 @@ class CollectionController extends ApiController
         $collection = $this->createCollectionAction->execute([
             ...$request->validated(),
             'fields' => $request->getFields(),
+            'indexes' => $request->getIndexes(),
         ]);
 
         return $this->successResponse($collection);
@@ -55,6 +56,10 @@ class CollectionController extends ApiController
         $payload = $request->validated();
         if ($request->has('fields')) {
             $payload['fields'] = $request->getFields();
+        }
+
+        if ($request->has('indexes')) {
+            $payload['indexes'] = $request->getIndexes();
         }
 
         $collection = $this->updateCollectionAction->execute($collection, $payload);
