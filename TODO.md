@@ -1,7 +1,6 @@
 
 ## TODO
 
-- Prevent renaming default users collection
 - Indexing system
     - Single field index
     - Composite index
