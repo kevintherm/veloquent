@@ -78,10 +78,21 @@ class StoreCollectionRequest extends FormRequest
             $isAuthCollection = $type === CollectionType::Auth;
             $reservedNames = SchemaChangePlan::getAllReservedFields($isAuthCollection);
 
+            $seenNames = [];
+
             foreach ($this->input('fields', []) as $index => $field) {
                 $fieldName = $field['name'] ?? null;
-                if (is_string($fieldName) && in_array($fieldName, $reservedNames, true)) {
-                    $validator->errors()->add("fields.{$index}.name", 'Reserved field names cannot be defined manually.');
+
+                if (is_string($fieldName)) {
+                    if (in_array($fieldName, $reservedNames, true)) {
+                        $validator->errors()->add("fields.{$index}.name", 'Reserved field names cannot be defined manually.');
+                    }
+
+                    if (isset($seenNames[$fieldName])) {
+                        $validator->errors()->add("fields.{$index}.name", "Duplicate field name '{$fieldName}'.");
+                    }
+
+                    $seenNames[$fieldName] = true;
                 }
 
                 $fieldType = CollectionFieldType::tryFrom($field['type'] ?? '');

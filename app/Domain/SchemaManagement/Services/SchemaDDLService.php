@@ -71,12 +71,12 @@ readonly class SchemaDDLService
         $type = CollectionFieldType::tryFrom($column['type']);
 
         $col = match ($type) {
-            CollectionFieldType::Text => $blueprint->string($name, $column['length'] ?? 255),
+            CollectionFieldType::Text => $blueprint->string($name, 255),
             CollectionFieldType::LongText => $blueprint->text($name),
             CollectionFieldType::Number => $blueprint->float($name),
             CollectionFieldType::Boolean => $blueprint->boolean($name),
             CollectionFieldType::Datetime => $blueprint->timestamp($name),
-            CollectionFieldType::Email => $blueprint->string($name, $column['length'] ?? 255),
+            CollectionFieldType::Email => $blueprint->string($name, 255),
             CollectionFieldType::Url => $blueprint->text($name),
             CollectionFieldType::Json => $blueprint->json($name),
             CollectionFieldType::Relation => $blueprint->char($name, 26),
@@ -110,28 +110,6 @@ readonly class SchemaDDLService
     public function updateTable(string $table, array $before, array $after, bool $isAuthCollection = false): void
     {
         $plan = SchemaChangePlan::buildPlan($before, $after, $isAuthCollection);
-
-        $stmt = DB::pretend(function () use ($table, $plan) {
-            Schema::table($table, function (Blueprint $t) use ($plan) {
-                foreach ($plan->renames as [$from, $to]) {
-                    $t->renameColumn($from, $to);
-                }
-
-                foreach ($plan->adds as $field) {
-                    $this->columnBlueprint($t, $field);
-                }
-
-                foreach ($plan->modifies as [, $field]) {
-                    $this->columnBlueprint($t, $field, change: true);
-                }
-
-                foreach ($plan->drops as $field) {
-                    $t->dropColumn($field['name']);
-                }
-            });
-        });
-
-        // dd($stmt);
 
         $this->runDDL(function () use ($table, $plan): void {
             Schema::table($table, function (Blueprint $t) use ($plan) {

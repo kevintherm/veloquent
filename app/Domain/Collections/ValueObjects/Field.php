@@ -13,7 +13,9 @@ class Field implements \ArrayAccess, \JsonSerializable
         public bool $nullable,
         public bool $unique,
         public mixed $default,
-        public ?int $length = null,
+        public ?string $id = null,
+        public ?int $min = null,
+        public ?int $max = null,
         public ?string $collection = null,
     ) {}
 
@@ -38,7 +40,9 @@ class Field implements \ArrayAccess, \JsonSerializable
             nullable: (bool) $shape['nullable'],
             unique: (bool) $shape['unique'],
             default: $shape['default'] ?? null,
-            length: isset($shape['length']) ? (is_null($shape['length']) ? null : (int) $shape['length']) : null,
+            id: isset($shape['id']) ? (string) $shape['id'] : null,
+            min: isset($shape['min']) ? (is_null($shape['min']) ? null : (int) $shape['min']) : null,
+            max: isset($shape['max']) ? (is_null($shape['max']) ? null : (int) $shape['max']) : null,
             collection: isset($shape['collection']) ? (is_null($shape['collection']) ? null : (string) $shape['collection']) : null,
         );
     }
@@ -49,13 +53,15 @@ class Field implements \ArrayAccess, \JsonSerializable
         $allowed = $type->allowedProperties();
 
         $data = [
+            'id' => $this->id,
             'name' => $this->name,
             'type' => $this->type,
             'order' => $this->order,
             'nullable' => $this->nullable,
             'unique' => $this->unique,
             'default' => $this->default,
-            'length' => $this->length,
+            'min' => $this->min,
+            'max' => $this->max,
             'collection' => $this->collection,
         ];
 
@@ -85,6 +91,12 @@ class Field implements \ArrayAccess, \JsonSerializable
     public function offsetSet(mixed $offset, mixed $value): void
     {
         $key = (string) $offset;
+
+        if ($key === 'id') {
+            $this->id = is_null($value) ? null : (string) $value;
+
+            return;
+        }
 
         if ($key === 'name') {
             $this->name = (string) $value;
@@ -122,8 +134,14 @@ class Field implements \ArrayAccess, \JsonSerializable
             return;
         }
 
-        if ($key === 'length') {
-            $this->length = is_null($value) ? null : (int) $value;
+        if ($key === 'min') {
+            $this->min = is_null($value) ? null : (int) $value;
+
+            return;
+        }
+
+        if ($key === 'max') {
+            $this->max = is_null($value) ? null : (int) $value;
 
             return;
         }

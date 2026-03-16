@@ -22,7 +22,7 @@ class UpdateCollectionRequest extends FormRequest
     {
         $rules = [
             'name' => [
-                'required',
+                'nullable',
                 'string',
                 'max:255',
                 Rule::unique('collections', 'name')->ignore($this->route('collection')->id, 'id'),
@@ -39,6 +39,7 @@ class UpdateCollectionRequest extends FormRequest
 
             'fields' => 'sometimes|array|min:1',
             'fields.*' => ['required', 'array'],
+            'fields.*.id' => 'sometimes|string',
             'fields.*.name' => 'required|string|regex:/^[a-zA-Z_]+$/',
             'fields.*.type' => ['required', new Enum(CollectionFieldType::class)],
             'fields.*.nullable' => 'sometimes|boolean',
@@ -105,9 +106,21 @@ class UpdateCollectionRequest extends FormRequest
                 }
             }
 
+            $seenNames = [];
+
             foreach ($fields as $index => $field) {
                 if (! is_array($field)) {
                     continue;
+                }
+
+                $fieldName = $field['name'] ?? null;
+
+                if (is_string($fieldName)) {
+                    if (isset($seenNames[$fieldName])) {
+                        $validator->errors()->add("fields.{$index}.name", "Duplicate field name '{$fieldName}'.");
+                    }
+
+                    $seenNames[$fieldName] = true;
                 }
 
                 $fieldType = CollectionFieldType::tryFrom($field['type'] ?? '');
@@ -122,7 +135,6 @@ class UpdateCollectionRequest extends FormRequest
                     }
                 }
 
-                $fieldName = $field['name'] ?? null;
                 if (! is_string($fieldName) || ! array_key_exists($fieldName, $reservedDefinitions)) {
                     continue;
                 }
@@ -140,7 +152,10 @@ class UpdateCollectionRequest extends FormRequest
 
                 $normalizedCanonical = $reservedDefinitions[$fieldName];
 
-                unset($normalizedIncoming['order'], $normalizedCanonical['order']);
+                unset(
+                    $normalizedIncoming['order'], $normalizedCanonical['order'],
+                    $normalizedIncoming['id'], $normalizedCanonical['id']
+                );
 
                 if ($normalizedIncoming !== $normalizedCanonical) {
                     $validator->errors()->add(
