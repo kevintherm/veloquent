@@ -1,7 +1,6 @@
 
 ## TODO
 
-- Hide email if email_visibility is false
 - Prevent renaming default users collection
 - Indexing system
     - Single field index
