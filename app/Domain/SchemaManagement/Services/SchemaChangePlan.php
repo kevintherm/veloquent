@@ -52,7 +52,6 @@ final class SchemaChangePlan
                 'type' => CollectionFieldType::Text->value,
                 'nullable' => false,
                 'unique' => true,
-                'length' => 26,
             ]),
             self::normalizeFieldDefinition([
                 'name' => 'created_at',
@@ -80,14 +79,12 @@ final class SchemaChangePlan
                 'type' => CollectionFieldType::Email->value,
                 'nullable' => false,
                 'unique' => true,
-                'length' => 255,
             ]),
             self::normalizeFieldDefinition([
                 'name' => 'password',
                 'type' => CollectionFieldType::Text->value,
                 'nullable' => false,
                 'unique' => false,
-                'length' => 255,
             ]),
             self::normalizeFieldDefinition([
                 'name' => 'email_visibility',
@@ -108,7 +105,6 @@ final class SchemaChangePlan
                 'type' => CollectionFieldType::Text->value,
                 'nullable' => false,
                 'unique' => false,
-                'length' => 255,
             ]),
         ];
     }
@@ -116,17 +112,25 @@ final class SchemaChangePlan
     /**
      * Merge system fields with user fields for metadata storage.
      * Places id first, auth system fields second (for auth collections), user fields next, and timestamps last.
+     *
+     * Validates that no user-submitted field uses a reserved name, then injects
+     * the canonical reserved field definitions. Assigns a unique field ID to
+     * any field that does not already have one.
+     *
+     * @throws \LogicException
      */
     public static function mergeWithSystemFields(array $userFields, bool $isAuthCollection = false): array
     {
-        $reservedDefinitions = self::getReservedFieldDefinitions($isAuthCollection);
-        $reservedNames = array_keys($reservedDefinitions);
+        $reservedNames = array_keys(self::getReservedFieldDefinitions($isAuthCollection));
 
         $normalizedUserFields = collect($userFields)
             ->map(fn (array|Field $field) => self::normalizeInputField($field))
-            ->reject(fn (array $field) => in_array($field['name'], $reservedNames, true))
             ->values()
             ->all();
+
+        self::assertNoReservedFieldsInUserInput($normalizedUserFields, $reservedNames);
+
+        $reservedDefinitions = self::getReservedFieldDefinitions($isAuthCollection);
 
         $merged = [
             $reservedDefinitions['id'],
@@ -140,6 +144,7 @@ final class SchemaChangePlan
             ->values()
             ->map(function (array $field, int $index): array {
                 $field['order'] = $index;
+                $field['id'] ??= self::generateFieldId();
 
                 return $field;
             })
@@ -180,26 +185,6 @@ final class SchemaChangePlan
             ->all();
     }
 
-    /**
-     * Type changes that are always safe (no data loss, no cast ambiguity).
-     *
-     * @return array<string, CollectionFieldType[]>
-     */
-    private static function compatibleTypeChanges(): array
-    {
-        return [
-            CollectionFieldType::Text->value => [CollectionFieldType::Text, CollectionFieldType::LongText],
-            CollectionFieldType::LongText->value => [CollectionFieldType::LongText, CollectionFieldType::Text],
-            CollectionFieldType::Number->value => [CollectionFieldType::Number],
-            CollectionFieldType::Boolean->value => [CollectionFieldType::Boolean],
-            CollectionFieldType::Datetime->value => [CollectionFieldType::Datetime],
-            CollectionFieldType::Email->value => [CollectionFieldType::Email],
-            CollectionFieldType::Url->value => [CollectionFieldType::Url],
-            CollectionFieldType::Json->value => [CollectionFieldType::Json],
-            CollectionFieldType::Relation->value => [CollectionFieldType::Relation],
-        ];
-    }
-
     public function __construct(
         public array $renames = [],
         public array $adds = [],
@@ -210,27 +195,46 @@ final class SchemaChangePlan
     /**
      * Diff $before and $after field arrays into a change plan.
      *
-     * Fields are matched by name. A name change appears as a drop + add.
+     * Fields are matched by their unique `id`. A changed name on the same id
+     * is detected as a rename. A missing id in $after is a drop. A new id
+     * in $after is an add. Attribute differences on the same id produce a
+     * modify entry. Type changes are always rejected.
      *
-     * @throws InvalidArgumentException
+     * @throws InvalidArgumentException|\LogicException
      */
     public static function buildPlan(array $before, array $after, bool $isAuthCollection = false): self
     {
+        self::assertNoDuplicateFieldNames($after);
+
         $plan = new self;
 
-        $beforeByName = collect($before)->keyBy('name');
-        $afterByName = collect($after)->keyBy('name');
+        $beforeById = collect($before)->keyBy('id');
+        $afterById = collect($after)->keyBy('id');
 
-        foreach ($afterByName as $name => $field) {
-            if (! $beforeByName->has($name)) {
+        foreach ($afterById as $id => $field) {
+            if (! $beforeById->has($id)) {
                 $plan->adds[] = $field;
-            } elseif ($field !== $beforeByName[$name]) {
-                $plan->modifies[] = [$beforeByName[$name], $field];
+
+                continue;
+            }
+
+            $oldField = $beforeById[$id];
+
+            if ($oldField['name'] !== $field['name']) {
+                $plan->renames[] = [$oldField['name'], $field['name']];
+            }
+
+            $comparableOld = $oldField;
+            $comparableNew = $field;
+            unset($comparableOld['order'], $comparableNew['order']);
+
+            if ($comparableOld !== $comparableNew) {
+                $plan->modifies[] = [$oldField, $field];
             }
         }
 
-        foreach ($beforeByName as $name => $field) {
-            if (! $afterByName->has($name)) {
+        foreach ($beforeById as $id => $field) {
+            if (! $afterById->has($id)) {
                 $plan->drops[] = $field;
             }
         }
@@ -241,7 +245,51 @@ final class SchemaChangePlan
     }
 
     /**
-     * @throws InvalidArgumentException
+     * Generate an 8-character hexadecimal field ID.
+     */
+    public static function generateFieldId(): string
+    {
+        return bin2hex(random_bytes(4));
+    }
+
+    /**
+     * @throws \LogicException
+     */
+    private static function assertNoReservedFieldsInUserInput(array $fields, array $reservedNames): void
+    {
+        foreach ($fields as $field) {
+            $name = $field['name'] ?? null;
+
+            if (is_string($name) && in_array($name, $reservedNames, true)) {
+                throw new \LogicException("Reserved field '{$name}' cannot be defined manually.");
+            }
+        }
+    }
+
+    /**
+     * @throws \LogicException
+     */
+    private static function assertNoDuplicateFieldNames(array $fields): void
+    {
+        $names = [];
+
+        foreach ($fields as $field) {
+            $name = $field['name'] ?? null;
+
+            if ($name === null) {
+                continue;
+            }
+
+            if (isset($names[$name])) {
+                throw new \LogicException("Duplicate field name '{$name}' detected.");
+            }
+
+            $names[$name] = true;
+        }
+    }
+
+    /**
+     * @throws InvalidArgumentException|\LogicException
      */
     private function validatePlan(self $plan, bool $isAuthCollection = false): void
     {
@@ -255,7 +303,7 @@ final class SchemaChangePlan
             }
 
             $this->assertValidField($new);
-            $this->assertCompatibleChange($old, $new);
+            $this->assertTypeNotChanged($old, $new);
         }
 
         foreach ($plan->drops as $field) {
@@ -282,20 +330,14 @@ final class SchemaChangePlan
     /**
      * @throws \LogicException
      */
-    private function assertCompatibleChange(array $old, array $new): void
+    private function assertTypeNotChanged(array $old, array $new): void
     {
         $from = CollectionFieldType::tryFrom($old['type']);
         $to = CollectionFieldType::tryFrom($new['type']);
 
-        if ($from === $to) {
-            return;
-        }
-
-        $allowed = self::compatibleTypeChanges()[$from->value] ?? [];
-
-        if (! in_array($to, $allowed, true)) {
+        if ($from !== $to) {
             throw new \LogicException(
-                "Incompatible type change on field '{$new['name']}': cannot change '{$from->value}' to '{$to->value}'."
+                "Field type cannot be changed on field '{$new['name']}': '{$from->value}' to '{$to->value}' is not allowed."
             );
         }
     }

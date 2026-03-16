@@ -17,11 +17,11 @@ enum CollectionFieldType: string
     public function typeProperties(): array
     {
         return match ($this) {
-            self::Text => ['length' => 255],
-            self::Email => ['length' => 255],
-            self::Url => ['length' => null],
+            self::Text => ['min' => null, 'max' => null],
+            self::Email => ['min' => null, 'max' => null],
+            self::Url => ['min' => null, 'max' => null],
             self::LongText => [],
-            self::Relation => ['collection' => null],
+            self::Relation => ['collectionId' => null, 'cascadeOnDelete' => false, 'maxSelect' => null],
             self::Number, self::Boolean, self::Datetime, self::Json => [],
         };
     }
@@ -40,12 +40,17 @@ enum CollectionFieldType: string
     {
         return match ($this) {
             self::Text, self::Email, self::Url => [
-                "{$prefix}.length" => ['nullable', 'integer', 'min:1'],
+                "{$prefix}.min" => ['nullable', 'integer', 'min:0'],
+                "{$prefix}.max" => ['nullable', 'integer', 'min:1'],
+            ],
+            self::Number => [
+                "{$prefix}.min" => ['nullable', 'numeric'],
+                "{$prefix}.max" => ['nullable', 'numeric'],
             ],
             self::Relation => [
                 "{$prefix}.collection" => ['nullable', 'string', 'regex:/^[a-zA-Z_]+$/'],
             ],
-            self::LongText, self::Number, self::Boolean, self::Datetime, self::Json => [],
+            self::LongText, self::Boolean, self::Datetime, self::Json => [],
         };
     }
 
@@ -74,7 +79,7 @@ enum CollectionFieldType: string
 
     public static function commonPropertyNames(): array
     {
-        return ['name', 'type', 'order', 'nullable', 'unique', 'default'];
+        return ['id', 'name', 'type', 'order', 'nullable', 'unique', 'default'];
     }
 
     public static function commonDefaults(): array

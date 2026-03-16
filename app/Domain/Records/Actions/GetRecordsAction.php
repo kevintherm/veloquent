@@ -28,8 +28,6 @@ class GetRecordsAction
         $maxPerPage = config('velo.records_per_page_max');
         $perPage = max(1, min($perPage, $maxPerPage));
 
-        // dd($query->toSql(), $query->getBindings() ?? []);
-
         return $query->paginate($perPage);
     }
 }

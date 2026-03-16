@@ -42,8 +42,12 @@ abstract class BaseRecordRequest extends FormRequest
                 $fieldRules[] = $uniqueRule;
             }
 
-            if (isset($field['length']) && $field['length']) {
-                $fieldRules[] = 'max:'.$field['length'];
+            if (isset($field['min']) && $field['min']) {
+                $fieldRules[] = 'min:'.$field['min'];
+            }
+
+            if (isset($field['max']) && $field['max']) {
+                $fieldRules[] = 'max:'.$field['max'];
             }
 
             $fieldRules[] = $this->getFieldTypeRule($field['type']);
@@ -55,7 +59,7 @@ abstract class BaseRecordRequest extends FormRequest
 
             $rules[$fieldName] = $fieldRules;
         }
-
+    
         return $rules;
     }
 
