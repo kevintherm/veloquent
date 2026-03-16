@@ -3,6 +3,7 @@
 namespace App\Domain\Collections\Models;
 
 use App\Domain\Collections\Casts\FieldCollectionCast;
+use App\Domain\Collections\Casts\IndexCollectionCast;
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Observers\CollectionObserver;
 use App\Domain\Collections\QueryBuilder\CollectionBuilder;
@@ -17,13 +18,14 @@ class Collection extends Model
 {
     use HasUlids;
 
-    protected $fillable = ['type', 'name', 'description', 'fields', 'api_rules', 'is_system', 'schema_updated_at'];
+    protected $fillable = ['type', 'name', 'description', 'fields', 'api_rules', 'indexes', 'is_system', 'schema_updated_at'];
 
     protected function casts(): array
     {
         return [
             'type' => CollectionType::class,
             'fields' => FieldCollectionCast::class,
+            'indexes' => IndexCollectionCast::class,
             'api_rules' => 'array',
             'is_system' => 'boolean',
             'schema_updated_at' => 'datetime',

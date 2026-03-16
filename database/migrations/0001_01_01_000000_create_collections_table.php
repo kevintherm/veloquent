@@ -16,6 +16,7 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->json('fields')->nullable();
             $table->json('api_rules')->nullable();
+            $table->json('indexes')->nullable();
 
             $table->timestamp('schema_updated_at')->nullable();
             $table->timestamps();
