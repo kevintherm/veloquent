@@ -57,8 +57,8 @@ class RedisRealtimeBus implements RealtimeBusDriver
                         }
                     }
                 );
-            } catch (\RedisException $e) {
-                Log::warning('Realtime Redis listener disconnected. Retrying...', [
+            } catch (\Throwable $e) {
+                Log::warning('Realtime Redis listener failed. Retrying...', [
                     'message' => $e->getMessage(),
                 ]);
 
@@ -66,12 +66,6 @@ class RedisRealtimeBus implements RealtimeBusDriver
                     Redis::connection('realtime')->disconnect();
                 } catch (\Throwable) {
                 }
-
-                usleep(self::RECONNECT_DELAY_US);
-            } catch (\Throwable $e) {
-                Log::warning('Realtime Redis listener failed unexpectedly. Retrying...', [
-                    'message' => $e->getMessage(),
-                ]);
 
                 usleep(self::RECONNECT_DELAY_US);
             }
