@@ -4,7 +4,6 @@ namespace App\Domain\Collections\QueryBuilder;
 
 use App\Domain\QueryCompiler\Services\QueryFilter;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Arr;
 
 class CollectionBuilder extends Builder
 {

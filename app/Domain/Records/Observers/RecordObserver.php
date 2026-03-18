@@ -2,11 +2,8 @@
 
 namespace App\Domain\Records\Observers;
 
-use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Realtime\Contracts\RealtimeBusDriver;
 use App\Domain\Records\Models\Record;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Str;
 
 class RecordObserver
 {
