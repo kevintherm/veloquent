@@ -7,9 +7,8 @@ return [
     | Authentication Defaults
     |--------------------------------------------------------------------------
     |
-    | This application uses custom JWT authentication (not Laravel's built-in
-    | auth guards). This config is kept minimal for any packages that may
-    | reference it.
+    | This application uses custom opaque bearer token authentication.
+    | This config is kept minimal for any packages that may reference it.
     |
     */
 
@@ -19,10 +18,8 @@ return [
 
     'guards' => [
         'api' => [
-            'driver' => 'jwt',
+            'driver' => 'opaque_token',
         ],
     ],
-
-    'refresh_token_ttl' => 30, // in days
 
 ];

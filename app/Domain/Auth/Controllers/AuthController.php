@@ -2,23 +2,21 @@
 
 namespace App\Domain\Auth\Controllers;
 
-use App\Domain\Auth\Services\JwtAuthService;
+use App\Domain\Auth\Services\TokenAuthService;
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Records\Models\Record;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Infrastructure\Http\Controllers\ApiController;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\Response;
 
 class AuthController extends ApiController
 {
     public function __construct(
-        private JwtAuthService $jwtService
+        private TokenAuthService $tokenService
     ) {}
 
     public function login(LoginRequest $request, Collection $collection): JsonResponse
@@ -35,67 +33,57 @@ class AuthController extends ApiController
             return $this->errorResponse('Invalid credentials.', Response::HTTP_UNAUTHORIZED);
         }
 
-        $tokenData = $this->jwtService->generateToken($user);
+        $tokenData = $this->tokenService->generateToken($user);
 
         return $this->tokenResponse($tokenData);
     }
 
-    public function logoutAll(): JsonResponse
+    public function logoutAll(Collection $collection): JsonResponse
     {
-        Auth::logout();
+        /** @var Record|null $user */
+        $user = Auth::user();
+
+        if ($user && ! $this->userMatchesCollection($user, $collection)) {
+            return $this->errorResponse('User not authenticated.', Response::HTTP_UNAUTHORIZED);
+        }
+
+        if ($user?->collection?->id) {
+            $this->tokenService->revokeRecordTokens($user->collection->id, $user->id);
+        }
 
         return $this->successResponse([], 'Logged out successfully.');
     }
 
-    public function me(): JsonResponse
+    public function me(Collection $collection): JsonResponse
     {
+        /** @var Record|null $user */
         $user = Auth::user();
 
-        if (! $user) {
+        if (! $user || ! $this->userMatchesCollection($user, $collection)) {
             return $this->errorResponse('User not authenticated.', Response::HTTP_UNAUTHORIZED);
         }
 
         return $this->successResponse($user);
     }
 
-    public function refresh(Request $request): JsonResponse
+    private function userMatchesCollection(Record $user, Collection $collection): bool
     {
-        $request->validate([
-            'refresh_token' => 'required|string|size:64',
-        ]);
-
-        $tokenData = $this->jwtService->refresh($request->input('refresh_token'));
-
-        return $this->tokenResponse($tokenData);
+        return $user->collection?->id === $collection->id;
     }
 
     /**
-     * @param  array{token: string, expires_in: int, user: array, collection_name: string}  $tokenData
+     * @param  array{token: string, expires_in: int, collection_name: string}  $tokenData
      */
     private function tokenResponse(array $tokenData, int $code = Response::HTTP_OK): JsonResponse
     {
-        $cookie = new Cookie(
-            name: 'refresh_token',
-            value: $tokenData['refresh_token'],
-            expire: $tokenData['refresh_token_expires_in'],
-            path: '/',
-            domain: null,
-            secure: true,
-            httpOnly: true,
-            raw: false,
-            sameSite: Cookie::SAMESITE_STRICT,
-        );
-
         return $this->successResponse(
             [
-                'access_token' => $tokenData['token'],
-                'refresh_token' => $tokenData['refresh_token'],
+                'token' => $tokenData['token'],
                 'expires_in' => $tokenData['expires_in'],
                 'collection_name' => $tokenData['collection_name'],
             ],
             'Success',
-            $code,
-            cookie: $cookie
+            $code
         );
     }
 }

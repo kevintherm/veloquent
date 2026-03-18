@@ -4,6 +4,7 @@ use App\Domain\Auth\Controllers\AuthController;
 use App\Domain\Collections\Controllers\CollectionController;
 use App\Domain\Records\Controllers\RecordController;
 use App\Http\Controllers\OnboardingController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('collections')->group(function () {
@@ -28,7 +29,7 @@ Route::prefix('collections/{collection}/auth')->name('collections.auth.')->group
     Route::post('/login', [AuthController::class, 'login'])->name('authenticate');
     Route::delete('/logout-all', [AuthController::class, 'logoutAll'])->name('logout-all');
     Route::get('/me', [AuthController::class, 'me'])->name('me');
-    Route::post('/refresh', [AuthController::class, 'refresh'])->name('refresh');
 });
 
 Route::post('onboarding/superuser', [OnboardingController::class, 'createSuperuser'])->name('onboarding.superuser.create');
+Route::get('/user', fn (Request $request) => $request->user());

@@ -28,15 +28,6 @@ return new class extends Migration
             $table->timestamp('created_at')->nullable();
         });
 
-        Schema::create('refresh_tokens', function (Blueprint $table) {
-            $table->id();
-            $table->ulid('record_id');
-            $table->string('token', 64)->unique();
-            $table->timestamp('expires_at');
-            $table->timestamps();
-
-            $table->index(['record_id', 'token']);
-        });
     }
 
     /**
@@ -46,6 +37,5 @@ return new class extends Migration
     {
         Schema::dropIfExists('superusers');
         Schema::dropIfExists('password_reset_tokens');
-        Schema::dropIfExists('refresh_tokens');
     }
 };
