@@ -9,9 +9,10 @@ The Laravel Boost guidelines are specifically curated by Laravel maintainers for
 
 This application is a Laravel application and its main Laravel ecosystems package & versions are below. You are an expert with them all. Ensure you abide by these specific packages & versions.
 
-- php - 8.5.3
+- php - 8.5.4
 - laravel/framework (LARAVEL) - v12
 - laravel/prompts (PROMPTS) - v0
+- laravel/reverb (REVERB) - v1
 - laravel/sanctum (SANCTUM) - v4
 - laravel/boost (BOOST) - v2
 - laravel/mcp (MCP) - v0
@@ -56,60 +57,6 @@ This project has domain-specific skills available. You MUST activate the relevan
 ## Replies
 
 - Be concise in your explanations - focus on what's important rather than explaining obvious details.
-
-=== project context ===
-
-# Velo — Project Overview
-
-## What is Velo?
-
-Velo is a **Backend-as-a-Service (BaaS)** platform — similar in spirit to PocketBase or Supabase. Operators define **Collections** (dynamic schemas) via an API, and the system automatically provisions real database tables, CRUD endpoints, authentication, and per-collection access rules.
-
-## Core Concepts
-
-### Collections
-
-A Collection is a user-defined schema. The system supports two types:
-- `base` — standard data collection
-- `auth` — includes built-in identity fields and supports login/logout
-
-Collections are also divided by ownership level:
-- **User collections** — created by operators via the API; physical tables are prefixed (`_velo_{name}`)
-- **System collections** — internal platform tables (e.g. `superusers`, `schema_jobs`); flagged with `is_system = true` and not prefixed
-
-When a collection is created, a corresponding physical database table is provisioned automatically. When updated or deleted, schema changes are applied synchronously in real time via dynamic DDL migrations (no traditional migration files). The field diff engine computes the required DDL operations: new fields become `ADD COLUMN`, renames become `RENAME COLUMN`, type changes within the same type group become `MODIFY COLUMN`, removed fields become `DROP COLUMN`, and cross-type changes are rejected.
-
-### Records
-
-Records are rows of data within a collection. The system uses a single dynamic Eloquent model that resolves to the correct table at runtime based on the collection. Access is controlled by per-collection API rules.
-
-### API Rules
-
-Each collection has per-operation access rules (`list`, `view`, `create`, `update`, `delete`). Rules can be:
-- `null` — deny all access
-- Empty string — allow all
-- An expression string — evaluated as a row-level filter using a custom query expression language
-
-The filter language supports comparisons, logical operators (`&&`, `||`), and date helper functions.
-
-Filter expression are strictly parsed by the QueryFilter custom parser that must follows the convention FIELD OP VALUE, and correspond directly to laravel's query builder, and uses recursive descent as the underlying algorithm hence limitation such as: basic arithmathics, and validating the allowed fields.
-
-### Authentication
-
-JWT-based authentication is used throughout. Auth-type collections support login, and logout. The JWT middleware is global but soft — unauthenticated requests pass through, and individual endpoints enforce access via Laravel Gates.
-
-Superusers are a top-level administrative role that can manage collections and bypass all record-level access rules.
-
-## Architecture
-
-The application follows a Domain-Driven Design (DDD) structure within Laravel:
-- **Auth domain** — JWT issuance and validation
-- **Collections domain** — collection CRUD and schema lifecycle management
-- **Records domain** — dynamic record CRUD against user-defined tables
-- **QueryCompiler domain** — custom filter/query expression parser
-- **SchemaManagement domain** — DDL operations (create, alter, drop tables)
-
-Schema operations are synchronous (not queued) and tracked via a `schema_jobs` table. The frontend is a Vue 3 SPA served by the same Laravel app.
 
 === boost rules ===
 

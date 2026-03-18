@@ -2,6 +2,7 @@
 
 use App\Domain\Auth\Controllers\AuthController;
 use App\Domain\Collections\Controllers\CollectionController;
+use App\Domain\Realtime\Controllers\SubscribeController;
 use App\Domain\Records\Controllers\RecordController;
 use App\Http\Controllers\OnboardingController;
 use Illuminate\Support\Facades\Route;
@@ -32,3 +33,8 @@ Route::prefix('collections/{collection}/auth')->name('collections.auth.')->group
 });
 
 Route::post('onboarding/superuser', [OnboardingController::class, 'createSuperuser'])->name('onboarding.superuser.create');
+
+Route::middleware('auth:api')->group(function () {
+    Route::post('/collections/{collection}/subscribe', [SubscribeController::class, 'subscribe']);
+    Route::delete('/collections/{collection}/subscribe', [SubscribeController::class, 'unsubscribe']);
+});
