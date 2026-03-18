@@ -7,12 +7,15 @@
         "dev": "vite"
     },
     "devDependencies": {
+        "@laravel/echo-vue": "^2.3.1",
         "@tailwindcss/vite": "^4.0.0",
         "axios": "^1.11.0",
         "clsx": "^2.1.1",
         "concurrently": "^9.0.1",
+        "laravel-echo": "^2.3.1",
         "laravel-vite-plugin": "^2.0.0",
         "lucide-vue-next": "^0.575.0",
+        "pusher-js": "^8.4.2",
         "radix-vue": "^1.9.17",
         "shadcn-vue": "^2.4.3",
         "tailwind-merge": "^3.5.0",

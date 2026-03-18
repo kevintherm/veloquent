@@ -2,14 +2,14 @@
 ## TODO
 
 - UI Dashboard
-- Handle field editing
-    - Rename field as old field
-    - Creates new field
-    - Backfill data
-    - Delete old field
+- Realtime
+    - Fix realtime subscribe for guest error
+    - authentication tests
+    - realtime tests
+- Hooks system
 - Handle schema jobs failure
     - Rebuild associated table
-    - Add routes for managing failed schema jobs
+    - Add routes for handling failed schema jobs
 - Optimize Record model
     - cache collections
 - Add manage_rule to allow updating password field for auth collections
