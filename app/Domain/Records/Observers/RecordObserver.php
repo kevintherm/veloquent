@@ -12,13 +12,7 @@ class RecordObserver
 {
     public function creating(Record $record): void
     {
-        if (
-            $record->collection
-            && $record->collection->type === CollectionType::Auth
-            && Arr::first($record->collection->fields, fn ($field) => $field['name'] === 'token_key') !== null
-        ) {
-            $record->token_key = Str::random(64);
-        }
+        //
     }
 
     public function created(Record $record): void
