@@ -10,11 +10,10 @@ import {
 } from "@/components/ui";
 import { ref } from "vue";
 import { useRouter } from "vue-router";
-import axios from "axios";
 import { useAuth } from "@/lib/auth";
 
 const router = useRouter();
-const { fetchUser } = useAuth();
+const { fetchUser, login } = useAuth();
 const email = ref("");
 const password = ref("");
 const error = ref("");
@@ -24,8 +23,7 @@ const handleSubmit = async () => {
   error.value = "";
   loading.value = true;
   try {
-    await axios.get("/sanctum/csrf-cookie");
-    await axios.post("/api/login", {
+    await login({
       email: email.value,
       password: password.value,
     });
@@ -58,16 +56,26 @@ const handleSubmit = async () => {
             <Label for="email">Email</Label>
             <Input
               id="email"
+              name="email"
               type="email"
               placeholder="name@example.com"
               v-model="email"
+              autocomplete="username"
               required
               :disabled="loading"
             />
           </div>
           <div class="space-y-2">
             <Label for="password">Password</Label>
-            <Input id="password" type="password" v-model="password" required :disabled="loading" />
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              v-model="password"
+              autocomplete="current-password"
+              required
+              :disabled="loading"
+            />
           </div>
           <Button type="submit" class="w-full" :disabled="loading">
             {{ loading ? "Signing In..." : "Sign In" }}

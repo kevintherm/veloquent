@@ -23,5 +23,13 @@ class RealtimeSubscription extends Model
         'subscriber_id',
         'channel',
         'filter',
+        'expired_at',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'expired_at' => 'datetime',
+        ];
+    }
 }

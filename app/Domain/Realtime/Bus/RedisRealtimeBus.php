@@ -2,6 +2,7 @@
 
 namespace App\Domain\Realtime\Bus;
 
+use App\Domain\Realtime\Contracts\RealtimeBusDriver;
 use Closure;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;

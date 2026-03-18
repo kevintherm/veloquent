@@ -5,9 +5,11 @@ namespace App\Domain\Auth\Controllers;
 use App\Domain\Auth\Services\TokenAuthService;
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
+use App\Domain\Realtime\Contracts\RealtimeBusDriver;
 use App\Domain\Records\Models\Record;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Infrastructure\Http\Controllers\ApiController;
+use App\Models\RealtimeSubscription;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -16,7 +18,8 @@ use Symfony\Component\HttpFoundation\Response;
 class AuthController extends ApiController
 {
     public function __construct(
-        private TokenAuthService $tokenService
+        private TokenAuthService $tokenService,
+        private RealtimeBusDriver $realtimeBus,
     ) {}
 
     public function login(LoginRequest $request, Collection $collection): JsonResponse
@@ -47,9 +50,22 @@ class AuthController extends ApiController
             return $this->errorResponse('User not authenticated.', Response::HTTP_UNAUTHORIZED);
         }
 
-        if ($user?->collection?->id) {
-            $this->tokenService->revokeRecordTokens($user->collection->id, $user->id);
+        if (! $user || ! $user->collection?->id) {
+            return $this->errorResponse('User not authenticated.', Response::HTTP_UNAUTHORIZED);
         }
+
+        $this->tokenService->revokeRecordTokens($user->collection->id, $user->id);
+
+        RealtimeSubscription::query()
+            ->where('subscriber_id', (string) $user->getKey())
+            ->delete();
+
+        $this->realtimeBus->publish([
+            'type' => 'connection',
+            'action' => 'logout',
+            'auth_collection' => $user->getTable(),
+            'subscriber_id' => (string) $user->getKey(),
+        ]);
 
         return $this->successResponse([], 'Logged out successfully.');
     }

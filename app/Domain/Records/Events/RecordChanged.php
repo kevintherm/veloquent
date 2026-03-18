@@ -3,10 +3,10 @@
 namespace App\Domain\Records\Events;
 
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Queue\SerializesModels;
 
-class RecordChanged implements ShouldBroadcast
+class RecordChanged implements ShouldBroadcastNow
 {
     use SerializesModels;
 

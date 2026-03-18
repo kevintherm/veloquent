@@ -1,6 +1,6 @@
 <script setup>
-import {computed, ref} from "vue";
-import { Input } from "@/components/ui";
+import { computed, ref } from "vue";
+import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from "@/components/ui";
 import {Search} from "lucide-vue-next";
 import DashboardLayout from "@/layouts/DashboardLayout.vue";
 import DataTable from "@/pages/Dashboard/DataTable.vue";
@@ -75,6 +75,17 @@ const toggleRecord = (id) => {
                     />
                 </div>
             </div>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Overview</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p class="text-sm text-muted-foreground">
+                        Manage records here. Realtime debugging tools are now available in Settings under the Tests tab.
+                    </p>
+                </CardContent>
+            </Card>
 
             <!-- Floating Bulk Actions Bar -->
             <BulkActions :selected-records="selectedRecords" @clear-selection="selectedRecords = []"/>

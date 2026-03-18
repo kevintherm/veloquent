@@ -18,9 +18,12 @@ return new class extends Migration
             $table->char('subscriber_id', 26);
             $table->string('channel');
             $table->text('filter')->nullable();
+            $table->timestamp('expired_at');
             $table->timestamps();
 
             $table->index('collection_id', 'rt_subs_collection_idx');
+            $table->index('expired_at', 'rt_subs_expired_at_idx');
+            $table->index(['collection_id', 'expired_at'], 'rt_subs_collection_expired_idx');
             $table->unique(
                 ['collection_id', 'auth_collection', 'subscriber_id'],
                 'rt_subs_collection_auth_sub_uq'

@@ -15,8 +15,9 @@ import {
   Switch,
   Separator,
 } from "@/components/ui";
-import { User, Shield, Zap, Bell, Monitor } from "lucide-vue-next";
+import { User, Shield, Zap, Bell, Monitor, FlaskConical } from "lucide-vue-next";
 import { useAuth } from "@/lib/auth.js";
+import RealtimeTest from "@/pages/Settings/RealtimeTest.vue";
 
 const { state } = useAuth();
 </script>
@@ -50,6 +51,10 @@ const { state } = useAuth();
           <TabsTrigger value="notifications" class="gap-2">
             <Bell class="h-4 w-4" />
             Notifications
+          </TabsTrigger>
+          <TabsTrigger value="tests" class="gap-2">
+            <FlaskConical class="h-4 w-4" />
+            Tests
           </TabsTrigger>
         </TabsList>
 
@@ -156,6 +161,10 @@ const { state } = useAuth();
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="tests" class="space-y-4">
+          <RealtimeTest />
         </TabsContent>
       </Tabs>
     </div>

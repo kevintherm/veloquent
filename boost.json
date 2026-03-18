@@ -11,6 +11,8 @@
     "sail": false,
     "skills": [
         "pest-testing",
+        "echo-vue-development",
+        "echo-development",
         "tailwindcss-development"
     ]
 }
