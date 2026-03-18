@@ -2,11 +2,32 @@
 ## TODO
 
 - UI Dashboard
-- View logging via API
+    - Manage records
+        - CRUD
+    - Manage collections
+        - Fields
+        - Index
+        - Truncate
+        - Delete
+        - Copy
+    - Manage systems collections
+        - superusers
+        - auth_tokens
+        - auth_otps
+    - Manage systems
+        - Schema corrupt detection
+            - Fix: Rebuild entire schema, manual trigger
+        - Setup system variables
+            - Rate limit
+            - Trust proxies
+            - Mail settings (encrypted)
+            - Storage settings
+            - Backups
+                - Collections, tables, records
+            - Export n imports
+                - Collections metadata only
+    - View Logs
 - Hooks system
-- Handle schema jobs failure
-    - Rebuild associated table
-    - Add routes for handling failed schema jobs
 - Optimize Record model
     - cache collections
 - Add manage_rule to allow updating password field for auth collections
