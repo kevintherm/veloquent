@@ -32,7 +32,8 @@ Route::prefix('collections/{collection}/auth')->name('collections.auth.')->group
     Route::get('/me', [AuthController::class, 'me'])->name('me');
 });
 
-Route::post('onboarding/superuser', [OnboardingController::class, 'createSuperuser'])->name('onboarding.superuser.create');
+Route::get('/onboarding/initialized', [OnboardingController::class, 'initialized'])->name('onboarding.initialized.status');
+Route::post('/onboarding/superuser', [OnboardingController::class, 'createSuperuser'])->name('onboarding.superuser.create');
 Route::get('/user', fn (Request $request) => $request->user());
 
 Route::middleware('auth:api')->group(function () {

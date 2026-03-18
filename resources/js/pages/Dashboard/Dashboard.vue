@@ -76,17 +76,6 @@ const toggleRecord = (id) => {
                 </div>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Overview</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p class="text-sm text-muted-foreground">
-                        Manage records here. Realtime debugging tools are now available in Settings under the Tests tab.
-                    </p>
-                </CardContent>
-            </Card>
-
             <!-- Floating Bulk Actions Bar -->
             <BulkActions :selected-records="selectedRecords" @clear-selection="selectedRecords = []"/>
 

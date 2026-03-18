@@ -5,23 +5,28 @@ namespace App\Domain\Realtime\Controllers;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Realtime\Contracts\RealtimeBusDriver;
 use App\Domain\Records\Models\Record;
-use App\Http\Controllers\Controller;
+use App\Infrastructure\Http\Controllers\ApiController;
 use App\Models\RealtimeSubscription;
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
-class SubscribeController extends Controller
+class SubscribeController extends ApiController
 {
+    public function __construct(
+        private readonly RealtimeBusDriver $driver,
+    ) {}
+
     public function subscribe(Request $request, Collection $collection): JsonResponse
     {
         /** @var Record|null $user */
         $user = Auth::user();
 
         if (! $user instanceof Record) {
-            return response()->json(['message' => 'Unauthenticated.'], 401);
+            throw new AuthenticationException;
         }
 
         $validated = $request->validate([
@@ -30,7 +35,7 @@ class SubscribeController extends Controller
 
         $authCollection = $user->getTable();
         $subscriberId = (string) $user->getKey();
-        $channel = 'private-'.$authCollection.'.'.$subscriberId;
+        $channel = "private-$authCollection.$subscriberId";
         $subscriptionTtl = max(1, (int) config('velo.realtime.subscription_ttl', 120));
         $expiresAt = CarbonImmutable::now()->addSeconds($subscriptionTtl);
 
@@ -49,7 +54,7 @@ class SubscribeController extends Controller
                 ]
             );
 
-            app(RealtimeBusDriver::class)->publish([
+            $this->driver->publish([
                 'type' => 'connection',
                 'action' => 'subscribe',
                 'collection_id' => $collection->id,
@@ -61,7 +66,7 @@ class SubscribeController extends Controller
             ]);
         })->afterResponse();
 
-        return response()->json([
+        return $this->successResponse([
             'status' => 'subscribed',
             'channel' => $channel,
             'expires_at' => $expiresAt->toIso8601String(),
@@ -74,7 +79,7 @@ class SubscribeController extends Controller
         $user = Auth::user();
 
         if (! $user instanceof Record) {
-            return response()->json(['message' => 'Unauthenticated.'], 401);
+            throw new AuthenticationException;
         }
 
         $authCollection = $user->getTable();
@@ -88,7 +93,7 @@ class SubscribeController extends Controller
                 'subscriber_id' => $subscriberId,
             ])->delete();
 
-            app(RealtimeBusDriver::class)->publish([
+            $this->driver->publish([
                 'type' => 'connection',
                 'action' => 'unsubscribe',
                 'collection_id' => $collection->id,
@@ -98,6 +103,6 @@ class SubscribeController extends Controller
             ]);
         })->afterResponse();
 
-        return response()->json(['status' => 'unsubscribed']);
+        return $this->successResponse(['status' => 'unsubscribed']);
     }
 }
