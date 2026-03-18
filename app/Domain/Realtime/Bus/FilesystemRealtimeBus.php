@@ -2,11 +2,12 @@
 
 namespace App\Domain\Realtime\Bus;
 
+use App\Domain\Realtime\Contracts\RealtimeBusDriver;
 use Closure;
 
 class FilesystemRealtimeBus implements RealtimeBusDriver
 {
-    private const POLL_INTERVAL_US = 500_000;
+    private const int POLL_INTERVAL_US = 500_000;
 
     private function directory(): string
     {

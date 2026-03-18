@@ -1,12 +1,8 @@
 
 ## TODO
 
-- Migrate authentication to stateful opaque tokens
 - UI Dashboard
-- Realtime
-    - Fix realtime subscribe for guest error
-    - authentication tests
-    - realtime tests
+- View logging via API
 - Hooks system
 - Handle schema jobs failure
     - Rebuild associated table

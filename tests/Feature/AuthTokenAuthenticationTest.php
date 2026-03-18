@@ -6,7 +6,9 @@ use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Records\Models\Record;
 use App\Models\AuthToken;
+use App\Models\RealtimeSubscription;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 
 use function Pest\Laravel\deleteJson;
 use function Pest\Laravel\getJson;
@@ -126,6 +128,16 @@ it('revokes all active tokens on logout-all', function () {
     $tokenA = $firstLogin->json('data.token');
     $tokenB = $secondLogin->json('data.token');
 
+    RealtimeSubscription::query()->create([
+        'id' => (string) Str::ulid(),
+        'collection_id' => $collection->id,
+        'auth_collection' => $collection->name,
+        'subscriber_id' => (string) $user->id,
+        'channel' => 'private-'.$collection->name.'.'.$user->id,
+        'filter' => '',
+        'expired_at' => now()->addMinute(),
+    ]);
+
     deleteJson("/api/collections/{$collection->name}/auth/logout-all", [], bearerHeaders($tokenA))
         ->assertSuccessful();
 
@@ -136,6 +148,7 @@ it('revokes all active tokens on logout-all', function () {
         ->assertUnauthorized();
 
     expect(AuthToken::query()->forRecord($collection->id, $user->id)->count())->toBe(0);
+    expect(RealtimeSubscription::query()->count())->toBe(0);
 });
 
 it('rejects expired tokens', function () {

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Domain\Realtime\Bus;
+namespace App\Domain\Realtime\Contracts;
 
 use Closure;
 

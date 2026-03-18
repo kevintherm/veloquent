@@ -14,7 +14,7 @@ import axios from "axios";
 import { useAuth } from "@/lib/auth";
 
 const router = useRouter();
-const { fetchUser } = useAuth();
+const { fetchUser, login } = useAuth();
 const name = ref("");
 const email = ref("");
 const password = ref("");
@@ -25,14 +25,25 @@ const loading = ref(false);
 const handleSubmit = async () => {
   error.value = "";
   loading.value = true;
+
+  if (password.value !== password_confirmation.value) {
+    error.value = "Password confirmation does not match.";
+    loading.value = false;
+    return;
+  }
+
   try {
-    await axios.get("/sanctum/csrf-cookie");
-    await axios.post("/api/register", {
+    await axios.post("/api/onboarding/superuser", {
       name: name.value,
       email: email.value,
       password: password.value,
-      password_confirmation: password_confirmation.value,
     });
+
+    await login({
+      email: email.value,
+      password: password.value,
+    });
+
     await fetchUser();
     router.push('/');
   } catch (err) {
@@ -60,29 +71,33 @@ const handleSubmit = async () => {
         <form @submit.prevent="handleSubmit" class="space-y-4">
           <div class="space-y-2">
             <Label for="name">Name</Label>
-            <Input id="name" type="text" v-model="name" required :disabled="loading" />
+            <Input id="name" name="name" type="text" v-model="name" autocomplete="name" required :disabled="loading" />
           </div>
           <div class="space-y-2">
             <Label for="email">Email</Label>
             <Input
               id="email"
+              name="email"
               type="email"
               placeholder="name@example.com"
               v-model="email"
+              autocomplete="username"
               required
               :disabled="loading"
             />
           </div>
           <div class="space-y-2">
             <Label for="password">Password</Label>
-            <Input id="password" type="password" v-model="password" required :disabled="loading" />
+            <Input id="password" name="password" type="password" v-model="password" autocomplete="new-password" required :disabled="loading" />
           </div>
           <div class="space-y-2">
             <Label for="password_confirmation">Confirm Password</Label>
             <Input
               id="password_confirmation"
+              name="password_confirmation"
               type="password"
               v-model="password_confirmation"
+              autocomplete="new-password"
               required
               :disabled="loading"
             />
