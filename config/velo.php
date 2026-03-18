@@ -35,4 +35,10 @@ return [
     |
     */
     'default_auth_collection' => env('VELO_DEFAULT_AUTH_COLLECTION', 'users'),
+
+    'realtime' => [
+        'bus' => env('VELO_REALTIME_BUS', 'redis'),
+        'mode' => env('VELO_REALTIME_MODE', 'persistent'),
+        'cron_ttl' => env('VELO_REALTIME_TTL', 55),
+    ],
 ];
