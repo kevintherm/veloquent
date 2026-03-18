@@ -59,7 +59,7 @@ abstract class BaseRecordRequest extends FormRequest
 
             $rules[$fieldName] = $fieldRules;
         }
-    
+
         return $rules;
     }
 
