@@ -12,6 +12,12 @@ use Symfony\Component\HttpFoundation\Response;
 
 class OnboardingController extends ApiController
 {
+    public function initialized(Request $request): JsonResponse
+    {
+        $collection = Collection::where('type', CollectionType::Auth)->where('name', 'superusers')->first();
+        return $this->successResponse($collection->exists());
+    }
+
     public function createSuperuser(Request $request): JsonResponse
     {
         $collection = Collection::where('type', CollectionType::Auth)->where('name', 'superusers')->first();
