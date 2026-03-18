@@ -19,9 +19,8 @@ class RecordResource extends JsonResource
         $data['collection_id'] = $this->resource->collection->id;
         $data['collection_name'] = $this->resource->collection->name;
 
-
         if ($this->resource->collection->type === CollectionType::Auth) {
-            if ($data['email_visibility'] !== true) {
+            if (isset($data['email_visibility']) && $data['email_visibility'] !== true) {
                 unset($data['email']);
             }
         }

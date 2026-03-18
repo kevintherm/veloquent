@@ -2,9 +2,10 @@
 
 namespace App\Providers;
 
+use App\Domain\Auth\Services\TokenAuthService;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Records\Models\Record;
-use App\Infrastructure\Guards\JwtGuard;
+use App\Infrastructure\Guards\TokenGuard;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -30,8 +31,11 @@ class AppServiceProvider extends ServiceProvider
 
     private function registerAuth(): void
     {
-        Auth::extend('jwt', function ($app, $name, array $config) {
-            return new JwtGuard;
+        Auth::extend('opaque_token', function ($app, $name, array $config) {
+            return new TokenGuard(
+                $app->make(TokenAuthService::class),
+                $app->make('request'),
+            );
         });
     }
 

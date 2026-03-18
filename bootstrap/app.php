@@ -1,9 +1,7 @@
 <?php
 
 use App\Domain\Collections\Models\Collection;
-use App\Exceptions\JwtException;
-use App\Http\Middleware\JwtMiddleware;
-use App\Infrastructure\Traits\ApiResponse;
+use App\Http\Middleware\TokenAuthMiddleware;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -30,49 +28,45 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->append(JwtMiddleware::class);
+        $middleware->append(TokenAuthMiddleware::class);
         $middleware->remove(ConvertEmptyStringsToNull::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (Throwable $e, $request) {
             if ($request->is('api/*')) {
-                return (new class
-                {
-                    use ApiResponse;
+                $errorResponse = static function (string $message, int $code, mixed $errors = null) {
+                    return response()->json([
+                        'message' => $message,
+                        'errors' => $errors,
+                    ], $code);
+                };
 
-                    public function handle($e)
-                    {
-                        if ($e instanceof ValidationException) {
-                            return $this->errorResponse('Validation error', Response::HTTP_UNPROCESSABLE_ENTITY, $e->errors());
-                        }
-                        if ($e instanceof ModelNotFoundException || $e instanceof NotFoundHttpException) {
-                            return $this->errorResponse('Resource not found', Response::HTTP_NOT_FOUND);
-                        }
-                        if ($e instanceof AuthenticationException) {
-                            return $this->errorResponse('Unauthenticated', Response::HTTP_UNAUTHORIZED);
-                        }
-                        if ($e instanceof AuthorizationException) {
-                            return $this->errorResponse('Unauthorized', Response::HTTP_FORBIDDEN);
-                        }
-                        if ($e instanceof JwtException) {
-                            return $this->errorResponse($e->getMessage(), Response::HTTP_UNAUTHORIZED);
-                        }
-                        if ($e instanceof HttpException) {
-                            return $this->errorResponse($e->getMessage(), $e->getStatusCode());
-                        }
+                if ($e instanceof ValidationException) {
+                    return $errorResponse('Validation error', Response::HTTP_UNPROCESSABLE_ENTITY, $e->errors());
+                }
+                if ($e instanceof ModelNotFoundException || $e instanceof NotFoundHttpException) {
+                    return $errorResponse('Resource not found', Response::HTTP_NOT_FOUND);
+                }
+                if ($e instanceof AuthenticationException) {
+                    return $errorResponse('Unauthenticated', Response::HTTP_UNAUTHORIZED);
+                }
+                if ($e instanceof AuthorizationException) {
+                    return $errorResponse('Unauthorized', Response::HTTP_FORBIDDEN);
+                }
+                if ($e instanceof HttpException) {
+                    return $errorResponse($e->getMessage(), $e->getStatusCode());
+                }
 
-                        return $this->errorResponse(
-                            config('app.debug') ? $e->getMessage() : 'Something went wrong',
-                            Response::HTTP_INTERNAL_SERVER_ERROR,
-                            config('app.debug') ? [
-                                'exception' => get_class($e),
-                                'file' => $e->getFile(),
-                                'line' => $e->getLine(),
-                                'trace' => collect($e->getTrace())->take(100),
-                            ] : null
-                        );
-                    }
-                })->handle($e);
+                return $errorResponse(
+                    config('app.debug') ? $e->getMessage() : 'Something went wrong',
+                    Response::HTTP_INTERNAL_SERVER_ERROR,
+                    config('app.debug') ? [
+                        'exception' => get_class($e),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                        'trace' => collect($e->getTrace())->take(100),
+                    ] : null
+                );
             }
         });
     })->create();
