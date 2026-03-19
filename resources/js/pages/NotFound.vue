@@ -22,11 +22,7 @@ const missingPath = computed(() => route.fullPath || "/");
 
         <div class="flex flex-col justify-center gap-3 sm:flex-row">
           <Button as-child>
-            <router-link to="/">Go to dashboard</router-link>
-          </Button>
-
-          <Button variant="outline" as-child>
-            <router-link to="/login">Go to login</router-link>
+            <router-link to="/">Go Back</router-link>
           </Button>
         </div>
       </CardContent>

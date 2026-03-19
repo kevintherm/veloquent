@@ -1,52 +1,145 @@
 <script setup>
-import { computed, ref } from "vue";
-import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from "@/components/ui";
+import { computed, onUnmounted, ref, watch } from "vue";
+import axios from "axios";
+import { Input } from "@/components/ui";
 import {Search} from "lucide-vue-next";
+import { useRoute, useRouter } from "vue-router";
 import DashboardLayout from "@/layouts/DashboardLayout.vue";
 import DataTable from "@/pages/Dashboard/DataTable.vue";
 import BulkActions from "@/pages/Dashboard/BulkActions.vue";
+import { useDashboardState } from "@/lib/dashboardState";
 
-const records = ref([
-    {id: 1, name: "John Doe", email: "john@example.com", role: "Admin", created_at: "2024-01-10"},
-    {id: 2, name: "Jane Smith", email: "jane@example.com", role: "User", created_at: "2024-01-12"},
-    {id: 3, name: "Bob Johnson", email: "bob@example.com", role: "User", created_at: "2024-01-15"},
-    {id: 4, name: "Alice Brown", email: "alice@example.com", role: "Editor", created_at: "2024-01-18"},
-    {id: 5, name: "Charlie Wilson", email: "charlie@example.com", role: "User", created_at: "2024-01-20"},
-    {id: 6, name: "David Miller", email: "david@example.com", role: "User", created_at: "2024-01-22"},
-    {id: 7, name: "Eve Davis", email: "eve@example.com", role: "Admin", created_at: "2024-01-25"},
-    {id: 8, name: "Frank White", email: "frank@example.com", role: "User", created_at: "2024-01-28"},
-    {id: 9, name: "Grace Lee", email: "grace@example.com", role: "Editor", created_at: "2024-02-01"},
-    {id: 10, name: "Henry Ford", email: "henry@example.com", role: "User", created_at: "2024-02-05"},
-]);
+const route = useRoute();
+const router = useRouter();
+const { activeCollection } = useDashboardState();
+const records = ref([]);
+const loading = ref(false);
 
 const selectedRecords = ref([]);
 const searchQuery = ref("");
+const debouncedSearchQuery = ref("");
 const currentPage = ref(1);
-const itemsPerPage = 5;
+const itemsPerPage = 15;
+const totalPages = ref(1);
+const totalRecords = ref(0);
+let searchDebounceTimer = null;
 
-const filteredRecords = computed(() => {
-    let result = records.value;
-    if (searchQuery.value) {
-        result = result.filter(
-            (record) =>
-                record.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-                record.email.toLowerCase().includes(searchQuery.value.toLowerCase())
-        );
+const normalizeRecordsPayload = (payload) => {
+    if (Array.isArray(payload)) {
+        return {
+            rows: payload,
+            meta: null,
+        };
     }
-    return result;
+
+    if (Array.isArray(payload?.data)) {
+        return {
+            rows: payload.data,
+            meta: payload.meta ?? null,
+        };
+    }
+
+    return {
+        rows: [],
+        meta: null,
+    };
+};
+
+const fetchRecords = async () => {
+    if (!activeCollection.value?.id) {
+        records.value = [];
+        totalPages.value = 1;
+        totalRecords.value = 0;
+        selectedRecords.value = [];
+        return;
+    }
+
+    loading.value = true;
+
+    const query = debouncedSearchQuery.value.trim();
+
+    try {
+        const response = await axios.get(`/api/collections/${activeCollection.value.name}/records`, {
+            params: {
+                page: currentPage.value,
+                per_page: itemsPerPage,
+                filter: query,
+            },
+        });
+
+        const { rows, meta } = normalizeRecordsPayload(response?.data?.data);
+
+        records.value = rows;
+
+        if (meta) {
+            totalPages.value = Number(meta.last_page ?? 1);
+            totalRecords.value = Number(meta.total ?? rows.length);
+            currentPage.value = Number(meta.current_page ?? currentPage.value);
+        } else {
+            totalPages.value = 1;
+            totalRecords.value = rows.length;
+        }
+    } catch (error) {
+        records.value = [];
+        totalPages.value = 1;
+        totalRecords.value = 0;
+    } finally {
+        selectedRecords.value = [];
+        loading.value = false;
+    }
+};
+
+const recordColumns = computed(() => {
+    const excludedColumns = new Set(["collection_id", "collection_name"]);
+    const collectionFields = activeCollection.value?.fields ?? [];
+    const fields = collectionFields
+        .map((field) => field?.name)
+        .filter((name) => name && !excludedColumns.has(name));
+
+    const rows = records.value;
+
+    if (!rows.length) {
+        return fields.length ? fields : ["id", "created_at", "updated_at"];
+    }
+
+    const rowKeys = Object.keys(rows[0]).filter((key) => !excludedColumns.has(key));
+    const orderedColumns = fields.length ? fields : rowKeys;
+
+    for (const key of rowKeys) {
+        if (!orderedColumns.includes(key)) {
+            orderedColumns.push(key);
+        }
+    }
+
+    return orderedColumns;
 });
 
-const totalPages = computed(() => Math.ceil(filteredRecords.value.length / itemsPerPage));
+const columnTypes = computed(() => {
+    const types = {};
+    const collectionFields = activeCollection.value?.fields ?? [];
 
-const paginatedRecords = computed(() => {
-    const start = (currentPage.value - 1) * itemsPerPage;
-    const end = start + itemsPerPage;
-    return filteredRecords.value.slice(start, end);
+    for (const field of collectionFields) {
+        if (!field?.name) {
+            continue;
+        }
+
+        types[field.name] = field.type ?? null;
+    }
+
+    if (!types.created_at) {
+        types.created_at = "timestamp";
+    }
+
+    if (!types.updated_at) {
+        types.updated_at = "timestamp";
+    }
+
+    return types;
 });
 
 const toggleAll = (checked) => {
     if (checked) {
-        selectedRecords.value = paginatedRecords.value.map((r) => r.id);
+        selectedRecords.value = records.value.map((r) => r.id);
     } else {
         selectedRecords.value = [];
     }
@@ -60,6 +153,79 @@ const toggleRecord = (id) => {
         selectedRecords.value.push(id);
     }
 };
+
+watch(
+    () => activeCollection.value?.id,
+    async () => {
+        currentPage.value = 1;
+        await fetchRecords();
+    },
+    { immediate: true }
+);
+
+watch(
+    () => route.query.q,
+    (value) => {
+        const nextQuery = typeof value === "string" ? value : "";
+
+        if (nextQuery === searchQuery.value) {
+            return;
+        }
+
+        if (searchDebounceTimer) {
+            clearTimeout(searchDebounceTimer);
+        }
+
+        searchQuery.value = nextQuery;
+        debouncedSearchQuery.value = nextQuery;
+        currentPage.value = 1;
+    },
+    { immediate: true }
+);
+
+watch(searchQuery, (value) => {
+    const normalizedValue = value.trim();
+    const currentQuery = typeof route.query.q === "string" ? route.query.q : "";
+
+    if (normalizedValue !== currentQuery) {
+        const nextQuery = { ...route.query };
+
+        if (normalizedValue) {
+            nextQuery.q = normalizedValue;
+        } else {
+            delete nextQuery.q;
+        }
+
+        void router.replace({ query: nextQuery });
+    }
+
+    if (searchDebounceTimer) {
+        clearTimeout(searchDebounceTimer);
+    }
+
+    searchDebounceTimer = setTimeout(() => {
+        debouncedSearchQuery.value = value;
+    }, 750);
+});
+
+watch(debouncedSearchQuery, async () => {
+    if (currentPage.value !== 1) {
+        currentPage.value = 1;
+        return;
+    }
+
+    await fetchRecords();
+});
+
+watch(currentPage, async () => {
+    await fetchRecords();
+});
+
+onUnmounted(() => {
+    if (searchDebounceTimer) {
+        clearTimeout(searchDebounceTimer);
+    }
+});
 </script>
 
 <template>
@@ -80,12 +246,15 @@ const toggleRecord = (id) => {
             <BulkActions :selected-records="selectedRecords" @clear-selection="selectedRecords = []"/>
 
             <DataTable
-                :paginated-records="paginatedRecords"
+                :records="records"
+                :columns="recordColumns"
+                :column-types="columnTypes"
                 :selected-records="selectedRecords"
                 :current-page="currentPage"
                 :total-pages="totalPages"
                 :items-per-page="itemsPerPage"
-                :filtered-records-length="filteredRecords.length"
+                :filtered-records-length="totalRecords"
+                :loading="loading"
                 @toggle-all="toggleAll"
                 @toggle-record="toggleRecord"
                 @prev-page="currentPage--"

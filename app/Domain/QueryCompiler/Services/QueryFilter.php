@@ -2,6 +2,7 @@
 
 namespace App\Domain\QueryCompiler\Services;
 
+use App\Domain\QueryCompiler\Exceptions\InvalidRuleExpressionException;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
@@ -120,7 +121,7 @@ class QueryFilter
 
             if (isset($this->tokens[$this->pos])) {
                 $token = $this->tokens[$this->pos];
-                throw new \RuntimeException("Unexpected token '{$token['value']}'");
+                $this->invalid("Unexpected token '{$token['value']}'");
             }
 
             return $result;
@@ -222,16 +223,16 @@ class QueryFilter
     {
         $fieldToken = $this->consume();
         if ($fieldToken['type'] !== 'FIELD') {
-            throw new \RuntimeException("Expected field name, got '{$fieldToken['value']}'");
+            $this->invalid("Expected field name, got '{$fieldToken['value']}'");
         }
 
         if ($this->isSystemReference($fieldToken['value'])) {
-            throw new \InvalidArgumentException('Invalid rule expression: expected FIELD OP VALUE and field cannot be @-prefixed.');
+            $this->invalid('Invalid rule expression: expected FIELD OP VALUE and field cannot be @-prefixed.');
         }
 
         $opToken = $this->consume();
         if ($opToken['type'] !== 'OP') {
-            throw new \RuntimeException("Expected operator, got '{$opToken['value']}'");
+            $this->invalid("Expected operator, got '{$opToken['value']}'");
         }
 
         $field = $fieldToken['value'];
@@ -303,16 +304,16 @@ class QueryFilter
     {
         $fieldToken = $this->consume();
         if ($fieldToken['type'] !== 'FIELD') {
-            throw new \RuntimeException("Expected field name, got '{$fieldToken['value']}'");
+            $this->invalid("Expected field name, got '{$fieldToken['value']}'");
         }
 
         if ($this->isSystemReference($fieldToken['value'])) {
-            throw new \InvalidArgumentException('Invalid rule expression: expected FIELD OP VALUE and field cannot be @-prefixed.');
+            $this->invalid('Invalid rule expression: expected FIELD OP VALUE and field cannot be @-prefixed.');
         }
 
         $opToken = $this->consume();
         if ($opToken['type'] !== 'OP') {
-            throw new \RuntimeException("Expected operator, got '{$opToken['value']}'");
+            $this->invalid("Expected operator, got '{$opToken['value']}'");
         }
 
         $fieldValue = $this->resolveContextValue($fieldToken['value']);
@@ -326,7 +327,7 @@ class QueryFilter
             'like' => $this->matchesLike($fieldValue, $this->parseScalarValue()),
             'not like' => ! $this->matchesLike($fieldValue, $this->parseScalarValue()),
             '=', '!=', '>', '<', '>=', '<=' => $this->compareValues($fieldValue, $op, $this->parseScalarValue()),
-            default => throw new \RuntimeException("Unsupported operator '{$op}' for evaluation"),
+            default => $this->invalid("Unsupported operator '{$op}' for evaluation"),
         };
     }
 
@@ -390,7 +391,7 @@ class QueryFilter
     private function resolveDateFunction(string $v): Carbon
     {
         if (! preg_match('/^(\w+)\((\d*)\)$/', $v, $m)) {
-            throw new \InvalidArgumentException("Malformed date function: {$v}");
+            $this->invalid("Malformed date function: {$v}");
         }
 
         $name = $m[1];
@@ -398,7 +399,7 @@ class QueryFilter
 
         if (in_array($name, self::DATE_FUNCTIONS_PARAM, true)) {
             if ($arg === null) {
-                throw new \InvalidArgumentException("Date function {$name}() requires a numeric argument.");
+                $this->invalid("Date function {$name}() requires a numeric argument.");
             }
 
             return match ($name) {
@@ -414,7 +415,7 @@ class QueryFilter
         }
 
         if ($arg !== null) {
-            throw new \InvalidArgumentException("Date function {$name}() does not accept arguments.");
+            $this->invalid("Date function {$name}() does not accept arguments.");
         }
 
         return match ($name) {
@@ -458,7 +459,7 @@ class QueryFilter
             $token = $this->consume();
 
             if (! in_array($token['type'], ['VALUE', 'DATE_FUNC', 'FIELD'], true)) {
-                throw new \RuntimeException("Expected list value, got '{$token['type']}' ('{$token['value']}')");
+                $this->invalid("Expected list value, got '{$token['type']}' ('{$token['value']}')");
             }
 
             if ($token['type'] === 'DATE_FUNC') {
@@ -483,7 +484,7 @@ class QueryFilter
         }
 
         if ($values === []) {
-            throw new \RuntimeException('List operator requires at least one value');
+            $this->invalid('List operator requires at least one value');
         }
 
         return $values;
@@ -494,12 +495,12 @@ class QueryFilter
         $token = $this->consume();
 
         if (! in_array($token['type'], ['VALUE', 'DATE_FUNC', 'FIELD'], true)) {
-            throw new \RuntimeException("Expected value token, got '{$token['type']}' ('{$token['value']}')");
+            $this->invalid("Expected value token, got '{$token['type']}' ('{$token['value']}')");
         }
 
         if ($token['type'] === 'FIELD') {
             if (! $this->isSystemReference($token['value'])) {
-                throw new \RuntimeException("Expected value token, got 'FIELD' ('{$token['value']}')");
+                $this->invalid("Expected value token, got 'FIELD' ('{$token['value']}')");
             }
 
             return $this->shouldResolveSystemReferences()
@@ -548,7 +549,7 @@ class QueryFilter
             '<' => $left < $right,
             '>=' => $left >= $right,
             '<=' => $left <= $right,
-            default => throw new \RuntimeException("Unsupported comparison operator '{$op}'"),
+            default => $this->invalid("Unsupported comparison operator '{$op}'"),
         };
     }
 
@@ -669,7 +670,7 @@ class QueryFilter
             // Function call — word followed immediately by '('
             if (isset($src[$i]) && $src[$i] === '(') {
                 if (! in_array($lower, $allDateFuncs, true)) {
-                    throw new \InvalidArgumentException("Unknown function: {$lower}()");
+                    $this->invalid("Unknown function: {$lower}()");
                 }
 
                 // Capture the full argument list including surrounding parens
@@ -709,7 +710,7 @@ class QueryFilter
             $isSystemField = $this->isSystemReference($word);
 
             if (! in_array($word, $this->allowedFields, true) && ! $this->allowUnknownFields && ! $isSystemField) {
-                throw new \InvalidArgumentException("Unknown field or variable: {$word}");
+                $this->invalid("Unknown field or variable: {$word}");
             }
 
             $tokens[] = ['type' => 'FIELD', 'value' => $word];
@@ -730,7 +731,7 @@ class QueryFilter
     {
         $token = $this->tokens[$this->pos] ?? null;
         if (! $token) {
-            throw new \RuntimeException('Unexpected end of filter string');
+            $this->invalid('Unexpected end of filter string');
         }
         $this->pos++;
 
@@ -741,9 +742,14 @@ class QueryFilter
     {
         $token = $this->consume();
         if ($token['type'] !== $type) {
-            throw new \RuntimeException("Expected {$type}, got {$token['type']} ('{$token['value']}')");
+            $this->invalid("Expected {$type}, got {$token['type']} ('{$token['value']}')");
         }
 
         return $token;
+    }
+
+    private function invalid(string $message): never
+    {
+        throw new InvalidRuleExpressionException($message);
     }
 }

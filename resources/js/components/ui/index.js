@@ -25,6 +25,7 @@ export { default as Label } from "./Label.vue";
 export { default as Checkbox } from "./Checkbox.vue";
 export { default as Separator } from "./Separator.vue";
 export { default as Switch } from "./Switch.vue";
+export { default as Skeleton } from "./skeleton/Skeleton.vue";
 
 export { default as Table } from "./Table.vue";
 export { default as TableBody } from "./TableBody.vue";

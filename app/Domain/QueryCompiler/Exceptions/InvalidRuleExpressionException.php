@@ -2,13 +2,12 @@
 
 namespace App\Domain\QueryCompiler\Exceptions;
 
-use Exception;
-use Illuminate\Support\Facades\Log;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
-class InvalidRuleExpressionException extends Exception
+class InvalidRuleExpressionException extends HttpException
 {
-    public function report(): void
+    public function __construct(string $message)
     {
-        Log::error('InvalidRuleExpressionException: '.$this->getMessage());
+        parent::__construct(400, $message);
     }
 }

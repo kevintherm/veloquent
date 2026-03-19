@@ -73,7 +73,7 @@ return new class extends Migration
             'id' => Str::ulid(),
             'type' => 'base',
             'is_system' => true,
-            'name' => 'password_reset_tokens',
+            'name' => 'passwordResetTokens',
             'description' => 'Password reset tokens collection',
             'fields' => json_encode([
                 [
