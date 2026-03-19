@@ -26,7 +26,6 @@ return new class extends Migration
             $table->string('name')->nullable();
             $table->string('email')->unique();
             $table->string('password');
-            $table->string('token_key');
             $table->boolean('email_visibility')->default(true);
             $table->boolean('verified')->default(false);
 
@@ -63,13 +62,6 @@ return new class extends Migration
                 ],
                 [
                     'name' => 'password',
-                    'type' => CollectionFieldType::Text->value,
-                    'nullable' => false,
-                    'unique' => false,
-                    'length' => 255,
-                ],
-                [
-                    'name' => 'token_key',
                     'type' => CollectionFieldType::Text->value,
                     'nullable' => false,
                     'unique' => false,

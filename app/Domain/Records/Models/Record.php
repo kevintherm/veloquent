@@ -71,7 +71,7 @@ class Record extends Authenticatable
         $instance->casts = $casts;
 
         if ($collection->type === CollectionType::Auth) {
-            $instance->hidden = ['password', 'token_key'];
+            $instance->hidden = ['password'];
         }
 
         return $instance;

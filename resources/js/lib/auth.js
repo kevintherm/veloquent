@@ -16,6 +16,15 @@ const state = reactive({
 
 const AUTH_COLLECTION = "superusers";
 
+export const clearAuthSession = () => {
+  state.user = null;
+  state.initialized = true;
+  clearAuthToken();
+  clearAuthCollection();
+  applyAuthHeader(axios, null);
+  window.disconnectEcho?.();
+};
+
 export const useAuth = () => {
   const resolveCollection = () => {
     return AUTH_COLLECTION;
@@ -55,7 +64,11 @@ export const useAuth = () => {
       const response = await axios.get(`/api/collections/${collection}/auth/me`);
       state.user = response.data.data;
     } catch (error) {
-      state.user = null;
+      if (error?.response?.status === 401) {
+        clearAuthSession();
+      } else {
+        state.user = null;
+      }
     } finally {
       state.initialized = true;
     }
@@ -65,15 +78,11 @@ export const useAuth = () => {
     const collection = resolveCollection();
 
     try {
-      await axios.delete(`/api/collections/${collection}/auth/logout-all`);
-      state.user = null;
+      await axios.delete(`/api/collections/${collection}/auth/logout`);
     } catch (error) {
       console.error("Logout error", error);
     } finally {
-      clearAuthToken();
-      clearAuthCollection();
-      applyAuthHeader(axios, null);
-      window.disconnectEcho?.();
+      clearAuthSession();
     }
   };
 

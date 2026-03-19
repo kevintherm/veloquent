@@ -11,6 +11,7 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Infrastructure\Http\Controllers\ApiController;
 use App\Models\RealtimeSubscription;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Symfony\Component\HttpFoundation\Response;
@@ -41,6 +42,32 @@ class AuthController extends ApiController
         return $this->tokenResponse($tokenData);
     }
 
+    public function logout(Request $request, Collection $collection): JsonResponse
+    {
+        /** @var Record|null $user */
+        $user = Auth::user();
+
+        if ($user && ! $this->userMatchesCollection($user, $collection)) {
+            return $this->errorResponse('User not authenticated.', Response::HTTP_UNAUTHORIZED);
+        }
+
+        if (! $user || ! $user->collection?->id) {
+            return $this->errorResponse('User not authenticated.', Response::HTTP_UNAUTHORIZED);
+        }
+
+        $tokenHash = hash('sha256', $this->tokenService->extractTokenFromRequest($request));
+        $this->tokenService->revokeRecordTokens($user->collection->id, $user->id, $tokenHash);
+
+        $this->realtimeBus->publish([
+            'type' => 'connection',
+            'action' => 'logout',
+            'auth_collection' => $user->getTable(),
+            'subscriber_id' => (string) $user->getKey(),
+        ]);
+
+        return $this->successResponse([], 'Logged out successfully.');
+    }
+
     public function logoutAll(Collection $collection): JsonResponse
     {
         /** @var Record|null $user */
@@ -62,7 +89,7 @@ class AuthController extends ApiController
 
         $this->realtimeBus->publish([
             'type' => 'connection',
-            'action' => 'logout',
+            'action' => 'logoutAll',
             'auth_collection' => $user->getTable(),
             'subscriber_id' => (string) $user->getKey(),
         ]);

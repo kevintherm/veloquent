@@ -15,7 +15,12 @@ class OnboardingController extends ApiController
     public function initialized(Request $request): JsonResponse
     {
         $collection = Collection::where('type', CollectionType::Auth)->where('name', 'superusers')->first();
-        return $this->successResponse($collection->exists());
+
+        if (! $collection) {
+            return $this->successResponse(false);
+        }
+
+        return $this->successResponse(Record::of($collection)->exists());
     }
 
     public function createSuperuser(Request $request): JsonResponse
