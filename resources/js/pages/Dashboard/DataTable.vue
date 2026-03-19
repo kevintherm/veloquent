@@ -2,13 +2,11 @@
 import {
     ChevronLeft,
     ChevronRight,
-    Edit,
-    MoreVertical,
-    Trash2,
 } from "lucide-vue-next";
 import {
     Button,
     Card,
+    Skeleton,
     Table,
     TableHeader,
     TableBody,
@@ -19,9 +17,17 @@ import {
 } from "@/components/ui";
 
 defineProps({
-    paginatedRecords: {
+    records: {
         type: Array,
         required: true
+    },
+    columns: {
+        type: Array,
+        required: true
+    },
+    columnTypes: {
+        type: Object,
+        default: () => ({})
     },
     selectedRecords: {
         type: Array,
@@ -42,10 +48,67 @@ defineProps({
     filteredRecordsLength: {
         type: Number,
         required: true
+    },
+    loading: {
+        type: Boolean,
+        default: false
     }
 })
 
 defineEmits(['toggle-all', 'toggle-record', 'prev-page', 'next-page'])
+
+const skeletonRows = 5;
+
+const datetimeTypes = new Set(["timestamp", "datetime", "date"]);
+
+const isDatetimeColumn = (column, columnTypes) => {
+    return datetimeTypes.has(columnTypes?.[column]);
+};
+
+const formatDatetimeParts = (value) => {
+    if (value === null || value === undefined || value === "") {
+        return {
+            date: "-",
+            time: "",
+        };
+    }
+
+    const parsedDate = value instanceof Date ? value : new Date(value);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+        return {
+            date: String(value),
+            time: "",
+        };
+    }
+
+    return {
+        date: parsedDate.toLocaleDateString(),
+        time: parsedDate.toLocaleTimeString(),
+    };
+};
+
+const formatValue = (value, column, columnTypes) => {
+    if (value === null || value === undefined || value === "") {
+        return "-";
+    }
+
+    if (typeof value === "boolean") {
+        return value ? "Yes" : "No";
+    }
+
+    if (typeof value === "object") {
+        return JSON.stringify(value);
+    }
+
+    return String(value);
+};
+
+const columnLabel = (name) => {
+    return name
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+};
 </script>
 
 <template>
@@ -56,48 +119,55 @@ defineEmits(['toggle-all', 'toggle-record', 'prev-page', 'next-page'])
                     <TableRow>
                         <TableHead class="w-12.5">
                             <Checkbox
-                                :model-value="selectedRecords.length === paginatedRecords.length && paginatedRecords.length > 0"
+                                :model-value="selectedRecords.length === records.length && records.length > 0"
                                 @update:model-value="(val) => $emit('toggle-all', val)"
                             />
                         </TableHead>
-                        <TableHead>ID</TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead>Created At</TableHead>
-                        <TableHead>Updated At</TableHead>
+                        <TableHead v-for="column in columns" :key="column">
+                            {{ columnLabel(column) }}
+                        </TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    <TableRow
-                        v-for="record in paginatedRecords"
-                        :key="record.id"
-                        :data-state="selectedRecords.includes(record.id) ? 'selected' : ''"
-                    >
-                        <TableCell>
-                            <Checkbox
-                                :model-value="selectedRecords.includes(record.id)"
-                                @update:model-value="$emit('toggle-record', record.id)"
-                            />
+                    <template v-if="!loading">
+                        <TableRow
+                            v-for="record in records"
+                            :key="record.id"
+                            :data-state="selectedRecords.includes(record.id) ? 'selected' : ''"
+                        >
+                            <TableCell>
+                                <Checkbox
+                                    :model-value="selectedRecords.includes(record.id)"
+                                    @update:model-value="$emit('toggle-record', record.id)"
+                                />
+                            </TableCell>
+                            <TableCell v-for="column in columns" :key="`${record.id}-${column}`" class="align-top">
+                                <div v-if="isDatetimeColumn(column, columnTypes)" class="leading-tight">
+                                    <p class="text-sm font-medium">
+                                        {{ formatDatetimeParts(record[column]).date }}
+                                    </p>
+                                    <p v-if="formatDatetimeParts(record[column]).time" class="text-xs text-muted-foreground">
+                                        {{ formatDatetimeParts(record[column]).time }}
+                                    </p>
+                                </div>
+                                <span v-else :class="column === 'id' ? 'font-mono text-xs text-muted-foreground' : ''">
+                                    {{ formatValue(record[column], column, columnTypes) }}
+                                </span>
+                            </TableCell>
+                        </TableRow>
+                    </template>
+                    <TableRow v-if="loading">
+                        <TableCell :colspan="columns.length + 1" class="space-y-3 py-4">
+                            <div v-for="rowIndex in skeletonRows" :key="`skeleton-row-${rowIndex}`" class="grid gap-3"
+                                :style="{ gridTemplateColumns: `2rem repeat(${columns.length}, minmax(0, 1fr))` }">
+                                <Skeleton class="h-4 w-4 rounded-sm" />
+                                <Skeleton v-for="column in columns" :key="`skeleton-${rowIndex}-${column}`" class="h-4 w-full" />
+                            </div>
                         </TableCell>
-                        <TableCell class="font-mono text-xs text-muted-foreground">#{{
-                                record.id
-                            }}
-                        </TableCell>
-                        <TableCell class="font-medium">{{ record.name }}</TableCell>
-                        <TableCell>{{ record.email }}</TableCell>
-                        <TableCell>
-                        <span
-                            class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-secondary text-secondary-foreground">
-                          {{ record.role }}
-                        </span>
-                        </TableCell>
-                        <TableCell class="text-muted-foreground">{{ record.created_at }}</TableCell>
-                        <TableCell class="text-muted-foreground">{{ record.created_at }}</TableCell>
                     </TableRow>
-                    <TableRow v-if="paginatedRecords.length === 0">
-                        <TableCell colspan="7" class="h-24 text-center text-muted-foreground">
-                            No results found.
+                    <TableRow v-else-if="records.length === 0">
+                        <TableCell :colspan="columns.length + 1" class="h-24 text-center text-muted-foreground">
+                            No records found.
                         </TableCell>
                     </TableRow>
                 </TableBody>
@@ -107,9 +177,14 @@ defineEmits(['toggle-all', 'toggle-record', 'prev-page', 'next-page'])
         <!-- Pagination -->
         <div class="flex items-center justify-between px-6 py-4 border-t">
             <div class="text-sm text-muted-foreground">
-                Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to
-                {{ Math.min(currentPage * itemsPerPage, filteredRecordsLength) }} of
-                {{ filteredRecordsLength }} records
+                <template v-if="filteredRecordsLength > 0">
+                    Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to
+                    {{ Math.min(currentPage * itemsPerPage, filteredRecordsLength) }} of
+                    {{ filteredRecordsLength }} records
+                </template>
+                <template v-else>
+                    Showing 0 records
+                </template>
             </div>
             <div class="flex items-center gap-2">
                 <Button

@@ -1,7 +1,6 @@
 <script setup>
 import {Button} from "@/components/ui";
 import {
-    Edit,
     Trash2,
 } from "lucide-vue-next";
 

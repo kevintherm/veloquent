@@ -96,5 +96,3 @@ const connectEcho = () => {
 
 window.connectEcho = connectEcho;
 window.disconnectEcho = disconnectEcho;
-
-// connectEcho();

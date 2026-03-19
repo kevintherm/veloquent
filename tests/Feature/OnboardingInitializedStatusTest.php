@@ -2,7 +2,6 @@
 
 use App\Models\Superuser;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Str;
 
 use function Pest\Laravel\postJson;
 
@@ -19,7 +18,7 @@ it('returns true after the first superuser is created', function () {
     $superuser->forceFill([
         'name' => 'First Admin',
         'email' => 'first-admin@example.test',
-        'password' => 'password123'
+        'password' => 'password123',
     ]);
     $superuser->save();
 
