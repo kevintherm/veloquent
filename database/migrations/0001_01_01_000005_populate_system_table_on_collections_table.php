@@ -44,13 +44,6 @@ return new class extends Migration
                     'length' => 255,
                 ],
                 [
-                    'name' => 'token_key',
-                    'type' => CollectionFieldType::Text->value,
-                    'nullable' => false,
-                    'unique' => true,
-                    'length' => 64,
-                ],
-                [
                     'name' => 'password',
                     'type' => CollectionFieldType::Text->value,
                     'nullable' => false,

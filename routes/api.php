@@ -28,11 +28,13 @@ Route::prefix('collections/{collection}/records')->group(function () {
 
 Route::prefix('collections/{collection}/auth')->name('collections.auth.')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->name('authenticate');
+    Route::delete('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::delete('/logout-all', [AuthController::class, 'logoutAll'])->name('logout-all');
     Route::get('/me', [AuthController::class, 'me'])->name('me');
 });
 
 Route::get('/onboarding/initialized', [OnboardingController::class, 'initialized'])->name('onboarding.initialized.status');
+Route::post('/onboarding/initialized', [OnboardingController::class, 'initialized'])->name('onboarding.initialized.check');
 Route::post('/onboarding/superuser', [OnboardingController::class, 'createSuperuser'])->name('onboarding.superuser.create');
 Route::get('/user', fn (Request $request) => $request->user());
 

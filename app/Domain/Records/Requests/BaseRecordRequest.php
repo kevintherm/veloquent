@@ -22,7 +22,7 @@ abstract class BaseRecordRequest extends FormRequest
         $rules = [];
         $fields = $collection->fields ?? [];
 
-        $autoFillFields = ['id', 'token_key', 'token', 'created_at', 'updated_at'];
+        $autoFillFields = ['id', 'token', 'created_at', 'updated_at'];
 
         foreach ($fields as $field) {
             $fieldName = $field['name'];

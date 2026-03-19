@@ -8,9 +8,10 @@ import {
   CardTitle,
   CardContent,
 } from "@/components/ui";
-import { ref } from "vue";
+import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useAuth } from "@/lib/auth";
+import { isOnboardingInitialized } from "@/lib/onboarding";
 
 const router = useRouter();
 const { fetchUser, login } = useAuth();
@@ -18,6 +19,15 @@ const email = ref("");
 const password = ref("");
 const error = ref("");
 const loading = ref(false);
+const onboardingInitialized = ref(true);
+
+onMounted(async () => {
+  try {
+    onboardingInitialized.value = await isOnboardingInitialized();
+  } catch (err) {
+    onboardingInitialized.value = true;
+  }
+});
 
 const handleSubmit = async () => {
   error.value = "";
@@ -81,7 +91,7 @@ const handleSubmit = async () => {
             {{ loading ? "Signing In..." : "Sign In" }}
           </Button>
         </form>
-        <div class="mt-4 text-center text-sm">
+        <div v-if="!onboardingInitialized" class="mt-4 text-center text-sm">
           Don't have an account?
           <router-link to="/register" class="text-primary hover:underline">
             Register

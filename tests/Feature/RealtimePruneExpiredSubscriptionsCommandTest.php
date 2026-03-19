@@ -31,7 +31,7 @@ it('prunes only expired realtime subscriptions', function () {
 
     expect(RealtimeSubscription::query()->count())->toBe(2);
 
-    artisan('realtime:prune-expired-subscriptions')->assertSuccessful();
+    artisan('realtime:prune-expired')->assertSuccessful();
 
     expect(RealtimeSubscription::query()->count())->toBe(1);
     expect(RealtimeSubscription::query()->firstOrFail()->expired_at->isFuture())->toBeTrue();

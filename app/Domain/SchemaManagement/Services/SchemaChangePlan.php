@@ -17,7 +17,7 @@ final class SchemaChangePlan
     /**
      * Auth-specific reserved field names that cannot be modified or deleted.
      */
-    private const AUTH_RESERVED_FIELD_NAMES = ['email', 'password', 'email_visibility', 'verified', 'token_key'];
+    private const AUTH_RESERVED_FIELD_NAMES = ['email', 'password', 'email_visibility', 'verified'];
 
     /**
      * Get auth reserved field names.
@@ -99,13 +99,7 @@ final class SchemaChangePlan
                 'nullable' => true,
                 'unique' => false,
                 'default' => false,
-            ]),
-            self::normalizeFieldDefinition([
-                'name' => 'token_key',
-                'type' => CollectionFieldType::Text->value,
-                'nullable' => false,
-                'unique' => false,
-            ]),
+            ])
         ];
     }
 
