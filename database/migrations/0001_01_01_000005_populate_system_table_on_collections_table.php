@@ -20,6 +20,7 @@ return new class extends Migration
             'type' => 'auth',
             'is_system' => true,
             'name' => 'superusers',
+            'table_name' => 'superusers',
             'description' => 'Superusers collection',
             'fields' => json_encode([
                 [
@@ -80,6 +81,7 @@ return new class extends Migration
             'type' => 'base',
             'is_system' => true,
             'name' => 'passwordResetTokens',
+            'table_name' => 'password_reset_tokens',
             'description' => 'Password reset tokens collection',
             'fields' => json_encode([
                 [

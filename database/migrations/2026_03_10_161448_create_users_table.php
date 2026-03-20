@@ -37,6 +37,7 @@ return new class extends Migration
             'id' => Str::ulid(),
             'type' => 'auth',
             'name' => $defaultAuthCollectionName,
+            'table_name' => '_velo_'.$defaultAuthCollectionName,
             'description' => 'Default users collection',
             'fields' => json_encode([
                 [

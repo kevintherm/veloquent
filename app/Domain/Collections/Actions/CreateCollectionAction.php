@@ -22,6 +22,7 @@ class CreateCollectionAction
 
         return Collection::create([
             ...$data,
+            'table_name' => SchemaChangePlan::generateTableName($data['name'], $data['is_system'] ?? false),
             'fields' => $mergedFields,
             'indexes' => $data['indexes'] ?? [],
         ]);

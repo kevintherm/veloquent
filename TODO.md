@@ -1,9 +1,6 @@
 
 ## TODO
 
-- Update collections metadata
-    - Generate table_name when creating collection
-    - Use table_name when fetching record allowing straight accessing the underlying table without fetching the collection metadata first
 - Sorting records
     - usage: ?sort=field1,field2 or ?sort=-field1 (descending)
     - default: id

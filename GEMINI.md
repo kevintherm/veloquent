@@ -23,6 +23,7 @@ This application is a Laravel application and its main Laravel ecosystems packag
 - phpunit/phpunit (PHPUNIT) - v12
 - vue (VUE) - v3
 - \@laravel/echo-vue (ECHO_VUE) - v2
+- eslint (ESLINT) - v10
 - laravel-echo (ECHO) - v2
 - tailwindcss (TAILWINDCSS) - v4
 

@@ -18,7 +18,7 @@ class Collection extends Model
 {
     use HasUlids;
 
-    protected $fillable = ['type', 'name', 'description', 'fields', 'api_rules', 'indexes', 'is_system', 'schema_updated_at'];
+    protected $fillable = ['type', 'name', 'table_name', 'description', 'fields', 'api_rules', 'indexes', 'is_system', 'schema_updated_at'];
 
     protected function casts(): array
     {
@@ -37,9 +37,12 @@ class Collection extends Model
      */
     public function getPhysicalTableName(): string
     {
-        return self::formatTableName($this->name, $this->is_system);
+        return $this->table_name ?? self::formatTableName($this->name, $this->is_system);
     }
 
+    /**
+     * @deprecated Use SchemaChangePlan::generateTableName($collectionName, $isSystem) instead for new collections.
+     */
     public static function formatTableName(string $collectionName, ?bool $isSystem = false): string
     {
         if ($isSystem) {

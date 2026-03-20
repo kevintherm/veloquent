@@ -41,6 +41,20 @@ class Record extends Authenticatable
     }
 
     /**
+     * Create a new Record instance straight from the table without collection metadata.
+     */
+    public static function fromTable(string $tableName): self
+    {
+        static::$allowDirectInstantiation = true;
+        $instance = new self;
+        static::$allowDirectInstantiation = false;
+
+        $instance->setTable($tableName);
+
+        return $instance;
+    }
+
+    /**
      * Create a new Record instance for a specific collection
      */
     public static function of(Collection $collection): self
