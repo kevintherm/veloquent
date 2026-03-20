@@ -89,13 +89,13 @@ abstract class BaseRecordRequest extends FormRequest
     protected function filterAutoFillFields(array $data, Collection $collection): array
     {
         $autoFillFields = ['id', 'token', 'created_at', 'updated_at'];
-        
+
         return array_filter($data, function ($value, $key) use ($autoFillFields) {
             // Keep the field if it's not an auto-fill field
             if (! in_array($key, $autoFillFields)) {
                 return true;
             }
-            
+
             // Keep the field if it has a non-null value
             return $value !== null;
         }, ARRAY_FILTER_USE_BOTH);
@@ -109,7 +109,7 @@ abstract class BaseRecordRequest extends FormRequest
         if ($collection->type === CollectionType::Auth && array_key_exists('password', $data) && $data['password'] === null) {
             unset($data['password']);
         }
-        
+
         return $data;
     }
 }

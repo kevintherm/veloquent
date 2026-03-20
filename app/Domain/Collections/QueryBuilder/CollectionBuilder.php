@@ -30,12 +30,12 @@ class CollectionBuilder extends Builder
 
     public function applyFilter(?string $filter): static
     {
-        if (!$filter) {
+        if (! $filter) {
             return $this;
         }
 
         $allowedFields = $this->getModel()->getFillable();
 
-        return $this->where(fn($q) => QueryFilter::for($q, $allowedFields)->run($filter));
+        return $this->where(fn ($q) => QueryFilter::for($q, $allowedFields)->run($filter));
     }
 }
