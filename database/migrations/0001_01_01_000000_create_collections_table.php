@@ -13,6 +13,7 @@ return new class extends Migration
             $table->string('type')->default('base');
             $table->boolean('is_system')->default(false);
             $table->string('name')->unique();
+            $table->string('table_name')->unique();
             $table->text('description')->nullable();
             $table->json('fields')->nullable();
             $table->json('api_rules')->nullable();

@@ -27,6 +27,10 @@ readonly class CollectionObserver
     {
         $this->validateApiRules($collection);
 
+        if (empty($collection->table_name)) {
+            $collection->table_name = SchemaChangePlan::generateTableName($collection->name, $collection->is_system ?? false);
+        }
+
         $this->startJob($collection, SchemaOperation::Create);
 
         $tableName = $collection->getPhysicalTableName();

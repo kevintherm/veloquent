@@ -42,6 +42,20 @@ final class SchemaChangePlan
     }
 
     /**
+     * Generate the physical table name for a collection.
+     */
+    public static function generateTableName(string $collectionName, bool $isSystem = false): string
+    {
+        if ($isSystem) {
+            return $collectionName;
+        }
+
+        $prefix = config('velo.collection_prefix');
+
+        return $prefix.$collectionName;
+    }
+
+    /**
      * Get base reserved fields with proper metadata for storage.
      */
     public static function getSystemFields(): array
