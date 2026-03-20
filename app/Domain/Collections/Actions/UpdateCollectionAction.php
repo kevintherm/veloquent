@@ -12,7 +12,7 @@ class UpdateCollectionAction
     public function execute(Collection $collection, array $data): Collection
     {
         $defaultUsersCollectionName = config('velo.default_auth_collection');
-        if ($collection->name === $defaultUsersCollectionName && $data['name'] !== $defaultUsersCollectionName) {
+        if (isset($data['name']) && $collection->name === $defaultUsersCollectionName && $data['name'] !== $defaultUsersCollectionName) {
             throw ValidationException::withMessages(['name' => 'Cannot rename default users collection']);
         }
 
@@ -33,8 +33,8 @@ class UpdateCollectionAction
         $expectedKeys = ['list', 'create', 'view', 'update', 'delete'];
         $missingKeys = array_diff($expectedKeys, array_keys($apiRules));
 
-        if (! empty($missingKeys)) {
-            throw ValidationException::withMessages(['api_rules' => 'Missing API rules for: '.implode(', ', $missingKeys)]);
+        if (!empty($missingKeys)) {
+            throw ValidationException::withMessages(['api_rules' => 'Missing API rules for: ' . implode(', ', $missingKeys)]);
         }
 
         foreach ($expectedKeys as $rule) {

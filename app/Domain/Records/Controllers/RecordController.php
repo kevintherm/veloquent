@@ -23,13 +23,15 @@ class RecordController extends ApiController
         private ShowRecordAction $showRecordAction,
         private UpdateRecordAction $updateRecordAction,
         private DeleteRecordAction $deleteRecordAction,
-    ) {}
+    ) {
+    }
 
     public function index(Request $request, Collection $collection): JsonResponse
     {
         $records = $this->getRecordsAction->execute(
             $collection,
-            $request->input('filter', ''),
+            $request->input('sort') ?? '',
+            $request->input('filter') ?? '',
             $request->input('per_page', 15)
         );
 

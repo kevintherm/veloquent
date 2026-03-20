@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Gate;
 
 class GetRecordsAction
 {
-    public function execute(Collection $collection, ?string $filters = null, int $perPage = 15): LengthAwarePaginator
+    public function execute(Collection $collection, string $sort, string $filter, int $perPage = 15): LengthAwarePaginator
     {
         Gate::authorize('list-records', $collection);
 
@@ -19,11 +19,11 @@ class GetRecordsAction
 
         $query = Record::of($collection)->newQuery();
 
-        if (! $bypassApiRules) {
+        if (!$bypassApiRules) {
             $query->applyRule('list');
         }
 
-        $query->applyFilter($filters ?? '');
+        $query->applySorting($sort)->applyFilter($filter);
 
         $maxPerPage = config('velo.records_per_page_max');
         $perPage = max(1, min($perPage, $maxPerPage));
