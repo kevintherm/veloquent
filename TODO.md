@@ -1,14 +1,23 @@
 
 ## TODO
 
-- Fix bug: add password field on auth collections as nullable, fill to create a new password
-- Fix bug: add created_at and updated_at as nullable and specific value if filled
 - Update collections metadata
     - Generate table_name when creating collection
     - Use table_name when fetching record allowing straight accessing the underlying table without fetching the collection metadata first
+- Sorting records
+    - usage: ?sort=field1,field2 or ?sort=-field1 (descending)
+    - default: id
+- Relation records
+    - usage: ?relation=field1,field2
+    - default: none
+- Expanding records
+    - usage: ?expand=field1,field2
+    - default: none
 - UI Dashboard
     - Manage records
         - CRUD
+        - Sort fields
+        - Show/Hide fields
     - Manage collections
         - Fields
         - Index

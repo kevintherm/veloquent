@@ -81,4 +81,35 @@ abstract class BaseRecordRequest extends FormRequest
 
         return [];
     }
+
+    /**
+     * Filter out auto-fill fields that have null values to prevent them from being set to null
+     * in the database. This allows Laravel's auto-fill behavior to work properly.
+     */
+    protected function filterAutoFillFields(array $data, Collection $collection): array
+    {
+        $autoFillFields = ['id', 'token', 'created_at', 'updated_at'];
+        
+        return array_filter($data, function ($value, $key) use ($autoFillFields) {
+            // Keep the field if it's not an auto-fill field
+            if (! in_array($key, $autoFillFields)) {
+                return true;
+            }
+            
+            // Keep the field if it has a non-null value
+            return $value !== null;
+        }, ARRAY_FILTER_USE_BOTH);
+    }
+
+    /**
+     * Filter out password field when it's null for auth collections
+     */
+    protected function filterPasswordField(array $data, Collection $collection): array
+    {
+        if ($collection->type === CollectionType::Auth && array_key_exists('password', $data) && $data['password'] === null) {
+            unset($data['password']);
+        }
+        
+        return $data;
+    }
 }
