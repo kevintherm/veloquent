@@ -72,7 +72,7 @@ watch(
 <template>
     <aside class="w-64 border-r bg-card flex flex-col h-full">
         <div class="p-6 gap-2">
-            <img :src="'/logo.svg'" alt="Velo Logo" class="h-8 w-8" />
+            <img :src="'/logo.svg'" alt="Velo Logo" class="h-8 w-8" draggable="false" />
         </div>
 
         <nav class="flex-1 overflow-y-auto px-4 space-y-1">
@@ -88,10 +88,10 @@ watch(
                     </div>
                 </div>
 
-                <router-link v-for="collection in regularCollections" :key="collection.id" to="/"
+                <router-link v-for="collection in regularCollections" :key="collection.id" :to="`/${encodeURIComponent(collection.name)}`"
                     @click="handleCollectionSelect(collection)" draggable="false" :class="[
                         'w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors',
-                        activeCollection.id === collection.id && $route.path === '/'
+                        activeCollection.id === collection.id
                             ? 'bg-primary/10 text-primary'
                             : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
                     ]">
@@ -109,10 +109,10 @@ watch(
                         </Button>
                     </CollapsibleTrigger>
                     <CollapsibleContent class="flex flex-col gap-2">
-                        <router-link v-for="collection in systemCollections" :key="collection.id" to="/"
+                        <router-link v-for="collection in systemCollections" :key="collection.id" :to="`/${encodeURIComponent(collection.name)}`"
                             @click="handleCollectionSelect(collection)" draggable="false" :class="[
                                 'w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors',
-                                activeCollection.id === collection.id && $route.path === '/'
+                                activeCollection.id === collection.id
                                     ? 'bg-primary/10 text-primary'
                                     : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
                             ]">

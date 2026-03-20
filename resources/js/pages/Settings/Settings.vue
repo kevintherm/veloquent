@@ -7,10 +7,7 @@ import {
   TabsTrigger,
 } from "@/components/ui";
 import { FlaskConical } from "lucide-vue-next";
-import { useAuth } from "@/lib/auth.js";
 import RealtimeTest from "@/pages/Settings/RealtimeTest.vue";
-
-const { state } = useAuth();
 </script>
 
 <template>

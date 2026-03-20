@@ -23,6 +23,8 @@ const currentPage = ref(1);
 const itemsPerPage = 15;
 const totalPages = ref(1);
 const totalRecords = ref(0);
+const lastAutoOpenedRecordKey = ref(null);
+const isAutoOpeningRecord = ref(false);
 let searchDebounceTimer = null;
 
 const normalizeRecordsPayload = (payload) => {
@@ -167,6 +169,28 @@ const handleOpenRecord = (record) => {
     });
 };
 
+const normalizedRouteRecordId = computed(() => {
+    if (typeof route.query.recordId !== "string") {
+        return null;
+    }
+
+    const value = route.query.recordId.trim();
+
+    return value.length ? value : null;
+});
+
+const fetchRecordById = async (recordId) => {
+    if (!activeCollection.value?.name || !recordId) {
+        return null;
+    }
+
+    const response = await axios.get(
+        `/api/collections/${encodeURIComponent(activeCollection.value.name)}/records/${encodeURIComponent(recordId)}`
+    );
+
+    return response?.data?.data ?? response?.data ?? null;
+};
+
 watch(
     () => activeCollection.value?.id,
     async () => {
@@ -237,6 +261,59 @@ watch(currentPage, async () => {
 watch(recordsReloadNonce, async () => {
     await fetchRecords();
 });
+
+watch(
+    [
+        () => activeCollection.value?.id,
+        normalizedRouteRecordId,
+    ],
+    async ([collectionId, recordId]) => {
+        if (!collectionId || !recordId) {
+            if (!recordId) {
+                lastAutoOpenedRecordKey.value = null;
+            }
+
+            return;
+        }
+
+        const autoOpenKey = `${collectionId}:${recordId}`;
+
+        if (lastAutoOpenedRecordKey.value === autoOpenKey || isAutoOpeningRecord.value) {
+            return;
+        }
+
+        isAutoOpeningRecord.value = true;
+
+        try {
+            const record = await fetchRecordById(recordId);
+
+            if (!record || typeof record !== "object") {
+                return;
+            }
+
+            openRecordForm({
+                collection: activeCollection.value,
+                record,
+                origin: "dashboard-record-id-query",
+            });
+
+            lastAutoOpenedRecordKey.value = autoOpenKey;
+
+            if (typeof route.query.recordId === "string") {
+                const nextQuery = { ...route.query };
+                delete nextQuery.recordId;
+
+                await router.replace({
+                    path: route.path,
+                    query: nextQuery,
+                });
+            }
+        } finally {
+            isAutoOpeningRecord.value = false;
+        }
+    },
+    { immediate: true }
+);
 
 onUnmounted(() => {
     if (searchDebounceTimer) {

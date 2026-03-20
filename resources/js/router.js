@@ -13,6 +13,7 @@ const routes = [
   { path: '/login', component: Login },
   { path: '/register', component: Register },
   { path: '/settings', component: Settings },
+  { path: '/:collection', component: Dashboard },
   {
     path: '/:pathMatch(.*)*',
     component: NotFound,
@@ -27,6 +28,7 @@ const router = createRouter({
 router.beforeEach(async (to) => {
   const { state, fetchUser } = useAuth()
   const token = getAuthToken()
+  const publicPaths = ['/login', '/register']
 
   if (!state.initialized || (token && !state.user)) {
     await fetchUser()
@@ -48,7 +50,7 @@ router.beforeEach(async (to) => {
     return { path: '/' }
   }
 
-  if (to.path === '/' && !isAuthenticated) {
+  if (!publicPaths.includes(to.path) && !isAuthenticated) {
     const initialized = await isOnboardingInitialized()
 
     return { path: initialized ? '/login' : '/register' }

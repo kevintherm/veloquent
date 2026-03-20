@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useAuth } from "@/lib/auth.js";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
@@ -24,6 +24,46 @@ const isMobileSidebarOpen = ref(false);
 
 const collectionSearchQuery = ref("");
 
+const getRouteCollectionParam = () => {
+    return typeof route.params.collection === "string"
+        ? decodeURIComponent(route.params.collection).toLowerCase()
+        : null;
+};
+
+const resolveCollectionFromRoute = () => {
+    const routeCollection = getRouteCollectionParam();
+
+    if (!routeCollection) {
+        return null;
+    }
+
+    return collections.value.find((collection) => {
+        const collectionName = String(collection?.name ?? "").toLowerCase();
+        const collectionId = String(collection?.id ?? "").toLowerCase();
+
+        return collectionName === routeCollection || collectionId === routeCollection;
+    }) ?? null;
+};
+
+const ensureCollectionPath = () => {
+    const collectionName = activeCollection.value?.name;
+
+    if (!collectionName) {
+        return;
+    }
+
+    const expectedPath = `/${encodeURIComponent(collectionName)}`;
+
+    if (route.path === expectedPath) {
+        return;
+    }
+
+    void router.replace({
+        path: expectedPath,
+        query: route.query,
+    });
+};
+
 const resolveCollectionIcon = (collection) => {
     return collection?.type === "auth" ? Users : Table;
 };
@@ -46,13 +86,15 @@ const fetchCollections = async () => {
         return;
     }
 
+    const routeCollection = resolveCollectionFromRoute();
     const currentId = activeCollection.value?.id;
     const selectedCollection = collections.value.find((collection) => collection.id === currentId);
     const defaultUsersCollection = collections.value.find(
         (collection) => collection.name?.toLowerCase() === "users"
     );
 
-    activeCollection.value = selectedCollection ?? defaultUsersCollection ?? collections.value[0];
+    activeCollection.value = routeCollection ?? selectedCollection ?? defaultUsersCollection ?? collections.value[0];
+    ensureCollectionPath();
 };
 
 const filteredCollections = computed(() => {
@@ -77,6 +119,28 @@ const closeMobileSidebar = () => {
 onMounted(async () => {
     await fetchCollections();
 });
+
+watch(
+    () => route.params.collection,
+    (value) => {
+        if (!collections.value.length || typeof value !== "string") {
+            return;
+        }
+
+        const nextCollection = resolveCollectionFromRoute();
+
+        if (nextCollection?.id && nextCollection.id !== activeCollection.value?.id) {
+            activeCollection.value = nextCollection;
+        }
+    }
+);
+
+watch(
+    () => activeCollection.value?.id,
+    () => {
+        ensureCollectionPath();
+    }
+);
 
 const handleLogout = async () => {
     await logout();
