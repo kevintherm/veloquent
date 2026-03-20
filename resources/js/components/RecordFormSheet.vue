@@ -45,6 +45,7 @@ const fieldErrors = ref({});
 const relationOptions = ref({});
 const relationLoading = ref({});
 const relationErrors = ref({});
+const availableCollections = ref([]);
 const { requestRecordsReload } = useDashboardState();
 
 const isUpdating = computed(() => {
@@ -129,6 +130,24 @@ const defaultFieldValue = (field) => {
       return Boolean(existingValue);
     }
 
+    if (field.type === "relation") {
+      const isMultiRelation = Number(field.max_select ?? 1) > 1;
+
+      if (isMultiRelation) {
+        return Array.isArray(existingValue)
+          ? existingValue.filter((value) => value !== null && value !== undefined && value !== "")
+          : existingValue
+            ? [existingValue]
+            : [];
+      }
+
+      if (Array.isArray(existingValue)) {
+        return existingValue[0] ?? "";
+      }
+
+      return existingValue ?? "";
+    }
+
     return existingValue;
   }
 
@@ -152,6 +171,10 @@ const defaultFieldValue = (field) => {
     return false;
   }
 
+  if (field.type === "relation" && Number(field.max_select ?? 1) > 1) {
+    return [];
+  }
+
   return "";
 };
 
@@ -172,13 +195,47 @@ const initializeFormState = () => {
 
 const relationDisplayValue = (fieldName, value) => {
   const options = relationOptions.value[fieldName] ?? [];
-  const option = options.find((item) => item.value === value);
+  const firstValue = Array.isArray(value) ? value[0] : value;
+  const option = options.find((item) => item.value === firstValue);
 
-  return option ? option.label : value;
+  return option ? option.label : firstValue;
+};
+
+const fetchAvailableCollections = async () => {
+  try {
+    const response = await axios.get("/api/collections");
+    availableCollections.value = Array.isArray(response?.data?.data) ? response.data.data : [];
+  } catch {
+    availableCollections.value = [];
+  }
+};
+
+const resolveRelationTargetIdentifier = (field) => {
+  if (field?.target_collection_id) {
+    return field.target_collection_id;
+  }
+
+  return field?.collection ?? null;
+};
+
+const resolveRelationTargetName = (field) => {
+  const targetCollectionId = resolveRelationTargetIdentifier(field);
+
+  if (!targetCollectionId) {
+    return null;
+  }
+
+  const targetCollection = availableCollections.value.find((collection) => {
+    return collection?.id === targetCollectionId || collection?.name === targetCollectionId;
+  });
+
+  return targetCollection?.name ?? targetCollectionId;
 };
 
 const loadRelationOptions = async (field) => {
-  if (field.type !== "relation" || !field.collection) {
+  const targetCollection = resolveRelationTargetName(field);
+
+  if (field.type !== "relation" || !targetCollection) {
     return;
   }
 
@@ -187,7 +244,7 @@ const loadRelationOptions = async (field) => {
 
   try {
     const response = await axios.get(
-      `/api/collections/${encodeURIComponent(field.collection)}/records`,
+      `/api/collections/${encodeURIComponent(targetCollection)}/records`,
       {
         params: {
           per_page: 100,
@@ -216,7 +273,7 @@ const loadRelationOptions = async (field) => {
 
 const loadAllRelationOptions = async () => {
   const relationFields = orderedFields.value.filter((field) => {
-    return field?.type === "relation" && field.collection;
+    return field?.type === "relation" && resolveRelationTargetIdentifier(field);
   });
 
   await Promise.all(relationFields.map((field) => loadRelationOptions(field)));
@@ -237,6 +294,7 @@ const fetchCollectionInfo = async () => {
     const response = await axios.get(`/api/collections/${encodeURIComponent(identifier)}`);
 
     fetchedCollection.value = normalizeCollectionPayload(response?.data);
+    await fetchAvailableCollections();
     initializeFormState();
     internalOpen.value = true;
     await loadAllRelationOptions();
@@ -318,6 +376,24 @@ const coerceFieldValue = (field, rawValue) => {
     return JSON.parse(rawValue);
   }
 
+  if (field.type === "relation") {
+    const isMultiRelation = Number(field.max_select ?? 1) > 1;
+
+    if (isMultiRelation) {
+      if (!Array.isArray(rawValue)) {
+        return [];
+      }
+
+      return rawValue.filter((value) => value !== null && value !== undefined && value !== "");
+    }
+
+    if (Array.isArray(rawValue)) {
+      return rawValue[0] ?? null;
+    }
+
+    return rawValue;
+  }
+
   return rawValue;
 };
 
@@ -384,12 +460,14 @@ const applyValidationErrors = (errors) => {
 };
 
 const handleOpenRelatedCollectionForm = (field) => {
-  if (!field.collection) {
+  const targetCollection = resolveRelationTargetName(field);
+
+  if (!targetCollection) {
     return;
   }
 
   openRecordForm({
-    collection: field.collection,
+    collection: targetCollection,
     origin: props.sheetId,
   });
 };
@@ -483,8 +561,9 @@ onMounted(async () => {
 
             <div v-else class="space-y-2">
               <select :id="`field-${sheetId}-${field.name}`" v-model="formState[field.name]"
+                :multiple="Number(field.max_select ?? 1) > 1"
                 class="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-                <option value="">Select related record</option>
+                <option v-if="Number(field.max_select ?? 1) === 1" value="">Select related record</option>
                 <option v-for="option in relationOptions[field.name] ?? []" :key="`${field.name}-${option.value}`"
                   :value="option.value">
                   {{ option.label }}

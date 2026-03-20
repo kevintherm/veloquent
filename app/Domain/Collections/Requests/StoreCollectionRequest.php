@@ -42,6 +42,7 @@ class StoreCollectionRequest extends FormRequest
 
             'indexes' => 'sometimes|array',
             'indexes.*' => ['required', 'array'],
+            'indexes.*.name' => ['prohibited'],
             'indexes.*.columns' => ['required', 'array', 'min:1'],
             'indexes.*.columns.*' => ['required', 'string', 'regex:/^[a-zA-Z_]+$/'],
             'indexes.*.type' => ['required', new Enum(IndexType::class)],
@@ -117,15 +118,6 @@ class StoreCollectionRequest extends FormRequest
 
                 if (is_string($fieldName)) {
                     $fieldTypesByName[$fieldName] = $fieldType;
-                }
-
-                $unknownProperties = array_diff(array_keys($field), $fieldType->allowedProperties());
-
-                if ($unknownProperties !== []) {
-                    $validator->errors()->add(
-                        "fields.{$index}",
-                        'Unknown properties for field type '.$fieldType->value.': '.implode(', ', $unknownProperties)
-                    );
                 }
 
                 if ($fieldType === CollectionFieldType::Relation) {
