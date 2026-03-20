@@ -23,8 +23,7 @@ class RecordController extends ApiController
         private ShowRecordAction $showRecordAction,
         private UpdateRecordAction $updateRecordAction,
         private DeleteRecordAction $deleteRecordAction,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request, Collection $collection): JsonResponse
     {
@@ -32,7 +31,8 @@ class RecordController extends ApiController
             $collection,
             $request->input('sort') ?? '',
             $request->input('filter') ?? '',
-            $request->input('per_page', 15)
+            $request->input('per_page', 15),
+            $request->input('expand') ?? ''
         );
 
         $records = RecordResource::collection($records);
@@ -52,9 +52,9 @@ class RecordController extends ApiController
         return $this->successResponse($record, 'Record created successfully', 201);
     }
 
-    public function show(Collection $collection, string $recordId): JsonResponse
+    public function show(Request $request, Collection $collection, string $recordId): JsonResponse
     {
-        $record = $this->showRecordAction->execute($collection, $recordId);
+        $record = $this->showRecordAction->execute($collection, $recordId, $request->input('expand') ?? '');
 
         $record = new RecordResource($record);
 

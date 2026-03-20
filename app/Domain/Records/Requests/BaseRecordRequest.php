@@ -6,6 +6,7 @@ use App\Domain\Collections\Enums\CollectionFieldType;
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Collections\ValueObjects\Field;
+use App\Domain\Records\Models\Record;
 use Illuminate\Foundation\Http\FormRequest;
 
 abstract class BaseRecordRequest extends FormRequest
@@ -13,6 +14,29 @@ abstract class BaseRecordRequest extends FormRequest
     public function authorize(): bool
     {
         return true;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $collection = $this->route('collection');
+        if (! $collection instanceof Collection) {
+            return;
+        }
+
+        $payload = $this->all();
+
+        foreach ($this->getRelationFields($collection) as $fieldName => $field) {
+            if (! array_key_exists($fieldName, $payload)) {
+                continue;
+            }
+
+            $payload[$fieldName] = $this->normalizeRelationInputValue(
+                $payload[$fieldName],
+                $this->isSingleRelationField($field),
+            );
+        }
+
+        $this->replace($payload);
     }
 
     protected function getDynamicValidationRules(?Collection $collection = null, ?callable $intervene = null): array
@@ -26,6 +50,7 @@ abstract class BaseRecordRequest extends FormRequest
 
         foreach ($fields as $field) {
             $fieldName = $field['name'];
+            $fieldType = CollectionFieldType::tryFrom((string) $field['type']);
             $fieldRules = [];
 
             if (! in_array($fieldName, $autoFillFields) && (! $field['nullable'] ?? false)) {
@@ -48,6 +73,112 @@ abstract class BaseRecordRequest extends FormRequest
 
             if (isset($field['max']) && $field['max']) {
                 $fieldRules[] = 'max:'.$field['max'];
+            }
+
+            if ($fieldType === CollectionFieldType::Relation) {
+                $maxSelect = $field['max_select'] ?? null;
+                $isSingleRelation = $this->isSingleRelationField($field);
+
+                if ($isSingleRelation) {
+                    $fieldRules[] = function (string $attribute, mixed $value, callable $fail) use ($field): void {
+                        if ($value === null) {
+                            return;
+                        }
+
+                        if (is_array($value) && count($value) > 1) {
+                            $fail('This relation only allows one ID.');
+
+                            return;
+                        }
+
+                        if (! is_string($value) || trim($value) === '') {
+                            $fail('Relation field value must be a valid record ID.');
+
+                            return;
+                        }
+
+                        $targetCollectionId = $field['target_collection_id'] ?? null;
+
+                        if (! is_string($targetCollectionId) || $targetCollectionId === '') {
+                            $fail('Relation field configuration is invalid.');
+
+                            return;
+                        }
+
+                        $targetCollection = Collection::query()->find($targetCollectionId);
+                        if ($targetCollection === null) {
+                            $fail('Relation target collection does not exist.');
+
+                            return;
+                        }
+
+                        $exists = Record::of($targetCollection)
+                            ->newQuery()
+                            ->where('id', trim($value))
+                            ->exists();
+
+                        if (! $exists) {
+                            $fail('One or more related records do not exist.');
+                        }
+                    };
+
+                    $rules[$fieldName] = $fieldRules;
+
+                    continue;
+                }
+
+                $fieldRules[] = 'array';
+
+                if (is_int($maxSelect)) {
+                    $fieldRules[] = 'max:'.$maxSelect;
+                }
+
+                $fieldRules[] = function (string $attribute, mixed $value, callable $fail) use ($field): void {
+                    if (! is_array($value)) {
+                        return;
+                    }
+
+                    $targetCollectionId = $field['target_collection_id'] ?? null;
+
+                    if (! is_string($targetCollectionId) || $targetCollectionId === '') {
+                        $fail('Relation field configuration is invalid.');
+
+                        return;
+                    }
+
+                    $targetCollection = Collection::query()->find($targetCollectionId);
+                    if ($targetCollection === null) {
+                        $fail('Relation target collection does not exist.');
+
+                        return;
+                    }
+
+                    $normalizedIds = collect($value)
+                        ->map(fn (mixed $relationId): mixed => is_string($relationId) ? trim($relationId) : $relationId)
+                        ->values();
+
+                    if ($normalizedIds->contains(fn (mixed $relationId): bool => ! is_string($relationId) || $relationId === '')) {
+                        $fail('Relation field values must contain valid record IDs.');
+
+                        return;
+                    }
+
+                    if ($normalizedIds->isEmpty()) {
+                        return;
+                    }
+
+                    $uniqueIds = $normalizedIds->unique()->values()->all();
+                    $existingCount = Record::of($targetCollection)->newQuery()->whereIn('id', $uniqueIds)->count();
+
+                    if ($existingCount !== count($uniqueIds)) {
+                        $fail('One or more related records do not exist.');
+                    }
+                };
+
+                $rules[$fieldName] = $fieldRules;
+                $rules["{$fieldName}.*"] = ['required', 'string'];
+
+                continue;
             }
 
             $fieldRules[] = $this->getFieldTypeRule($field['type']);
@@ -111,5 +242,84 @@ abstract class BaseRecordRequest extends FormRequest
         }
 
         return $data;
+    }
+
+    protected function normalizeRelationFieldsForWrite(array $data, Collection $collection): array
+    {
+        foreach ($this->getRelationFields($collection) as $fieldName => $field) {
+            if (! array_key_exists($fieldName, $data)) {
+                continue;
+            }
+
+            $value = $data[$fieldName];
+
+            if ($value === null) {
+                continue;
+            }
+
+            $normalizedValue = $this->normalizeRelationInputValue(
+                $value,
+                $this->isSingleRelationField($field),
+            );
+
+            if ($this->isSingleRelationField($field)) {
+                if (! is_string($normalizedValue) || trim($normalizedValue) === '') {
+                    continue;
+                }
+
+                $data[$fieldName] = [trim($normalizedValue)];
+
+                continue;
+            }
+
+            if (! is_array($normalizedValue)) {
+                continue;
+            }
+
+            $data[$fieldName] = collect($normalizedValue)
+                ->map(fn (mixed $relationId): string => (string) $relationId)
+                ->values()
+                ->all();
+        }
+
+        return $data;
+    }
+
+    private function getRelationFields(Collection $collection): array
+    {
+        return collect($collection->fields ?? [])
+            ->filter(fn (Field|array $field): bool => ($field['type'] ?? null) === CollectionFieldType::Relation->value)
+            ->keyBy(fn (Field|array $field): string => (string) $field['name'])
+            ->all();
+    }
+
+    private function normalizeRelationInputValue(mixed $value, bool $isSingleRelation): mixed
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if ($isSingleRelation) {
+            if (is_array($value)) {
+                if (count($value) === 1) {
+                    return is_string($value[0] ?? null) ? $value[0] : null;
+                }
+
+                return $value;
+            }
+
+            return $value;
+        }
+
+        if (is_array($value)) {
+            return array_values($value);
+        }
+
+        return $value;
+    }
+
+    private function isSingleRelationField(Field|array $field): bool
+    {
+        return (int) ($field['max_select'] ?? 0) === 1;
     }
 }

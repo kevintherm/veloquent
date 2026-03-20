@@ -16,7 +16,9 @@ class Field implements \ArrayAccess, \JsonSerializable
         public ?string $id = null,
         public ?int $min = null,
         public ?int $max = null,
-        public ?string $collection = null,
+        public ?string $target_collection_id = null,
+        public bool $cascade_on_delete = false,
+        public ?int $max_select = null,
     ) {}
 
     public static function fromArray(array $data): self
@@ -43,7 +45,9 @@ class Field implements \ArrayAccess, \JsonSerializable
             id: isset($shape['id']) ? (string) $shape['id'] : null,
             min: isset($shape['min']) ? (is_null($shape['min']) ? null : (int) $shape['min']) : null,
             max: isset($shape['max']) ? (is_null($shape['max']) ? null : (int) $shape['max']) : null,
-            collection: isset($shape['collection']) ? (is_null($shape['collection']) ? null : (string) $shape['collection']) : null,
+            target_collection_id: isset($shape['target_collection_id']) ? (is_null($shape['target_collection_id']) ? null : (string) $shape['target_collection_id']) : null,
+            cascade_on_delete: (bool) ($shape['cascade_on_delete'] ?? false),
+            max_select: isset($shape['max_select']) ? (is_null($shape['max_select']) ? null : (int) $shape['max_select']) : null,
         );
     }
 
@@ -62,7 +66,9 @@ class Field implements \ArrayAccess, \JsonSerializable
             'default' => $this->default,
             'min' => $this->min,
             'max' => $this->max,
-            'collection' => $this->collection,
+            'target_collection_id' => $this->target_collection_id,
+            'cascade_on_delete' => $this->cascade_on_delete,
+            'max_select' => $this->max_select,
         ];
 
         return collect($data)
@@ -146,8 +152,20 @@ class Field implements \ArrayAccess, \JsonSerializable
             return;
         }
 
-        if ($key === 'collection') {
-            $this->collection = is_null($value) ? null : (string) $value;
+        if ($key === 'target_collection_id') {
+            $this->target_collection_id = is_null($value) ? null : (string) $value;
+
+            return;
+        }
+
+        if ($key === 'cascade_on_delete') {
+            $this->cascade_on_delete = (bool) $value;
+
+            return;
+        }
+
+        if ($key === 'max_select') {
+            $this->max_select = is_null($value) ? null : (int) $value;
         }
     }
 

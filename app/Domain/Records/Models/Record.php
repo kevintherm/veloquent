@@ -31,6 +31,8 @@ class Record extends Authenticatable
 
     protected $hidden = [];
 
+    public array $expandedRelations = [];
+
     public function __construct(array $attributes = [])
     {
         if (! static::$allowDirectInstantiation) {

@@ -2,14 +2,6 @@
 ## TODO
 
 - Reserved field checking should first check if those fields were really in the metadata collection first
-- Relation field
-- Superusers should bypass api_rules (reinvented)
-- Relation records
-    - usage: ?relation=field1,field2
-    - default: none
-- Expanding records
-    - usage: ?expand=field1,field2
-    - default: none
 - UI Dashboard
     - Datatables
         - Sorting fields
@@ -37,6 +29,11 @@
             - Export n imports
                 - Collections metadata only
     - View Logs
+- RecordExpansionService revise
+    - resolveTargetCollection N+1 on collection lookup
+    - No expand field count limit
+    - expandedRelations as dynamic property 
+    - Field|array type inconsistency
 - Superusers should bypass api_rules (reinvented)
 - Hooks system
 - Optimize Record model
