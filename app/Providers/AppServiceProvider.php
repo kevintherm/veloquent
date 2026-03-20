@@ -61,6 +61,10 @@ class AppServiceProvider extends ServiceProvider
             return $user && $user->getTable() === 'superusers' && $data['is_system'] === false;
         });
 
+        Gate::define('truncate-collections', function (?Record $user, Collection $collection) {
+            return $user && $user->getTable() === 'superusers' && $collection->is_system === false;
+        });
+
         Gate::define('list-records', function (?Record $user, Collection $collection) {
             return ($user && $user->getTable() === 'superusers') || $collection->is_system === false;
         });

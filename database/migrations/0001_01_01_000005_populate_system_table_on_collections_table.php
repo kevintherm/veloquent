@@ -23,6 +23,7 @@ return new class extends Migration
             'description' => 'Superusers collection',
             'fields' => json_encode([
                 [
+                    'id' => bin2hex(random_bytes(4)),
                     'name' => 'id',
                     'type' => CollectionFieldType::Text->value,
                     'nullable' => false,
@@ -30,6 +31,7 @@ return new class extends Migration
                     'length' => 26,
                 ],
                 [
+                    'id' => bin2hex(random_bytes(4)),
                     'name' => 'name',
                     'type' => CollectionFieldType::Text->value,
                     'nullable' => false,
@@ -37,6 +39,7 @@ return new class extends Migration
                     'length' => 255,
                 ],
                 [
+                    'id' => bin2hex(random_bytes(4)),
                     'name' => 'email',
                     'type' => CollectionFieldType::Email->value,
                     'nullable' => false,
@@ -44,6 +47,7 @@ return new class extends Migration
                     'length' => 255,
                 ],
                 [
+                    'id' => bin2hex(random_bytes(4)),
                     'name' => 'password',
                     'type' => CollectionFieldType::Text->value,
                     'nullable' => false,
@@ -51,12 +55,14 @@ return new class extends Migration
                     'length' => 255,
                 ],
                 [
+                    'id' => bin2hex(random_bytes(4)),
                     'name' => 'created_at',
                     'type' => CollectionFieldType::Datetime->value,
                     'nullable' => false,
                     'unique' => false,
                 ],
                 [
+                    'id' => bin2hex(random_bytes(4)),
                     'name' => 'updated_at',
                     'type' => CollectionFieldType::Datetime->value,
                     'nullable' => false,
@@ -77,6 +83,7 @@ return new class extends Migration
             'description' => 'Password reset tokens collection',
             'fields' => json_encode([
                 [
+                    'id' => bin2hex(random_bytes(4)),
                     'name' => 'email',
                     'type' => CollectionFieldType::Email->value,
                     'nullable' => false,
@@ -84,6 +91,7 @@ return new class extends Migration
                     'length' => 255,
                 ],
                 [
+                    'id' => bin2hex(random_bytes(4)),
                     'name' => 'token',
                     'type' => CollectionFieldType::Text->value,
                     'nullable' => false,
@@ -91,6 +99,7 @@ return new class extends Migration
                     'length' => 255,
                 ],
                 [
+                    'id' => bin2hex(random_bytes(4)),
                     'name' => 'created_at',
                     'type' => CollectionFieldType::Datetime->value,
                     'nullable' => true,

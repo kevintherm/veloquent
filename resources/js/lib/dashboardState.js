@@ -6,9 +6,14 @@ const activeCollection = ref({
   fields: [],
 });
 const recordsReloadNonce = ref(0);
+const collectionsReloadNonce = ref(0);
 
 const requestRecordsReload = () => {
   recordsReloadNonce.value += 1;
+};
+
+const requestCollectionsReload = () => {
+  collectionsReloadNonce.value += 1;
 };
 
 export const useDashboardState = () => {
@@ -16,5 +21,7 @@ export const useDashboardState = () => {
     activeCollection,
     recordsReloadNonce,
     requestRecordsReload,
+    collectionsReloadNonce,
+    requestCollectionsReload,
   };
 };
