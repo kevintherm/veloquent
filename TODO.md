@@ -1,6 +1,7 @@
 
 ## TODO
 
+- Reserved field checking should first check if those fields were really in the metadata collection first
 - Relation field
 - Superusers should bypass api_rules (reinvented)
 - Relation records
@@ -36,6 +37,7 @@
             - Export n imports
                 - Collections metadata only
     - View Logs
+- Superusers should bypass api_rules (reinvented)
 - Hooks system
 - Optimize Record model
     - cache collections

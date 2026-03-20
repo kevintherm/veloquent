@@ -85,16 +85,15 @@ class TokenAuthService
     /**
      * Revoke ALL auth tokens for given record.
      * If token hash is provided then it will revoke only that token.
-     * @param string $collectionId
-     * @param string $recordId
-     * @param mixed $tokenHash
+     *
+     * @param  mixed  $tokenHash
      * @return bool|int|mixed|null
      */
     public function revokeRecordTokens(string $collectionId, string $recordId, ?string $tokenHash = null): int
     {
         return AuthToken::query()
             ->forRecord($collectionId, $recordId)
-            ->when($tokenHash !== null, fn($query) => $query->where('token_hash', $tokenHash))
+            ->when($tokenHash !== null, fn ($query) => $query->where('token_hash', $tokenHash))
             ->delete();
     }
 

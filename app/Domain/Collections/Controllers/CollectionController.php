@@ -20,8 +20,7 @@ class CollectionController extends ApiController
     public function __construct(
         private CreateCollectionAction $createCollectionAction,
         private UpdateCollectionAction $updateCollectionAction,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
