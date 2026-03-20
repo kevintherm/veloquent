@@ -12,7 +12,7 @@ import {
   Separator,
 } from "@/components/ui";
 
-const props = defineProps({
+defineProps({
   open: {
     type: Boolean,
     required: true,

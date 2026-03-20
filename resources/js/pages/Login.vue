@@ -24,7 +24,7 @@ const onboardingInitialized = ref(true);
 onMounted(async () => {
   try {
     onboardingInitialized.value = await isOnboardingInitialized();
-  } catch (err) {
+  } catch {
     onboardingInitialized.value = true;
   }
 });
