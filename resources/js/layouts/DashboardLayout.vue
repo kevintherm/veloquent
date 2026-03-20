@@ -11,6 +11,7 @@ import {
 } from "lucide-vue-next";
 import Sidebar from "@/pages/Dashboard/Sidebar.vue";
 import DashboardHeader from "@/pages/Dashboard/DashboardHeader.vue";
+import RecordFormSheetHost from "@/components/RecordFormSheetHost.vue";
 import { useDashboardState } from "@/lib/dashboardState";
 
 const { state, logout } = useAuth();
@@ -36,7 +37,7 @@ const fetchCollections = async () => {
             ...collection,
             icon: resolveCollectionIcon(collection),
         }));
-    } catch (error) {
+    } catch {
         collections.value = [];
     }
 
@@ -133,5 +134,7 @@ const handleLogout = async () => {
                 </div>
             </div>
         </main>
+
+        <RecordFormSheetHost />
     </div>
 </template>

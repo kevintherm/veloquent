@@ -3,6 +3,8 @@ import {
     ChevronLeft,
     ChevronRight,
 } from "lucide-vue-next";
+import { toast } from "vue-sonner";
+import { resolveCollectionFieldTypeIcon } from "@/lib/collectionFieldTypeIcons";
 import {
     Button,
     Card,
@@ -55,7 +57,7 @@ defineProps({
     }
 })
 
-defineEmits(['toggle-all', 'toggle-record', 'prev-page', 'next-page'])
+defineEmits(['toggle-all', 'toggle-record', 'prev-page', 'next-page', 'open-record'])
 
 const skeletonRows = 5;
 
@@ -88,7 +90,7 @@ const formatDatetimeParts = (value) => {
     };
 };
 
-const formatValue = (value, column, columnTypes) => {
+const formatValue = (value) => {
     if (value === null || value === undefined || value === "") {
         return "-";
     }
@@ -104,10 +106,31 @@ const formatValue = (value, column, columnTypes) => {
     return String(value);
 };
 
+const resolveColumnIcon = (column, columnTypes) => {
+    return resolveCollectionFieldTypeIcon(columnTypes?.[column]);
+};
+
+const fixedWidthColumns = new Set(["id", "created_at", "updated_at"]);
+
+const isFixedWidthColumn = (column) => {
+    return fixedWidthColumns.has(column);
+};
+
 const columnLabel = (name) => {
-    return name
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, (char) => char.toUpperCase());
+    return String(name);
+};
+
+const copyRecordId = async (recordId) => {
+    if (!recordId) {
+        return;
+    }
+
+    try {
+        await navigator.clipboard.writeText(String(recordId));
+        toast.success("ID copied");
+    } catch {
+        toast.error("Failed to copy ID");
+    }
 };
 </script>
 
@@ -118,40 +141,49 @@ const columnLabel = (name) => {
                 <TableHeader>
                     <TableRow>
                         <TableHead class="w-12.5">
-                            <Checkbox
-                                :model-value="selectedRecords.length === records.length && records.length > 0"
-                                @update:model-value="(val) => $emit('toggle-all', val)"
-                            />
+                            <Checkbox :model-value="selectedRecords.length === records.length && records.length > 0"
+                                @update:model-value="(val) => $emit('toggle-all', val)" />
                         </TableHead>
-                        <TableHead v-for="column in columns" :key="column">
-                            {{ columnLabel(column) }}
+                        <TableHead v-for="column in columns" :key="column"
+                            :class="isFixedWidthColumn(column) ? 'w-45 min-w-45 whitespace-nowrap' : ''">
+                            <div class="inline-flex items-center gap-2">
+                                <component :is="resolveColumnIcon(column, columnTypes)"
+                                    class="h-3.5 w-3.5 text-muted-foreground" />
+                                <span>{{ columnLabel(column) }}</span>
+                            </div>
                         </TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     <template v-if="!loading">
-                        <TableRow
-                            v-for="record in records"
-                            :key="record.id"
-                            :data-state="selectedRecords.includes(record.id) ? 'selected' : ''"
-                        >
-                            <TableCell>
-                                <Checkbox
-                                    :model-value="selectedRecords.includes(record.id)"
-                                    @update:model-value="$emit('toggle-record', record.id)"
-                                />
+                        <TableRow v-for="record in records" :key="record.id"
+                            :data-state="selectedRecords.includes(record.id) ? 'selected' : ''" class="cursor-pointer"
+                            @click="$emit('open-record', record)">
+                            <TableCell @click.stop>
+                                <Checkbox :model-value="selectedRecords.includes(record.id)"
+                                    @update:model-value="$emit('toggle-record', record.id)" />
                             </TableCell>
-                            <TableCell v-for="column in columns" :key="`${record.id}-${column}`" class="align-top">
-                                <div v-if="isDatetimeColumn(column, columnTypes)" class="leading-tight">
+                            <TableCell v-for="column in columns" :key="`${record.id}-${column}`" :class="[
+                                'align-top',
+                                isFixedWidthColumn(column) ? 'w-45 min-w-45 whitespace-nowrap' : '',
+                            ]">
+                                <div v-if="isDatetimeColumn(column, columnTypes)"
+                                    class="leading-tight whitespace-nowrap">
                                     <p class="text-sm font-medium">
                                         {{ formatDatetimeParts(record[column]).date }}
                                     </p>
-                                    <p v-if="formatDatetimeParts(record[column]).time" class="text-xs text-muted-foreground">
+                                    <p v-if="formatDatetimeParts(record[column]).time"
+                                        class="text-xs text-muted-foreground">
                                         {{ formatDatetimeParts(record[column]).time }}
                                     </p>
                                 </div>
-                                <span v-else :class="column === 'id' ? 'font-mono text-xs text-muted-foreground' : ''">
-                                    {{ formatValue(record[column], column, columnTypes) }}
+                                <button v-else-if="column === 'id'" type="button"
+                                    class="font-mono text-xs text-muted-foreground underline-offset-2 hover:underline"
+                                    @click.stop="copyRecordId(record[column])">
+                                    {{ formatValue(record[column]) }}
+                                </button>
+                                <span v-else>
+                                    {{ formatValue(record[column]) }}
                                 </span>
                             </TableCell>
                         </TableRow>
@@ -161,7 +193,8 @@ const columnLabel = (name) => {
                             <div v-for="rowIndex in skeletonRows" :key="`skeleton-row-${rowIndex}`" class="grid gap-3"
                                 :style="{ gridTemplateColumns: `2rem repeat(${columns.length}, minmax(0, 1fr))` }">
                                 <Skeleton class="h-4 w-4 rounded-sm" />
-                                <Skeleton v-for="column in columns" :key="`skeleton-${rowIndex}-${column}`" class="h-4 w-full" />
+                                <Skeleton v-for="column in columns" :key="`skeleton-${rowIndex}-${column}`"
+                                    class="h-4 w-full" />
                             </div>
                         </TableCell>
                     </TableRow>
@@ -187,24 +220,14 @@ const columnLabel = (name) => {
                 </template>
             </div>
             <div class="flex items-center gap-2">
-                <Button
-                    variant="outline"
-                    size="icon"
-                    class="h-8 w-8"
-                    :disabled="currentPage === 1"
-                    @click="$emit('prev-page')"
-                >
-                    <ChevronLeft class="h-4 w-4"/>
+                <Button variant="outline" size="icon" class="h-8 w-8" :disabled="currentPage === 1"
+                    @click="$emit('prev-page')">
+                    <ChevronLeft class="h-4 w-4" />
                 </Button>
                 <div class="text-sm font-medium">Page {{ currentPage }} of {{ totalPages }}</div>
-                <Button
-                    variant="outline"
-                    size="icon"
-                    class="h-8 w-8"
-                    :disabled="currentPage === totalPages"
-                    @click="$emit('next-page')"
-                >
-                    <ChevronRight class="h-4 w-4"/>
+                <Button variant="outline" size="icon" class="h-8 w-8" :disabled="currentPage === totalPages"
+                    @click="$emit('next-page')">
+                    <ChevronRight class="h-4 w-4" />
                 </Button>
             </div>
         </div>
