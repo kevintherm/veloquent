@@ -262,7 +262,7 @@ const displayFieldName = (fieldName) => {
 };
 
 const isRequiredField = (field) => {
-  return !field?.nullable;
+  return !["id", "created_at", "updated_at"].includes(field?.name) && field?.nullable === false;
 };
 
 const resolveInputType = (field) => {
