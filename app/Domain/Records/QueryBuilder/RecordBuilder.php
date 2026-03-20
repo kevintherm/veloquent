@@ -9,9 +9,34 @@ use RuntimeException;
 
 class RecordBuilder extends Builder
 {
+    public function applySorting(?string $sortParam): static
+    {
+        if (!$collection = $this->getModel()?->collection) {
+            throw new RuntimeException("Model's collection is not set");
+        }
+
+        $systemSorts = ['created_at', 'updated_at', 'id'];
+        $allowed = array_merge(Arr::pluck($collection->fields, 'name'), $systemSorts);
+
+        if (empty($sortParam)) {
+            return $this->orderByDesc('created_at');
+        }
+
+        foreach (explode(',', $sortParam) as $sort) {
+            $direction = str_starts_with($sort, '-') ? 'desc' : 'asc';
+            $column = ltrim($sort, '-');
+
+            if (in_array($column, $allowed)) {
+                $this->orderBy($column, $direction);
+            }
+        }
+
+        return $this;
+    }
+
     public function applyRule(string $action): static
     {
-        if (! $collection = $this->getModel()?->collection) {
+        if (!$collection = $this->getModel()?->collection) {
             throw new RuntimeException("Model's collection is not set");
         }
 
@@ -24,23 +49,23 @@ class RecordBuilder extends Builder
         }
 
         $allowedFields = Arr::pluck($collection->fields, 'name');
-        $this->where(fn ($q) => QueryFilter::for($q, $allowedFields)->run($rule));
+        $this->where(fn($q) => QueryFilter::for($q, $allowedFields)->run($rule));
 
         return $this;
     }
 
     public function applyFilter(?string $filter): static
     {
-        if (! $filter) {
+        if (!$filter) {
             return $this;
         }
 
-        if (! $collection = $this->getModel()?->collection) {
+        if (!$collection = $this->getModel()?->collection) {
             throw new RuntimeException("Model's collection is not set");
         }
 
         $allowedFields = Arr::pluck($collection->fields ?? [], 'name');
 
-        return $this->where(fn ($q) => QueryFilter::for($q, $allowedFields)->run($filter));
+        return $this->where(fn($q) => QueryFilter::for($q, $allowedFields)->run($filter));
     }
 }

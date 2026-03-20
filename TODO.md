@@ -1,9 +1,8 @@
 
 ## TODO
 
-- Sorting records
-    - usage: ?sort=field1,field2 or ?sort=-field1 (descending)
-    - default: id
+- Relation field
+- Superusers should bypass api_rules (reinvented)
 - Relation records
     - usage: ?relation=field1,field2
     - default: none
@@ -11,20 +10,19 @@
     - usage: ?expand=field1,field2
     - default: none
 - UI Dashboard
-    - Manage records
-        - CRUD ✅
-        - Sort fields 
+    - Datatables
+        - Sorting fields
         - Show/Hide fields
+    - Manage records
+        - Relation field should be a dropdown with list fetch from /api/collections
+        - acceptable field options should not be rejected (Server)
+            - e.g providing collection property on a text field option should be accepted
     - Manage collections
-        - Fields ✅
-        - Index ✅
-        - Truncate
-        - Delete
-        - Copy
-    - Manage systems collections
-        - superusers
-        - auth_tokens
-        - auth_otps
+        - existing field type cannot be change
+        - hint on api rules should declare the structure of `field op value`
+        - indexes should not receive a index name as its generated automatically
+            - index type should be index or unique
+        - reserved fields should not be provided on creation
     - Manage systems
         - Schema corrupt detection
             - Fix: Rebuild entire schema, manual trigger

@@ -20,14 +20,16 @@ class CollectionController extends ApiController
     public function __construct(
         private CreateCollectionAction $createCollectionAction,
         private UpdateCollectionAction $updateCollectionAction,
-    ) {}
+    ) {
+    }
 
     public function index(Request $request): JsonResponse
     {
         Gate::authorize('list-collections');
 
         $filters = $request->input('filter') ?? '';
-        $collections = Collection::query()->applyFilter($filters)->get();
+        $sort = $request->input('sort') ?? '';
+        $collections = Collection::query()->applySorting($sort)->applyFilter($filters)->get();
 
         return $this->successResponse($collections);
     }
