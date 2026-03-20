@@ -8,10 +8,11 @@ import DashboardLayout from "@/layouts/DashboardLayout.vue";
 import DataTable from "@/pages/Dashboard/DataTable.vue";
 import BulkActions from "@/pages/Dashboard/BulkActions.vue";
 import { useDashboardState } from "@/lib/dashboardState";
+import { openRecordForm } from "@/lib/recordFormSheet";
 
 const route = useRoute();
 const router = useRouter();
-const { activeCollection } = useDashboardState();
+const { activeCollection, recordsReloadNonce } = useDashboardState();
 const records = ref([]);
 const loading = ref(false);
 
@@ -79,7 +80,7 @@ const fetchRecords = async () => {
             totalPages.value = 1;
             totalRecords.value = rows.length;
         }
-    } catch (error) {
+    } catch {
         records.value = [];
         totalPages.value = 1;
         totalRecords.value = 0;
@@ -154,6 +155,18 @@ const toggleRecord = (id) => {
     }
 };
 
+const handleOpenRecord = (record) => {
+    if (!activeCollection.value?.id) {
+        return;
+    }
+
+    openRecordForm({
+        collection: activeCollection.value,
+        record,
+        origin: "dashboard-row-click",
+    });
+};
+
 watch(
     () => activeCollection.value?.id,
     async () => {
@@ -221,6 +234,10 @@ watch(currentPage, async () => {
     await fetchRecords();
 });
 
+watch(recordsReloadNonce, async () => {
+    await fetchRecords();
+});
+
 onUnmounted(() => {
     if (searchDebounceTimer) {
         clearTimeout(searchDebounceTimer);
@@ -259,6 +276,7 @@ onUnmounted(() => {
                 @toggle-record="toggleRecord"
                 @prev-page="currentPage--"
                 @next-page="currentPage++"
+                @open-record="handleOpenRecord"
             />
         </div>
     </DashboardLayout>
