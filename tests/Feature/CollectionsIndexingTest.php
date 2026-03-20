@@ -109,6 +109,28 @@ it('rejects non-indexable field types in store request indexes', function () {
     expect($validator->errors()->has('indexes.0.columns.0'))->toBeTrue();
 });
 
+it('rejects providing index name in store request', function () {
+    $payload = [
+        'name' => 'products',
+        'type' => CollectionType::Base->value,
+        'description' => 'Products',
+        'fields' => [
+            ['name' => 'sku', 'type' => CollectionFieldType::Text->value],
+        ],
+        'indexes' => [
+            ['name' => 'idx_sku', 'columns' => ['sku'], 'type' => IndexType::Index->value],
+        ],
+    ];
+
+    $request = StoreCollectionRequest::create('/api/collections', 'POST', $payload);
+
+    $validator = Validator::make($payload, $request->rules());
+    $request->withValidator($validator);
+
+    expect($validator->fails())->toBeTrue();
+    expect($validator->errors()->has('indexes.0.name'))->toBeTrue();
+});
+
 it('uses existing fields when validating update request indexes', function () {
     $collection = new Collection;
     $collection->type = CollectionType::Base;
@@ -118,7 +140,7 @@ it('uses existing fields when validating update request indexes', function () {
 
     $payload = [
         'indexes' => [
-            ['columns' => ['metadata'], 'type' => IndexType::Index->value, 'unexpected' => 'x'],
+            ['name' => 'idx_metadata', 'columns' => ['metadata'], 'type' => IndexType::Index->value],
         ],
     ];
 
@@ -132,8 +154,68 @@ it('uses existing fields when validating update request indexes', function () {
     $request->withValidator($validator);
 
     expect($validator->fails())->toBeTrue();
-    expect($validator->errors()->has('indexes.0'))->toBeTrue();
+    expect($validator->errors()->has('indexes.0.name'))->toBeTrue();
     expect($validator->errors()->has('indexes.0.columns.0'))->toBeTrue();
+});
+
+it('allows extra field options for non-relation fields', function () {
+    $payload = [
+        'name' => 'notes',
+        'type' => CollectionType::Base->value,
+        'description' => 'Notes',
+        'fields' => [
+            [
+                'name' => 'title',
+                'type' => CollectionFieldType::Text->value,
+                'target_collection_id' => '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+                'max_select' => 5,
+            ],
+        ],
+        'indexes' => [],
+    ];
+
+    $request = StoreCollectionRequest::create('/api/collections', 'POST', $payload);
+
+    $validator = Validator::make($payload, $request->rules());
+    $request->withValidator($validator);
+
+    expect($validator->fails())->toBeFalse();
+});
+
+it('rejects changing existing field type in update request', function () {
+    $collection = Collection::create([
+        'name' => 'events',
+        'type' => CollectionType::Base,
+        'description' => 'Events',
+        'fields' => [
+            ['id' => 'aa11aa11', 'name' => 'title', 'type' => CollectionFieldType::Text->value, 'order' => 0, 'nullable' => false, 'unique' => false, 'default' => null],
+        ],
+        'api_rules' => [
+            'list' => '',
+            'view' => '',
+            'create' => '',
+            'update' => '',
+            'delete' => '',
+        ],
+        'indexes' => [],
+    ]);
+
+    $payload = [
+        'fields' => [
+            ['id' => 'aa11aa11', 'name' => 'title', 'type' => CollectionFieldType::Number->value],
+        ],
+    ];
+
+    $request = UpdateCollectionRequest::create('/api/collections/events', 'PATCH', $payload);
+    $matchedRoute = Route::getRoutes()->match($request);
+    $matchedRoute->setParameter('collection', $collection);
+    $request->setRouteResolver(fn () => $matchedRoute);
+
+    $validator = Validator::make($payload, $request->rules());
+    $request->withValidator($validator);
+
+    expect($validator->fails())->toBeTrue();
+    expect($validator->errors()->has('fields.0.type'))->toBeTrue();
 });
 
 it('syncs fields unique metadata from declared unique indexes', function () {

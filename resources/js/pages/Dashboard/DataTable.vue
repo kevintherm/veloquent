@@ -1,5 +1,8 @@
 <script setup>
 import {
+    ArrowDown,
+    ArrowUp,
+    ArrowUpDown,
     ChevronLeft,
     ChevronRight,
 } from "lucide-vue-next";
@@ -31,6 +34,18 @@ defineProps({
         type: Object,
         default: () => ({})
     },
+    relationFields: {
+        type: Object,
+        default: () => ({})
+    },
+    sortBy: {
+        type: String,
+        default: null,
+    },
+    sortDirection: {
+        type: String,
+        default: "asc",
+    },
     selectedRecords: {
         type: Array,
         required: true
@@ -57,7 +72,7 @@ defineProps({
     }
 })
 
-defineEmits(['toggle-all', 'toggle-record', 'prev-page', 'next-page', 'open-record'])
+defineEmits(['toggle-all', 'toggle-record', 'prev-page', 'next-page', 'open-record', 'sort'])
 
 const skeletonRows = 5;
 
@@ -106,6 +121,42 @@ const formatValue = (value) => {
     return String(value);
 };
 
+const normalizeRelationIds = (value) => {
+    if (Array.isArray(value)) {
+        return value.filter((item) => item !== null && item !== undefined && item !== "");
+    }
+
+    if (value === null || value === undefined || value === "") {
+        return [];
+    }
+
+    return [value];
+};
+
+const isRelationColumn = (column, relationFields) => {
+    return Boolean(relationFields?.[column]?.targetCollectionId);
+};
+
+const relationRecordUrl = (column, relationId, relationFields) => {
+    const targetCollectionId = relationFields?.[column]?.targetCollectionId;
+
+    if (!targetCollectionId || !relationId) {
+        return "#";
+    }
+
+    return `/${encodeURIComponent(targetCollectionId)}?recordId=${encodeURIComponent(String(relationId))}`;
+};
+
+const relationLinkTitle = (column, relationFields) => {
+    const targetName = relationFields?.[column]?.targetCollectionName;
+
+    if (!targetName) {
+        return "Open related record in new tab";
+    }
+
+    return `Open related ${targetName} record in new tab`;
+};
+
 const resolveColumnIcon = (column, columnTypes) => {
     return resolveCollectionFieldTypeIcon(columnTypes?.[column]);
 };
@@ -118,6 +169,14 @@ const isFixedWidthColumn = (column) => {
 
 const columnLabel = (name) => {
     return String(name);
+};
+
+const sortIconFor = (column, sortBy, sortDirection) => {
+    if (sortBy !== column) {
+        return ArrowUpDown;
+    }
+
+    return sortDirection === "desc" ? ArrowDown : ArrowUp;
 };
 
 const copyRecordId = async (recordId) => {
@@ -146,11 +205,13 @@ const copyRecordId = async (recordId) => {
                         </TableHead>
                         <TableHead v-for="column in columns" :key="column"
                             :class="isFixedWidthColumn(column) ? 'w-45 min-w-45 whitespace-nowrap' : ''">
-                            <div class="inline-flex items-center gap-2">
+                            <button type="button" class="inline-flex items-center gap-2"
+                                @click="$emit('sort', column)">
                                 <component :is="resolveColumnIcon(column, columnTypes)"
                                     class="h-3.5 w-3.5 text-muted-foreground" />
                                 <span>{{ columnLabel(column) }}</span>
-                            </div>
+                                <component :is="sortIconFor(column, sortBy, sortDirection)" class="h-3.5 w-3.5 text-muted-foreground" />
+                            </button>
                         </TableHead>
                     </TableRow>
                 </TableHeader>
@@ -182,6 +243,21 @@ const copyRecordId = async (recordId) => {
                                     @click.stop="copyRecordId(record[column])">
                                     {{ formatValue(record[column]) }}
                                 </button>
+                                <div v-else-if="isRelationColumn(column, relationFields)" class="flex flex-wrap gap-2">
+                                    <a
+                                        v-for="relationId in normalizeRelationIds(record[column])"
+                                        :key="`${record.id}-${column}-${relationId}`"
+                                        :href="relationRecordUrl(column, relationId, relationFields)"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="font-mono text-xs text-primary underline underline-offset-2"
+                                        :title="relationLinkTitle(column, relationFields)"
+                                        @click.stop
+                                    >
+                                        {{ relationId }}
+                                    </a>
+                                    <span v-if="normalizeRelationIds(record[column]).length === 0">-</span>
+                                </div>
                                 <span v-else>
                                     {{ formatValue(record[column]) }}
                                 </span>

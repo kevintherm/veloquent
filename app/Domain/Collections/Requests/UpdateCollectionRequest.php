@@ -50,6 +50,7 @@ class UpdateCollectionRequest extends FormRequest
 
             'indexes' => 'sometimes|array',
             'indexes.*' => ['required', 'array'],
+            'indexes.*.name' => ['prohibited'],
             'indexes.*.columns' => ['required', 'array', 'min:1'],
             'indexes.*.columns.*' => ['required', 'string', 'regex:/^[a-zA-Z_]+$/'],
             'indexes.*.type' => ['required', new Enum(IndexType::class)],
@@ -151,17 +152,34 @@ class UpdateCollectionRequest extends FormRequest
                         $fieldTypesByName[$fieldName] = $fieldType;
                     }
 
-                    $unknownProperties = array_diff(array_keys($field), $fieldType->allowedProperties());
-
-                    if ($unknownProperties !== []) {
-                        $validator->errors()->add(
-                            "fields.{$index}",
-                            'Unknown properties for field type '.$fieldType->value.': '.implode(', ', $unknownProperties)
-                        );
-                    }
-
                     if ($fieldType === CollectionFieldType::Relation) {
                         $this->validateRelationFieldDefinition($validator, $index, $field);
+                    }
+                }
+
+                $existingField = null;
+                $fieldId = $field['id'] ?? null;
+
+                if (is_string($fieldId) && $fieldId !== '') {
+                    $existingField = collect($collection->fields)
+                        ->first(fn (mixed $existing): bool => (string) ($existing['id'] ?? '') === $fieldId);
+                }
+
+                if ($existingField === null && is_string($fieldName)) {
+                    $existingField = collect($collection->fields)
+                        ->first(fn (mixed $existing): bool => (string) ($existing['name'] ?? '') === $fieldName);
+                }
+
+                if ($existingField !== null) {
+                    $existingFieldArray = is_array($existingField)
+                        ? $existingField
+                        : (method_exists($existingField, 'toArray') ? $existingField->toArray() : (array) $existingField);
+
+                    $originalType = (string) ($existingFieldArray['type'] ?? '');
+                    $incomingType = (string) ($field['type'] ?? '');
+
+                    if ($originalType !== '' && $incomingType !== '' && $originalType !== $incomingType) {
+                        $validator->errors()->add("fields.{$index}.type", 'Existing field type cannot be changed.');
                     }
                 }
 

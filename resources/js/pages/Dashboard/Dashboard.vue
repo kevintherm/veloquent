@@ -1,8 +1,8 @@
 <script setup>
 import { computed, onUnmounted, ref, watch } from "vue";
 import axios from "axios";
-import { Input } from "@/components/ui";
-import {Search} from "lucide-vue-next";
+import { Button, Checkbox, Input } from "@/components/ui";
+import { Search, SlidersHorizontal } from "lucide-vue-next";
 import { useRoute, useRouter } from "vue-router";
 import DashboardLayout from "@/layouts/DashboardLayout.vue";
 import DataTable from "@/pages/Dashboard/DataTable.vue";
@@ -15,6 +15,7 @@ const router = useRouter();
 const { activeCollection, recordsReloadNonce } = useDashboardState();
 const records = ref([]);
 const loading = ref(false);
+const collectionsById = ref({});
 
 const selectedRecords = ref([]);
 const searchQuery = ref("");
@@ -23,6 +24,10 @@ const currentPage = ref(1);
 const itemsPerPage = 15;
 const totalPages = ref(1);
 const totalRecords = ref(0);
+const visibleColumns = ref([]);
+const showColumnPicker = ref(false);
+const sortBy = ref(null);
+const sortDirection = ref("asc");
 const lastAutoOpenedRecordKey = ref(null);
 const isAutoOpeningRecord = ref(false);
 let searchDebounceTimer = null;
@@ -92,6 +97,23 @@ const fetchRecords = async () => {
     }
 };
 
+const fetchCollectionsMap = async () => {
+    try {
+        const response = await axios.get("/api/collections");
+        const items = Array.isArray(response?.data?.data) ? response.data.data : [];
+
+        collectionsById.value = items.reduce((carry, collection) => {
+            if (collection?.id) {
+                carry[collection.id] = collection;
+            }
+
+            return carry;
+        }, {});
+    } catch {
+        collectionsById.value = {};
+    }
+};
+
 const recordColumns = computed(() => {
     const excludedColumns = new Set(["collection_id", "collection_name"]);
     const collectionFields = activeCollection.value?.fields ?? [];
@@ -139,6 +161,103 @@ const columnTypes = computed(() => {
 
     return types;
 });
+
+const relationFieldsMeta = computed(() => {
+    const fields = Array.isArray(activeCollection.value?.fields) ? activeCollection.value.fields : [];
+
+    return fields.reduce((carry, field) => {
+        if (field?.type !== "relation" || !field?.name) {
+            return carry;
+        }
+
+        const targetCollection = collectionsById.value[field.target_collection_id] ?? null;
+
+        carry[field.name] = {
+            targetCollectionId: field.target_collection_id ?? null,
+            targetCollectionName: targetCollection?.name ?? null,
+            maxSelect: Number(field.max_select ?? 1),
+        };
+
+        return carry;
+    }, {});
+});
+
+const displayedColumns = computed(() => {
+    if (!visibleColumns.value.length) {
+        return recordColumns.value;
+    }
+
+    const visible = new Set(visibleColumns.value);
+
+    return recordColumns.value.filter((column) => visible.has(column));
+});
+
+const sortedRecords = computed(() => {
+    const rows = [...records.value];
+
+    if (!sortBy.value) {
+        return rows;
+    }
+
+    const direction = sortDirection.value === "desc" ? -1 : 1;
+    const column = sortBy.value;
+    const type = columnTypes.value[column] ?? "text";
+
+    rows.sort((left, right) => {
+        const leftValue = left?.[column] ?? null;
+        const rightValue = right?.[column] ?? null;
+
+        if (leftValue === rightValue) {
+            return 0;
+        }
+
+        if (leftValue === null || leftValue === undefined) {
+            return 1;
+        }
+
+        if (rightValue === null || rightValue === undefined) {
+            return -1;
+        }
+
+        if (["number", "timestamp", "datetime", "date"].includes(type)) {
+            const leftNumeric = type === "number" ? Number(leftValue) : new Date(leftValue).getTime();
+            const rightNumeric = type === "number" ? Number(rightValue) : new Date(rightValue).getTime();
+
+            if (Number.isFinite(leftNumeric) && Number.isFinite(rightNumeric)) {
+                return (leftNumeric - rightNumeric) * direction;
+            }
+        }
+
+        return String(leftValue).localeCompare(String(rightValue), undefined, { numeric: true }) * direction;
+    });
+
+    return rows;
+});
+
+const toggleColumn = (column) => {
+    const index = visibleColumns.value.indexOf(column);
+
+    if (index === -1) {
+        visibleColumns.value.push(column);
+        return;
+    }
+
+    if (visibleColumns.value.length === 1) {
+        return;
+    }
+
+    visibleColumns.value.splice(index, 1);
+};
+
+const handleSort = (column) => {
+    if (sortBy.value !== column) {
+        sortBy.value = column;
+        sortDirection.value = "asc";
+        return;
+    }
+
+    sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc";
+};
 
 const toggleAll = (checked) => {
     if (checked) {
@@ -195,10 +314,22 @@ watch(
     () => activeCollection.value?.id,
     async () => {
         currentPage.value = 1;
+        visibleColumns.value = [];
+        showColumnPicker.value = false;
+        sortBy.value = null;
+        sortDirection.value = "asc";
+        await fetchCollectionsMap();
         await fetchRecords();
     },
     { immediate: true }
 );
+
+watch(recordColumns, (columns) => {
+    const visible = new Set(visibleColumns.value);
+    const nextVisible = columns.filter((column) => visible.has(column));
+
+    visibleColumns.value = nextVisible.length ? nextVisible : [...columns];
+});
 
 watch(
     () => route.query.q,
@@ -325,7 +456,7 @@ onUnmounted(() => {
 <template>
     <DashboardLayout>
         <div class="space-y-6">
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between gap-3">
                 <div class="relative w-full">
                     <Search class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground"/>
                     <Input
@@ -334,15 +465,39 @@ onUnmounted(() => {
                         class="pl-9 h-10 bg-card w-full"
                     />
                 </div>
+                <Button type="button" variant="outline" class="shrink-0 gap-2" @click="showColumnPicker = !showColumnPicker">
+                    <SlidersHorizontal class="h-4 w-4" />
+                    Columns
+                </Button>
+            </div>
+
+            <div v-if="showColumnPicker" class="rounded-md border bg-card p-4">
+                <div class="mb-3 text-sm font-medium">Show/Hide Fields</div>
+                <div class="grid grid-cols-2 gap-2 md:grid-cols-4">
+                    <label
+                        v-for="column in recordColumns"
+                        :key="`column-picker-${column}`"
+                        class="flex cursor-pointer items-center gap-2 text-sm"
+                    >
+                        <Checkbox
+                            :model-value="displayedColumns.includes(column)"
+                            @update:model-value="() => toggleColumn(column)"
+                        />
+                        <span>{{ column }}</span>
+                    </label>
+                </div>
             </div>
 
             <!-- Floating Bulk Actions Bar -->
             <BulkActions :selected-records="selectedRecords" @clear-selection="selectedRecords = []"/>
 
             <DataTable
-                :records="records"
-                :columns="recordColumns"
+                :records="sortedRecords"
+                :columns="displayedColumns"
                 :column-types="columnTypes"
+                :relation-fields="relationFieldsMeta"
+                :sort-by="sortBy"
+                :sort-direction="sortDirection"
                 :selected-records="selectedRecords"
                 :current-page="currentPage"
                 :total-pages="totalPages"
@@ -351,6 +506,7 @@ onUnmounted(() => {
                 :loading="loading"
                 @toggle-all="toggleAll"
                 @toggle-record="toggleRecord"
+                @sort="handleSort"
                 @prev-page="currentPage--"
                 @next-page="currentPage++"
                 @open-record="handleOpenRecord"

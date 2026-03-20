@@ -1,21 +1,18 @@
 
 ## TODO
-
-- Reserved field checking should first check if those fields were really in the metadata collection first
+- fix bug cannot recreate field to change type
+    - problem: deleted field, recreated with same name different type no id in the payload, returned error existing field type cannot be changed
+    - mark deleted with no id
+    - velo parse diff the before n after
+- scroll top when adding new field
+- close collapse when adding new field or reordering
+- fix input border left and right clipped on record sheet form
+- refresh datatable after truncating collection
+- refresh sidebar after deleting collection
+- make left click on relation field open the record in current tab, and right click on a new tab
+    - context menu preferred?
+- relation field on record form uses a full on modal/dialog
 - UI Dashboard
-    - Datatables
-        - Sorting fields
-        - Show/Hide fields
-    - Manage records
-        - Relation field should be a dropdown with list fetch from /api/collections
-        - acceptable field options should not be rejected (Server)
-            - e.g providing collection property on a text field option should be accepted
-    - Manage collections
-        - existing field type cannot be change
-        - hint on api rules should declare the structure of `field op value`
-        - indexes should not receive a index name as its generated automatically
-            - index type should be index or unique
-        - reserved fields should not be provided on creation
     - Manage systems
         - Schema corrupt detection
             - Fix: Rebuild entire schema, manual trigger
@@ -35,6 +32,8 @@
     - expandedRelations as dynamic property 
     - Field|array type inconsistency
 - Superusers should bypass api_rules (reinvented)
+- Reserved field checking should first check if those fields were really in the metadata collection first
+    - e.g updating a superusers collection failed bcs email_visibility and verified were missing even though it is not necessary
 - Hooks system
 - Optimize Record model
     - cache collections

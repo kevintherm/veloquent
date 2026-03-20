@@ -40,6 +40,7 @@ const loadingCollection = ref(false);
 const submitting = ref(false);
 const fetchedCollection = ref(null);
 const validationErrors = ref({});
+const availableCollections = ref([]);
 const { activeCollection, requestCollectionsReload, requestRecordsReload } = useDashboardState();
 
 const defaultApiRules = () => ({
@@ -127,14 +128,15 @@ const newField = ref({
   default: null,
   min: null,
   max: null,
-  collection: null,
+  target_collection_id: null,
+  max_select: 1,
+  cascade_on_delete: false,
   order: 0,
 });
 
 const newIndex = ref({
-  name: "",
   columns: [],
-  unique: false,
+  type: "index",
   order: 0,
 });
 
@@ -151,6 +153,45 @@ const normalizeCollectionPayload = (payload) => {
   return payload;
 };
 
+const reservedFieldNames = new Set(["id", "created_at", "updated_at"]);
+
+const normalizeFieldForForm = (field) => {
+  const normalized = { ...field };
+
+  if (normalized.type === "relation") {
+    normalized.target_collection_id = normalized.target_collection_id ?? normalized.collection ?? null;
+    normalized.max_select = Number(normalized.max_select ?? 1);
+    normalized.cascade_on_delete = Boolean(normalized.cascade_on_delete ?? false);
+  }
+
+  return normalized;
+};
+
+const normalizeIndexForForm = (index) => {
+  if (index?.type === "unique" || index?.type === "index") {
+    return {
+      columns: Array.isArray(index.columns) ? [...index.columns] : [],
+      type: index.type,
+    };
+  }
+
+  return {
+    columns: Array.isArray(index?.columns) ? [...index.columns] : [],
+    type: index?.unique ? "unique" : "index",
+  };
+};
+
+const fetchAvailableCollections = async () => {
+  try {
+    const response = await axios.get("/api/collections");
+    const rows = Array.isArray(response?.data?.data) ? response.data.data : [];
+
+    availableCollections.value = rows;
+  } catch {
+    availableCollections.value = [];
+  }
+};
+
 const initializeFormState = () => {
   if (fetchedCollection.value) {
     isCreateMode.value = false;
@@ -160,7 +201,7 @@ const initializeFormState = () => {
       ? fetchedCollection.value.fields.map(field => {
           // Ensure id is either a valid string or remove it entirely
           const fieldId = field.id;
-          const cleanedField = { ...field };
+          const cleanedField = normalizeFieldForForm(field);
           if (fieldId === undefined || fieldId === null || fieldId === '') {
             delete cleanedField.id;
           }
@@ -169,7 +210,7 @@ const initializeFormState = () => {
       : [];
     
     const indexes = Array.isArray(fetchedCollection.value.indexes)
-      ? fetchedCollection.value.indexes.map(index => ({ ...index }))
+      ? fetchedCollection.value.indexes.map((index) => normalizeIndexForForm(index))
       : [];
     
     formState.value = {
@@ -188,11 +229,7 @@ const initializeFormState = () => {
       name: "",
       description: "",
       type: "base",
-      fields: [
-        { name: "id", type: "text", nullable: false, unique: true, default: null, order: 0 },
-        { name: "created_at", type: "timestamp", nullable: true, unique: false, default: null, order: 1 },
-        { name: "updated_at", type: "timestamp", nullable: true, unique: false, default: null, order: 2 },
-      ],
+      fields: [],
       indexes: [],
       api_rules: defaultApiRules(),
       is_system: false,
@@ -266,13 +303,18 @@ const addField = () => {
     (f) => f.name === newField.value.name.trim()
   );
 
+  if (reservedFieldNames.has(newField.value.name.trim())) {
+    toast.error("Reserved fields are managed by the system.");
+    return;
+  }
+
   if (fieldExists) {
     toast.error("Field name already exists");
     return;
   }
 
   formState.value.fields.push({
-    ...newField.value,
+    ...normalizeFieldForForm(newField.value),
     name: newField.value.name.trim(),
     order: formState.value.fields.length,
   });
@@ -285,6 +327,9 @@ const addField = () => {
     default: null,
     min: null,
     max: null,
+    target_collection_id: null,
+    max_select: 1,
+    cascade_on_delete: false,
     order: 0,
   };
   showNewFieldForm.value = false;
@@ -317,35 +362,32 @@ const isExistingField = (field) => {
 };
 
 const addIndex = () => {
-  if (!newIndex.value.name.trim()) {
-    toast.error("Index name is required");
-    return;
-  }
-
   if (newIndex.value.columns.length === 0) {
     toast.error("Select at least one column");
     return;
   }
 
-  const indexExists = formState.value.indexes.some(
-    (i) => i.name === newIndex.value.name.trim()
-  );
+  const indexExists = formState.value.indexes.some((index) => {
+    const sameType = (index.type ?? "index") === (newIndex.value.type ?? "index");
+    const sameColumns = JSON.stringify(index.columns ?? []) === JSON.stringify(newIndex.value.columns ?? []);
+
+    return sameType && sameColumns;
+  });
 
   if (indexExists) {
-    toast.error("Index name already exists");
+    toast.error("Duplicate index definition");
     return;
   }
 
   formState.value.indexes.push({
-    ...newIndex.value,
-    name: newIndex.value.name.trim(),
+    columns: [...newIndex.value.columns],
+    type: newIndex.value.type,
     order: formState.value.indexes.length,
   });
 
   newIndex.value = {
-    name: "",
     columns: [],
-    unique: false,
+    type: "index",
     order: 0,
   };
   showNewIndexForm.value = false;
@@ -381,15 +423,32 @@ const buildPayload = () => {
     } else if (typeof cleaned.id !== 'string') {
       cleaned.id = String(cleaned.id);
     }
+    if (cleaned.type !== "relation") {
+      delete cleaned.target_collection_id;
+      delete cleaned.max_select;
+      delete cleaned.cascade_on_delete;
+      delete cleaned.collection;
+    } else {
+      cleaned.target_collection_id = cleaned.target_collection_id ?? cleaned.collection ?? null;
+      cleaned.max_select = Number(cleaned.max_select ?? 1);
+      cleaned.cascade_on_delete = Boolean(cleaned.cascade_on_delete ?? false);
+      delete cleaned.collection;
+    }
+
     return cleaned;
   });
+
+  const cleanedIndexes = formState.value.indexes.map((index) => ({
+    columns: Array.isArray(index.columns) ? [...index.columns] : [],
+    type: index.type === "unique" ? "unique" : "index",
+  }));
   
   return {
     name: formState.value.name,
     description: formState.value.description,
     type: formState.value.type,
     fields: cleanedFields,
-    indexes: formState.value.indexes,
+    indexes: cleanedIndexes,
     api_rules: normalizeApiRules(formState.value.api_rules),
   };
 };
@@ -527,6 +586,7 @@ const handleCopy = () => {
 };
 
 onMounted(async () => {
+  await fetchAvailableCollections();
   await fetchCollectionInfo();
 });
 </script>
@@ -634,7 +694,17 @@ onMounted(async () => {
                 
                 <div v-if="newField.type === 'relation'" class="space-y-2">
                   <Label class="text-xs font-semibold tracking-wide text-primary/80 uppercase">Related Collection</Label>
-                  <Input v-model="newField.collection" class="h-9 focus-visible:ring-1 border-primary/20 bg-background" placeholder="e.g. users, posts" />
+                  <select v-model="newField.target_collection_id" class="flex h-9 w-full items-center justify-between rounded-md border border-primary/20 bg-background px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring">
+                    <option :value="null">Select collection</option>
+                    <option v-for="collection in availableCollections" :key="`new-field-target-${collection.id}`" :value="collection.id">
+                      {{ collection.name }}
+                    </option>
+                  </select>
+                </div>
+
+                <div v-if="newField.type === 'relation'" class="space-y-2">
+                  <Label class="text-xs font-semibold tracking-wide text-primary/80 uppercase">Max Select</Label>
+                  <Input v-model.number="newField.max_select" type="number" min="1" class="h-9 focus-visible:ring-1 border-primary/20 bg-background" placeholder="1 for single, 2+ for multiple" />
                 </div>
                 
                 <div v-if="['text', 'email', 'url'].includes(newField.type)" class="space-y-2 grid grid-cols-2 gap-3 col-span-1 border-border/50">
@@ -689,7 +759,7 @@ onMounted(async () => {
                   </div>
                   <div class="text-muted-foreground text-xs truncate">
                     <span v-if="field.min || field.max">min:{{ field.min }} max:{{ field.max }}</span>
-                    <span v-if="field.collection">rel:{{ field.collection }}</span>
+                    <span v-if="field.target_collection_id">rel:{{ field.target_collection_id }}</span>
                   </div>
                 </div>
                 <div class="flex items-center gap-1">
@@ -745,7 +815,17 @@ onMounted(async () => {
                   
                   <div v-if="field.type === 'relation'" class="space-y-2">
                     <Label class="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Related Collection</Label>
-                    <Input v-model="field.collection" class="h-9 focus-visible:ring-1" placeholder="e.g. users, posts" />
+                    <select v-model="field.target_collection_id" class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring">
+                      <option :value="null">Select collection</option>
+                      <option v-for="collection in availableCollections" :key="`field-target-${collection.id}`" :value="collection.id">
+                        {{ collection.name }}
+                      </option>
+                    </select>
+                  </div>
+
+                  <div v-if="field.type === 'relation'" class="space-y-2">
+                    <Label class="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Max Select</Label>
+                    <Input v-model.number="field.max_select" type="number" min="1" class="h-9 focus-visible:ring-1" placeholder="1 for single, 2+ for multiple" />
                   </div>
                   
                   <div v-if="['text', 'email', 'url'].includes(field.type)" class="space-y-2 grid grid-cols-2 gap-3 col-span-1 border-border/50">
@@ -800,15 +880,14 @@ onMounted(async () => {
           <div v-if="showNewIndexForm" class="p-4 border rounded-lg space-y-3 bg-muted/30">
             <div class="grid grid-cols-2 gap-3">
               <div class="grid gap-2">
-                <Label>Index Name</Label>
-                <Input v-model="newIndex.name" placeholder="e.g. idx_name_email" />
-              </div>
-              <div class="grid gap-2">
                 <Label>Type</Label>
-                <label class="flex items-center gap-2 text-sm pt-2">
-                  <input type="checkbox" v-model="newIndex.unique" class="rounded" />
-                  Unique Index
-                </label>
+                <select
+                  v-model="newIndex.type"
+                  class="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="index">index</option>
+                  <option value="unique">unique</option>
+                </select>
               </div>
             </div>
             <div class="grid gap-2">
@@ -836,10 +915,9 @@ onMounted(async () => {
           <div v-for="(index, idx) in orderedIndexes" :key="idx"
             class="flex items-center gap-2 p-3 border rounded-lg bg-background">
             <div class="flex-1 grid grid-cols-2 gap-2 text-sm">
-              <div class="font-medium">{{ index.name }}</div>
+              <div class="font-medium">{{ index.type }}</div>
               <div class="text-muted-foreground">
                 {{ index.columns.join(', ') }}
-                <span v-if="index.unique" class="text-xs ml-1">(unique)</span>
               </div>
             </div>
             <Button variant="ghost" size="icon" class="h-8 w-8 text-destructive" @click="removeIndex(idx)">
@@ -860,10 +938,10 @@ onMounted(async () => {
               <textarea
                 v-model="formState.api_rules.list"
                 class="min-h-24 rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
-                placeholder="e.g. auth()"
+                placeholder="e.g. status = 'published'"
                 @input="clearValidationError('api_rules.list')"
               ></textarea>
-              <p class="text-xs text-muted-foreground">Rule evaluated when listing records.</p>
+              <p class="text-xs text-muted-foreground">Use `field op value` expressions. Example: `status = "published" && views > 10`.</p>
               <p v-if="firstErrorFor('api_rules.list')" class="text-xs text-destructive">{{ firstErrorFor('api_rules.list') }}</p>
             </div>
 
