@@ -2,6 +2,9 @@
 
 namespace App\Domain\Records\QueryBuilder;
 
+use App\Domain\Collections\Enums\CollectionFieldType;
+use App\Domain\Collections\ValueObjects\Field;
+use App\Domain\QueryCompiler\Exceptions\UnsupportedQueryFeatureException;
 use App\Domain\QueryCompiler\Services\QueryFilter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Arr;
@@ -11,7 +14,7 @@ class RecordBuilder extends Builder
 {
     public function applySorting(?string $sortParam): static
     {
-        if (!$collection = $this->getModel()?->collection) {
+        if (! $collection = $this->getModel()?->collection) {
             throw new RuntimeException("Model's collection is not set");
         }
 
@@ -36,7 +39,7 @@ class RecordBuilder extends Builder
 
     public function applyRule(string $action): static
     {
-        if (!$collection = $this->getModel()?->collection) {
+        if (! $collection = $this->getModel()?->collection) {
             throw new RuntimeException("Model's collection is not set");
         }
 
@@ -49,23 +52,46 @@ class RecordBuilder extends Builder
         }
 
         $allowedFields = Arr::pluck($collection->fields, 'name');
-        $this->where(fn($q) => QueryFilter::for($q, $allowedFields)->run($rule));
+        $this->where(fn ($q) => QueryFilter::for($q, $allowedFields)->run($rule));
 
         return $this;
     }
 
     public function applyFilter(?string $filter): static
     {
-        if (!$filter) {
+        if (! $filter) {
             return $this;
         }
 
-        if (!$collection = $this->getModel()?->collection) {
+        if (! $collection = $this->getModel()?->collection) {
             throw new RuntimeException("Model's collection is not set");
         }
 
+        $this->assertRelationFilterNotUsed($filter, $collection->fields ?? []);
+
         $allowedFields = Arr::pluck($collection->fields ?? [], 'name');
 
-        return $this->where(fn($q) => QueryFilter::for($q, $allowedFields)->run($filter));
+        return $this->where(fn ($q) => QueryFilter::for($q, $allowedFields)->run($filter));
+    }
+
+    private function assertRelationFilterNotUsed(string $filter, array $fields): void
+    {
+        if (preg_match('/\b[a-zA-Z_]+\.[a-zA-Z_]+\b/', $filter) === 1) {
+            throw new UnsupportedQueryFeatureException('Filtering nested relation fields is not implemented.');
+        }
+
+        $relationFieldNames = collect($fields)
+            ->filter(fn (Field|array $field): bool => ($field['type'] ?? null) === CollectionFieldType::Relation->value)
+            ->pluck('name')
+            ->filter(fn (mixed $fieldName): bool => is_string($fieldName) && $fieldName !== '')
+            ->all();
+
+        foreach ($relationFieldNames as $fieldName) {
+            $pattern = '/(^|\s|\()'.preg_quote($fieldName, '/').'\s*(=|!=|>|<|>=|<=|in\b|not\s+in\b|like\b|not\s+like\b|is\s+null\b|is\s+not\s+null\b)/i';
+
+            if (preg_match($pattern, $filter) === 1) {
+                throw new UnsupportedQueryFeatureException('Filtering relation fields is not implemented.');
+            }
+        }
     }
 }

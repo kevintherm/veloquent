@@ -25,6 +25,36 @@ class RecordResource extends JsonResource
             }
         }
 
+        foreach ($this->resource->collection->fields ?? [] as $field) {
+            if (($field['type'] ?? null) !== 'relation') {
+                continue;
+            }
+
+            $fieldName = (string) $field['name'];
+
+            if (! array_key_exists($fieldName, $data)) {
+                continue;
+            }
+
+            $isSingleRelation = (int) ($field['max_select'] ?? 0) === 1;
+
+            if ($isSingleRelation) {
+                if (is_array($data[$fieldName])) {
+                    $data[$fieldName] = $data[$fieldName][0] ?? null;
+                }
+
+                continue;
+            }
+
+            if (is_string($data[$fieldName])) {
+                $data[$fieldName] = [$data[$fieldName]];
+            }
+        }
+
+        foreach (($this->resource->expandedRelations ?? []) as $fieldName => $expandedValue) {
+            $data[$fieldName] = $expandedValue;
+        }
+
         return $data;
     }
 }

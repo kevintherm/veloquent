@@ -17,6 +17,8 @@ class StoreRecordRequest extends BaseRecordRequest
         // Filter out null auto-fill fields (created_at, updated_at, etc.)
         $data = $this->filterAutoFillFields($data, $collection);
 
+        $data = $this->normalizeRelationFieldsForWrite($data, $collection);
+
         return $data;
     }
 }

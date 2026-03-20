@@ -4,12 +4,15 @@ namespace App\Domain\Records\Actions;
 
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Records\Models\Record;
+use App\Domain\Records\Services\RecordExpansionService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 
 class ShowRecordAction
 {
-    public function execute(Collection $collection, string $recordId): Record
+    public function __construct(private RecordExpansionService $recordExpansionService) {}
+
+    public function execute(Collection $collection, string $recordId, string $expand = ''): Record
     {
         Gate::authorize('view-records', $collection);
 
@@ -22,6 +25,10 @@ class ShowRecordAction
             $query->applyRule('view');
         }
 
-        return $query->findOrFail($recordId);
+        $record = $query->findOrFail($recordId);
+
+        $this->recordExpansionService->expandMany($collection, [$record], $expand);
+
+        return $record;
     }
 }

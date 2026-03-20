@@ -113,7 +113,7 @@ final class SchemaChangePlan
                 'nullable' => true,
                 'unique' => false,
                 'default' => false,
-            ])
+            ]),
         ];
     }
 
@@ -185,7 +185,7 @@ final class SchemaChangePlan
             ->map(fn (array|Field $field) => self::normalizeInputField($field))
             ->reject(fn (array $field) => in_array($field['name'], self::BASE_RESERVED_FIELD_NAMES, true))
             ->map(function (array $field): array {
-                unset($field['order'], $field['collection']);
+                unset($field['order']);
 
                 return $field;
             })

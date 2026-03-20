@@ -159,6 +159,10 @@ class UpdateCollectionRequest extends FormRequest
                             'Unknown properties for field type '.$fieldType->value.': '.implode(', ', $unknownProperties)
                         );
                     }
+
+                    if ($fieldType === CollectionFieldType::Relation) {
+                        $this->validateRelationFieldDefinition($validator, $index, $field);
+                    }
                 }
 
                 if (! is_string($fieldName) || ! array_key_exists($fieldName, $reservedDefinitions)) {
@@ -250,6 +254,41 @@ class UpdateCollectionRequest extends FormRequest
             }
 
         });
+    }
+
+    private function validateRelationFieldDefinition(Validator $validator, int $index, array $field): void
+    {
+        $targetCollectionId = $field['target_collection_id'] ?? null;
+        $maxSelect = $field['max_select'] ?? null;
+
+        if (! is_string($targetCollectionId) || $targetCollectionId === '') {
+            $validator->errors()->add("fields.{$index}.target_collection_id", 'The target collection is required.');
+
+            return;
+        }
+
+        $targetCollection = Collection::query()->find($targetCollectionId);
+        if ($targetCollection === null) {
+            $validator->errors()->add("fields.{$index}.target_collection_id", 'The selected target collection is invalid.');
+
+            return;
+        }
+
+        if ($targetCollection->is_system) {
+            $validator->errors()->add("fields.{$index}.target_collection_id", 'System collections cannot be used as relation targets.');
+        }
+
+        if (! is_numeric($maxSelect) || (string) (int) $maxSelect !== trim((string) $maxSelect)) {
+            $validator->errors()->add("fields.{$index}.max_select", 'The max_select field must be an integer.');
+
+            return;
+        }
+
+        $maxSelect = (int) $maxSelect;
+
+        if ($maxSelect !== 1 && $maxSelect < 2) {
+            $validator->errors()->add("fields.{$index}.max_select", 'The max_select field must be 1 or greater than 1 for multiple relations.');
+        }
     }
 
     public function getIndexes(): array

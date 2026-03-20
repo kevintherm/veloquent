@@ -21,7 +21,7 @@ enum CollectionFieldType: string
             self::Email => ['min' => null, 'max' => null],
             self::Url => ['min' => null, 'max' => null],
             self::LongText => [],
-            self::Relation => ['collectionId' => null, 'cascadeOnDelete' => false, 'maxSelect' => null],
+            self::Relation => ['target_collection_id' => null, 'cascade_on_delete' => false, 'max_select' => null],
             self::Number, self::Boolean, self::Datetime, self::Json => [],
         };
     }
@@ -48,7 +48,9 @@ enum CollectionFieldType: string
                 "{$prefix}.max" => ['nullable', 'numeric'],
             ],
             self::Relation => [
-                "{$prefix}.collection" => ['nullable', 'string', 'regex:/^[a-zA-Z_]+$/'],
+                "{$prefix}.target_collection_id" => ['required', 'string', 'exists:collections,id'],
+                "{$prefix}.max_select" => ['required', 'integer', 'min:1'],
+                "{$prefix}.cascade_on_delete" => ['sometimes', 'boolean'],
             ],
             self::LongText, self::Boolean, self::Datetime, self::Json => [],
         };
@@ -57,12 +59,12 @@ enum CollectionFieldType: string
     public function recordValidationRule(): string
     {
         return match ($this) {
-            self::Text, self::LongText, self::Email, self::Relation => 'string',
+            self::Text, self::LongText, self::Email => 'string',
             self::Number => 'numeric',
             self::Boolean => 'boolean',
             self::Datetime => 'date',
             self::Url => 'url',
-            self::Json => 'json',
+            self::Json, self::Relation => 'json',
         };
     }
 
@@ -72,14 +74,14 @@ enum CollectionFieldType: string
             self::Number => 'float',
             self::Boolean => 'boolean',
             self::Datetime => 'datetime',
-            self::Json => 'json',
+            self::Json, self::Relation => 'json',
             default => null,
         };
     }
 
     public function isIndexable(): bool
     {
-        return !in_array($this, [self::Json, self::LongText, self::Url], true);
+        return ! in_array($this, [self::Json, self::LongText, self::Url], true);
     }
 
     public static function commonPropertyNames(): array
