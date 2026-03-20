@@ -451,87 +451,61 @@ onMounted(async () => {
         </SheetDescription>
       </SheetHeader>
 
-      <div class="grid gap-4 py-4 overflow-y-auto max-h-[calc(100vh-200px)]">
+      <form class="grid gap-4 py-4 overflow-y-auto max-h-[calc(100vh-200px)]">
         <div v-if="loadingCollection" class="px-1 text-sm text-muted-foreground">
           Fetching collection information...
         </div>
 
         <template v-else>
-          <div
-            v-for="field in orderedFields"
-            :key="field.id ?? field.name"
-            class="grid gap-2 px-1"
-          >
-          <div class="flex items-center justify-between gap-2">
-            <Label :for="`field-${sheetId}-${field.name}`" class="flex items-center gap-2">
-              <component :is="resolveCollectionFieldTypeIcon(field.type)" class="h-4 w-4 text-muted-foreground" />
-              <span>{{ displayFieldName(field.name) }}</span>
-              <span v-if="isRequiredField(field)" class="text-destructive">*</span>
-            </Label>
-            <span class="text-[11px] uppercase tracking-wide text-muted-foreground">{{ field.type }}</span>
-          </div>
+          <div v-for="field in orderedFields" :key="field.id ?? field.name" class="grid gap-2 px-1">
+            <div class="flex items-center justify-between gap-2">
+              <Label :for="`field-${sheetId}-${field.name}`" class="flex items-center gap-2">
+                <component :is="resolveCollectionFieldTypeIcon(field.type)" class="h-4 w-4 text-muted-foreground" />
+                <span>{{ displayFieldName(field.name) }}</span>
+                <span v-if="isRequiredField(field)" class="text-destructive text-xl">*</span>
+              </Label>
+              <span class="text-[11px] uppercase tracking-wide text-muted-foreground">{{ field.type }}</span>
+            </div>
 
-          <textarea
-            v-if="field.type === 'longtext' || field.type === 'json'"
-            :id="`field-${sheetId}-${field.name}`"
-            v-model="formState[field.name]"
-            class="min-h-24 rounded-md border border-input bg-background px-3 py-2 text-sm"
-            :placeholder="`Enter ${displayFieldName(field.name)}...`"
-          />
-
-          <Input
-            v-else-if="field.type !== 'boolean' && field.type !== 'relation'"
-            :id="`field-${sheetId}-${field.name}`"
-            v-model="formState[field.name]"
-            :type="resolveInputType(field)"
-            :placeholder="`Enter ${displayFieldName(field.name)}...`"
-          />
-
-          <div v-else-if="field.type === 'boolean'" class="flex items-center gap-2 pt-1">
-            <Switch
-              :model-value="Boolean(formState[field.name])"
-              @update:model-value="(value) => { formState[field.name] = value; }"
-            />
-          </div>
-
-          <div v-else class="space-y-2">
-            <select
-              :id="`field-${sheetId}-${field.name}`"
+            <textarea v-if="field.type === 'longtext' || field.type === 'json'" :id="`field-${sheetId}-${field.name}`"
               v-model="formState[field.name]"
-              class="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-            >
-              <option value="">Select related record</option>
-              <option
-                v-for="option in relationOptions[field.name] ?? []"
-                :key="`${field.name}-${option.value}`"
-                :value="option.value"
-              >
-                {{ option.label }}
-              </option>
-            </select>
-            <p v-if="relationLoading[field.name]" class="text-xs text-muted-foreground">Loading related records...</p>
-            <p v-else-if="relationErrors[field.name]" class="text-xs text-destructive">{{ relationErrors[field.name] }}</p>
-            <p
-              v-else-if="formState[field.name]"
-              class="text-xs text-muted-foreground"
-            >
-              Selected: {{ relationDisplayValue(field.name, formState[field.name]) }}
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              class="gap-1"
-              type="button"
-              @click="handleOpenRelatedCollectionForm(field)"
-            >
-              <Plus class="h-3.5 w-3.5" />
-              New Related Record
-            </Button>
-          </div>
+              class="min-h-24 rounded-md border border-input bg-background px-3 py-2 text-sm"
+              :placeholder="`Enter ${displayFieldName(field.name)}...`"></textarea>
 
-          <p v-if="fieldErrors[field.name]" class="text-xs text-destructive">
-            {{ fieldErrors[field.name] }}
-          </p>
+            <Input v-else-if="field.type !== 'boolean' && field.type !== 'relation'"
+              :id="`field-${sheetId}-${field.name}`" v-model="formState[field.name]" :type="resolveInputType(field)"
+              :placeholder="`Enter ${displayFieldName(field.name)}...`" />
+
+            <div v-else-if="field.type === 'boolean'" class="flex items-center gap-2 pt-1">
+              <Switch :model-value="Boolean(formState[field.name])"
+                @update:model-value="(value) => { formState[field.name] = value; }" />
+            </div>
+
+            <div v-else class="space-y-2">
+              <select :id="`field-${sheetId}-${field.name}`" v-model="formState[field.name]"
+                class="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
+                <option value="">Select related record</option>
+                <option v-for="option in relationOptions[field.name] ?? []" :key="`${field.name}-${option.value}`"
+                  :value="option.value">
+                  {{ option.label }}
+                </option>
+              </select>
+              <p v-if="relationLoading[field.name]" class="text-xs text-muted-foreground">Loading related records...</p>
+              <p v-else-if="relationErrors[field.name]" class="text-xs text-destructive">{{ relationErrors[field.name]
+                }}</p>
+              <p v-else-if="formState[field.name]" class="text-xs text-muted-foreground">
+                Selected: {{ relationDisplayValue(field.name, formState[field.name]) }}
+              </p>
+              <Button variant="outline" size="sm" class="gap-1" type="button"
+                @click="handleOpenRelatedCollectionForm(field)">
+                <Plus class="h-3.5 w-3.5" />
+                New Related Record
+              </Button>
+            </div>
+
+            <p v-if="fieldErrors[field.name]" class="text-xs text-destructive">
+              {{ fieldErrors[field.name] }}
+            </p>
 
           </div>
         </template>
@@ -539,7 +513,7 @@ onMounted(async () => {
         <p v-if="!loadingCollection && orderedFields.length === 0" class="px-1 text-sm text-muted-foreground">
           This collection does not have schema fields yet.
         </p>
-      </div>
+      </form>
 
       <SheetFooter class="absolute bottom-0 left-0 right-0 p-6 bg-background border-t">
         <div class="flex gap-2 w-full">
