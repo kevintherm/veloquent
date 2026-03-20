@@ -15,12 +15,12 @@
     - default: none
 - UI Dashboard
     - Manage records
-        - CRUD
-        - Sort fields
+        - CRUD ✅
+        - Sort fields 
         - Show/Hide fields
     - Manage collections
-        - Fields
-        - Index
+        - Fields ✅
+        - Index ✅
         - Truncate
         - Delete
         - Copy

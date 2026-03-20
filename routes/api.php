@@ -14,6 +14,7 @@ Route::prefix('collections')->group(function () {
     Route::get('/{collection}', [CollectionController::class, 'show'])->name('collections.show');
     Route::put('/{collection}', [CollectionController::class, 'update'])->name('collections.update');
     Route::patch('/{collection}', [CollectionController::class, 'update'])->name('collections.update');
+    Route::delete('/{collection}/truncate', [CollectionController::class, 'truncate'])->name('collections.truncate');
     Route::delete('/{collection}', [CollectionController::class, 'destroy'])->name('collections.destroy');
 });
 

@@ -1,12 +1,12 @@
 <script setup>
-import { computed, ref } from "vue";
+import { computed } from "vue";
 import { Button } from "@/components/ui";
 import {
     Plus,
     Sliders,
 } from "lucide-vue-next";
-import CollectionFormSheet from "@/components/CollectionFormSheet.vue";
 import { openRecordForm } from "@/lib/recordFormSheet";
+import { openCollectionSheet } from "@/lib/collectionFormSheet";
 
 const props = defineProps({
     activeCollection: {
@@ -19,13 +19,15 @@ const collectionName = computed(() => {
     return props.activeCollection?.name ?? "";
 });
 
-const isCollectionSheetOpen = ref(false);
-
 const handleOpenRecordForm = () => {
     openRecordForm({
         collection: props.activeCollection,
         origin: "dashboard-header",
     });
+};
+
+const handleOpenCollectionSheet = () => {
+    openCollectionSheet(props.activeCollection);
 };
 </script>
 
@@ -33,7 +35,7 @@ const handleOpenRecordForm = () => {
     <header class="h-16 border-b bg-card flex items-center justify-between px-8 shrink-0">
         <div class="flex items-center gap-4">
             <h1 class="text-xl font-semibold">{{ collectionName || "Collection" }}</h1>
-            <Button variant="ghost" size="sm" class="text-muted-foreground gap-2" @click="isCollectionSheetOpen = true">
+            <Button variant="ghost" size="sm" class="text-muted-foreground gap-2" @click="handleOpenCollectionSheet">
                 <Sliders class="h-4 w-4"/>
                 Manage Collection
             </Button>
@@ -44,10 +46,5 @@ const handleOpenRecordForm = () => {
                 Add Record
             </Button>
         </div>
-
-        <CollectionFormSheet
-            v-model:open="isCollectionSheetOpen"
-            :collection="activeCollection"
-        />
     </header>
 </template>

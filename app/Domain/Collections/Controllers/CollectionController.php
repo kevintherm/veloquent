@@ -4,10 +4,13 @@ namespace App\Domain\Collections\Controllers;
 
 use App\Domain\Collections\Actions\CreateCollectionAction;
 use App\Domain\Collections\Actions\UpdateCollectionAction;
+use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Collections\Requests\StoreCollectionRequest;
 use App\Domain\Collections\Requests\UpdateCollectionRequest;
+use App\Domain\Records\Models\Record;
 use App\Infrastructure\Http\Controllers\ApiController;
+use App\Models\AuthToken;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -79,5 +82,29 @@ class CollectionController extends ApiController
         $collection->delete();
 
         return $this->successResponse([], 'Collection deleted successfully.');
+    }
+
+    public function truncate(Collection $collection): JsonResponse
+    {
+        Gate::authorize('truncate-collections', $collection);
+
+        $defaultAuthCollection = config('velo.default_auth_collection');
+        if ($collection->name === $defaultAuthCollection) {
+            return $this->errorResponse('Cannot truncate default auth collection', 400);
+        }
+
+        $recordQuery = Record::of($collection)->newQuery();
+        $deletedCount = $recordQuery->count();
+        $recordQuery->delete();
+
+        if ($collection->type === CollectionType::Auth) {
+            AuthToken::query()
+                ->where('collection_id', $collection->id)
+                ->delete();
+        }
+
+        return $this->successResponse([
+            'deleted' => $deletedCount,
+        ], 'Collection truncated successfully.');
     }
 }

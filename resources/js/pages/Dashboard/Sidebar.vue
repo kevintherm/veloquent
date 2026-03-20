@@ -2,10 +2,10 @@
 import { computed, ref, watch } from "vue";
 import { Search, Plus, Settings, LogOut, ChevronDown, ChevronUp } from "lucide-vue-next";
 import { Button, Input } from "@/components/ui"
-import CollectionFormSheet from "@/components/CollectionFormSheet.vue";
 import Collapsible from "@/components/ui/collapsible/Collapsible.vue";
 import CollapsibleTrigger from "@/components/ui/collapsible/CollapsibleTrigger.vue";
 import CollapsibleContent from "@/components/ui/collapsible/CollapsibleContent.vue";
+import { openCollectionSheet } from "@/lib/collectionFormSheet";
 
 const props = defineProps({
     activeCollection: {
@@ -37,7 +37,6 @@ const props = defineProps({
 const emit = defineEmits(['update:collectionSearchQuery', 'update:activeCollection'])
 
 const isSystemCollectionsShown = ref(false);
-const isNewCollectionSheetOpen = ref(false);
 
 const handleCollectionSelect = (collection) => {
     emit('update:activeCollection', collection);
@@ -125,7 +124,7 @@ watch(
                     class="px-3 py-2 text-xs text-muted-foreground">
                     No collections found.
                 </p>
-                <button @click="isNewCollectionSheetOpen = true"
+                <button @click="openCollectionSheet(null)"
                     class="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md text-primary hover:bg-primary/5 mt-1">
                     <Plus class="h-4 w-4" />
                     New Collection
@@ -156,7 +155,5 @@ watch(
                 Logout
             </Button>
         </div>
-
-        <CollectionFormSheet v-model:open="isNewCollectionSheetOpen" />
     </aside>
 </template>
