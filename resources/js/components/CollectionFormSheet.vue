@@ -25,6 +25,7 @@ import SelectTrigger from "./ui/select/SelectTrigger.vue";
 import SelectValue from "./ui/select/SelectValue.vue";
 import SelectContent from "./ui/select/SelectContent.vue";
 import SelectItem from "./ui/select/SelectItem.vue";
+import Checkbox from "./ui/Checkbox.vue";
 
 const props = defineProps({
   sheetId: {
@@ -56,11 +57,11 @@ const defaultApiRules = () => ({
 });
 
 const normalizeApiRules = (apiRules = {}) => ({
-  list: apiRules.list ?? "",
-  view: apiRules.view ?? apiRules.read ?? "",
-  create: apiRules.create ?? "",
-  update: apiRules.update ?? "",
-  delete: apiRules.delete ?? "",
+  list: apiRules?.list,
+  view: apiRules?.view,
+  create: apiRules?.create,
+  update: apiRules?.update,
+  delete: apiRules?.delete,
 });
 
 const fieldTypes = [
@@ -257,7 +258,8 @@ const fetchCollectionInfo = async () => {
     fetchedCollection.value = normalizeCollectionPayload(response?.data);
     initializeFormState();
     internalOpen.value = true;
-  } catch {
+  } catch (error) {
+    console.error(error)
     toast.error("Failed to fetch collection");
     emit("close");
   } finally {
@@ -510,8 +512,6 @@ const handleSave = async () => {
 
       const firstError = Object.values(errors ?? {})?.[0]?.[0] ?? "Validation failed";
       toast.error(firstError);
-    } else {
-      toast.error("Failed to save collection");
     }
   } finally {
     submitting.value = false;
@@ -741,21 +741,13 @@ onMounted(async () => {
                     class="text-xs font-semibold tracking-wide text-primary/80 uppercase mb-3 block">Constraints</Label>
                   <div class="flex flex-wrap items-center gap-6 mb-4">
                     <label class="flex items-center gap-2 cursor-pointer group">
-                      <div
-                        class="flex items-center justify-center p-0.5 rounded border border-primary/30 bg-background group-hover:border-primary transition-colors">
-                        <input type="checkbox" v-model="newField.nullable"
-                          class="h-3 w-3 rounded-sm accent-primary cursor-pointer" />
-                      </div>
+                      <Checkbox v-model="newField.nullable" />
                       <span
                         class="text-sm font-medium text-foreground/80 group-hover:text-foreground transition-colors">Allow
                         Null Values</span>
                     </label>
                     <label class="flex items-center gap-2 cursor-pointer group">
-                      <div
-                        class="flex items-center justify-center p-0.5 rounded border border-primary/30 bg-background group-hover:border-primary transition-colors">
-                        <input type="checkbox" v-model="newField.unique"
-                          class="h-3 w-3 rounded-sm accent-primary cursor-pointer" />
-                      </div>
+                      <Checkbox v-model="newField.unique" />
                       <span
                         class="text-sm font-medium text-foreground/80 group-hover:text-foreground transition-colors">Must
                         Be Unique</span>
@@ -893,21 +885,13 @@ onMounted(async () => {
                       class="text-xs font-semibold tracking-wide text-muted-foreground uppercase mb-3 block">Constraints</Label>
                     <div class="flex flex-wrap items-center gap-6">
                       <label class="flex items-center gap-2 cursor-pointer group">
-                        <div
-                          class="flex items-center justify-center p-0.5 rounded border border-input bg-background group-hover:border-primary transition-colors">
-                          <input type="checkbox" v-model="field.nullable"
-                            class="h-3 w-3 rounded-sm accent-primary cursor-pointer" />
-                        </div>
+                        <Checkbox v-model="field.nullable" />
                         <span
                           class="text-sm font-medium text-foreground/80 group-hover:text-foreground transition-colors">Allow
                           Null Values</span>
                       </label>
                       <label class="flex items-center gap-2 cursor-pointer group">
-                        <div
-                          class="flex items-center justify-center p-0.5 rounded border border-input bg-background group-hover:border-primary transition-colors">
-                          <input type="checkbox" v-model="field.unique"
-                            class="h-3 w-3 rounded-sm accent-primary cursor-pointer" />
-                        </div>
+                        <Checkbox v-model="field.unique" />
                         <span
                           class="text-sm font-medium text-foreground/80 group-hover:text-foreground transition-colors">Must
                           Be Unique</span>

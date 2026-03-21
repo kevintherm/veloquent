@@ -4,15 +4,26 @@ namespace App\Domain\Collections\Actions;
 
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
+use App\Domain\Collections\Validators\CollectionFieldValidator;
 use App\Domain\QueryCompiler\Services\QueryFilter;
 use App\Domain\SchemaManagement\Services\SchemaChangePlan;
 use Illuminate\Support\Arr;
 
 class CreateCollectionAction
 {
+    public function __construct(
+        private readonly CollectionFieldValidator $collectionFieldValidator,
+    ) {}
+
     public function execute(array $data): Collection
     {
         $isAuthCollection = ($data['type'] ?? null) === CollectionType::Auth->value;
+
+        $this->collectionFieldValidator->validateForCreate(
+            $data['fields'] ?? [],
+            $data['indexes'] ?? [],
+            $isAuthCollection,
+        );
 
         $mergedFields = SchemaChangePlan::mergeWithSystemFields($data['fields'], $isAuthCollection);
 

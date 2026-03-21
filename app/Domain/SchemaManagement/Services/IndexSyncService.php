@@ -19,7 +19,7 @@ readonly class IndexSyncService
      */
     public function sync(string $table, array $desiredIndexes, array $protectedIndexNames = []): void
     {
-        $desiredByName = collect($desiredIndexes)
+        $desiredByIdentity = collect($desiredIndexes)
             ->map(function (mixed $index): Index {
                 if ($index instanceof Index) {
                     return $index;
@@ -27,35 +27,42 @@ readonly class IndexSyncService
 
                 return Index::fromArray((array) $index);
             })
-            ->keyBy(fn (Index $index): string => $index->generateName($table));
+            ->keyBy(fn (Index $index): string => $index->identityKey());
 
         $protected = array_fill_keys($protectedIndexNames, true);
 
-        $existingManagedNames = $this->getManagedIndexNames($table);
-        $existingManagedNames = array_values(array_filter(
-            $existingManagedNames,
-            fn (string $name): bool => ! isset($protected[$name])
-        ));
+        $existingByIdentity = collect($this->getManagedIndexMetadata($table))
+            ->reject(fn (array $index): bool => isset($protected[$index['name']]))
+            ->keyBy('identity')
+            ->all();
 
-        $desiredNames = $desiredByName->keys()->all();
+        $toDrop = collect($existingByIdentity)
+            ->reject(fn (array $index, string $identity): bool => $desiredByIdentity->has($identity))
+            ->values()
+            ->all();
 
-        $toDrop = array_values(array_diff($existingManagedNames, $desiredNames));
-        $toCreate = array_values(array_diff($desiredNames, $existingManagedNames));
+        $toCreate = $desiredByIdentity
+            ->reject(fn (Index $index, string $identity): bool => array_key_exists($identity, $existingByIdentity))
+            ->values();
 
-        $this->runDDL(function () use ($table, $toDrop, $toCreate, $desiredByName): void {
+        $this->runDDL(function () use ($table, $toDrop, $toCreate): void {
             if ($toDrop !== []) {
                 Schema::table($table, function (Blueprint $blueprint) use ($toDrop): void {
-                    foreach ($toDrop as $name) {
-                        $this->dropBlueprintIndex($blueprint, $name);
+                    foreach ($toDrop as $entry) {
+                        $this->dropBlueprintIndex(
+                            $blueprint,
+                            (string) ($entry['name'] ?? ''),
+                            (string) ($entry['type'] ?? '')
+                        );
                     }
                 });
             }
 
-            if ($toCreate !== []) {
-                Schema::table($table, function (Blueprint $blueprint) use ($toCreate, $desiredByName): void {
-                    foreach ($toCreate as $name) {
-                        /** @var Index $index */
-                        $index = $desiredByName->get($name);
+            if ($toCreate->isNotEmpty()) {
+                Schema::table($table, function (Blueprint $blueprint) use ($table, $toCreate): void {
+                    /** @var Index $index */
+                    foreach ($toCreate as $index) {
+                        $name = $index->generateName($table);
 
                         if ($index->type === IndexType::Unique->value) {
                             $blueprint->unique($index->columns, $name);
@@ -71,40 +78,48 @@ readonly class IndexSyncService
     }
 
     /**
+     * @param  array<int, string>  $columnNames
+     */
+    public function dropIndexesReferencingColumns(string $table, array $columnNames): void
+    {
+        $columns = collect($columnNames)
+            ->filter(fn (mixed $name): bool => is_string($name) && $name !== '')
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($columns === []) {
+            return;
+        }
+
+        $toDrop = collect($this->getManagedIndexMetadata($table))
+            ->filter(function (array $index) use ($columns): bool {
+                foreach ($index['columns'] as $column) {
+                    if (in_array($column, $columns, true)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            })
+            ->values()
+            ->all();
+
+        $this->dropIndexEntries($table, $toDrop);
+    }
+
+    /**
      * @param  array<int, string>  $protectedIndexNames
      */
     public function dropManagedIndexesForPreviousTableName(string $actualTable, string $previousTable, array $protectedIndexNames = []): void
     {
-        $managedNames = $this->getManagedIndexNames($actualTable);
+        $managedIndexes = $this->getManagedIndexMetadata($actualTable);
         $protected = array_fill_keys($protectedIndexNames, true);
 
         $oldPrefix = $previousTable.'_';
 
-        $toDrop = array_values(array_filter(
-            $managedNames,
-            fn (string $name): bool => str_starts_with($name, $oldPrefix) && ! isset($protected[$name])
-        ));
-
-        if ($toDrop === []) {
-            return;
-        }
-
-        $this->runDDL(function () use ($actualTable, $toDrop): void {
-            Schema::table($actualTable, function (Blueprint $blueprint) use ($toDrop): void {
-                foreach ($toDrop as $name) {
-                    $this->dropBlueprintIndex($blueprint, $name);
-                }
-            });
-        });
-    }
-
-    /**
-     * @param  array<int, string>  $indexNames
-     */
-    public function dropIndexesByNames(string $table, array $indexNames): void
-    {
-        $toDrop = collect($indexNames)
-            ->filter(fn (mixed $name): bool => is_string($name) && $name !== '')
+        $toDrop = collect($managedIndexes)
+            ->filter(fn (array $index): bool => str_starts_with($index['name'], $oldPrefix) && ! isset($protected[$index['name']]))
             ->values()
             ->all();
 
@@ -112,19 +127,35 @@ readonly class IndexSyncService
             return;
         }
 
-        $this->runDDL(function () use ($table, $toDrop): void {
-            Schema::table($table, function (Blueprint $blueprint) use ($toDrop): void {
-                foreach ($toDrop as $name) {
-                    $this->dropBlueprintIndex($blueprint, $name);
-                }
-            });
-        });
+        $this->dropIndexEntries($actualTable, $toDrop);
     }
 
     /**
-     * @return array<int, string>
+     * @param  array<int, string>  $indexNames
      */
-    private function getManagedIndexNames(string $table): array
+    public function dropIndexesByNames(string $table, array $indexNames): void
+    {
+        $nameSet = collect($indexNames)
+            ->filter(fn (mixed $name): bool => is_string($name) && $name !== '')
+            ->values()
+            ->all();
+
+        if ($nameSet === []) {
+            return;
+        }
+
+        $toDrop = collect($this->getManagedIndexMetadata($table))
+            ->filter(fn (array $index): bool => in_array($index['name'], $nameSet, true))
+            ->values()
+            ->all();
+
+        $this->dropIndexEntries($table, $toDrop);
+    }
+
+    /**
+     * @return array<int, array{name: string, columns: array<int, string>, type: string, identity: string}>
+     */
+    private function getManagedIndexMetadata(string $table): array
     {
         $indexes = Schema::getIndexes($table);
         $prefix = $table.'_';
@@ -141,9 +172,25 @@ readonly class IndexSyncService
                     return false;
                 }
 
-                return str_ends_with($name, '_index') || str_ends_with($name, '_unique');
+                return true;
             })
-            ->pluck('name')
+            ->map(function (array $index): array {
+                $name = (string) ($index['name'] ?? '');
+                $columns = collect($index['columns'] ?? [])
+                    ->filter(fn (mixed $column): bool => is_string($column) && $column !== '')
+                    ->values()
+                    ->all();
+
+                $isUnique = (bool) ($index['unique'] ?? false);
+                $type = $isUnique ? IndexType::Unique->value : IndexType::Index->value;
+
+                return [
+                    'name' => $name,
+                    'columns' => $columns,
+                    'type' => $type,
+                    'identity' => (new Index($columns, $type))->identityKey(),
+                ];
+            })
             ->values()
             ->all();
     }
@@ -168,9 +215,35 @@ readonly class IndexSyncService
         }
     }
 
-    private function dropBlueprintIndex(Blueprint $blueprint, string $name): void
+    /**
+     * @param  array<int, array{name: string, type: string}>  $entries
+     */
+    private function dropIndexEntries(string $table, array $entries): void
     {
-        if (str_ends_with($name, '_unique')) {
+        if ($entries === []) {
+            return;
+        }
+
+        $this->runDDL(function () use ($table, $entries): void {
+            Schema::table($table, function (Blueprint $blueprint) use ($entries): void {
+                foreach ($entries as $entry) {
+                    $this->dropBlueprintIndex(
+                        $blueprint,
+                        (string) ($entry['name'] ?? ''),
+                        (string) ($entry['type'] ?? '')
+                    );
+                }
+            });
+        });
+    }
+
+    private function dropBlueprintIndex(Blueprint $blueprint, string $name, string $type = ''): void
+    {
+        if ($name === '') {
+            return;
+        }
+
+        if ($type === IndexType::Unique->value || str_ends_with($name, '_unique')) {
             $blueprint->dropUnique($name);
 
             return;

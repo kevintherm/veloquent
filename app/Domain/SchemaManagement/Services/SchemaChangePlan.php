@@ -4,8 +4,6 @@ namespace App\Domain\SchemaManagement\Services;
 
 use App\Domain\Collections\Enums\CollectionFieldType;
 use App\Domain\Collections\ValueObjects\Field;
-use App\Domain\SchemaManagement\Policies\SchemaPolicy;
-use App\Infrastructure\Exceptions\InvalidArgumentException;
 
 final class SchemaChangePlan
 {
@@ -200,35 +198,34 @@ final class SchemaChangePlan
         public array $drops = [],
     ) {}
 
-    /**
-     * Diff $before and $after field arrays into a change plan.
-     *
-     * Fields are matched by their unique `id`. A changed name on the same id
-     * is detected as a rename. A missing id in $after is a drop. A new id
-     * in $after is an add. Attribute differences on the same id produce a
-     * modify entry. Type changes are always rejected.
-     *
-     * @throws InvalidArgumentException|\LogicException
-     */
     public static function buildPlan(array $before, array $after, bool $isAuthCollection = false): self
     {
-        self::assertNoDuplicateFieldNames($after);
-
         $plan = new self;
 
-        $beforeById = collect($before)->keyBy('id');
-        $afterById = collect($after)->keyBy('id');
+        $beforeById = collect($before)
+            ->filter(function (array $field): bool {
+                $id = $field['id'] ?? null;
 
-        foreach ($afterById as $id => $field) {
-            if (! $beforeById->has($id)) {
+                return is_string($id) && $id !== '';
+            })
+            ->keyBy('id');
+
+        $matchedBeforeIds = [];
+
+        foreach (array_values($after) as $field) {
+            $fieldId = $field['id'] ?? null;
+
+            if (! is_string($fieldId) || $fieldId === '' || ! $beforeById->has($fieldId)) {
+                $field['id'] = self::generateFieldId();
                 $plan->adds[] = $field;
 
                 continue;
             }
 
-            $oldField = $beforeById[$id];
+            $matchedBeforeIds[$fieldId] = true;
+            $oldField = $beforeById->get($fieldId);
 
-            if ($oldField['name'] !== $field['name']) {
+            if (($oldField['name'] ?? null) !== ($field['name'] ?? null)) {
                 $plan->renames[] = [$oldField['name'], $field['name']];
             }
 
@@ -242,12 +239,12 @@ final class SchemaChangePlan
         }
 
         foreach ($beforeById as $id => $field) {
-            if (! $afterById->has($id)) {
-                $plan->drops[] = $field;
+            if (isset($matchedBeforeIds[$id])) {
+                continue;
             }
-        }
 
-        $plan->validatePlan($plan, $isAuthCollection);
+            $plan->drops[] = $field;
+        }
 
         return $plan;
     }
@@ -271,82 +268,6 @@ final class SchemaChangePlan
             if (is_string($name) && in_array($name, $reservedNames, true)) {
                 throw new \LogicException("Reserved field '{$name}' cannot be defined manually.");
             }
-        }
-    }
-
-    /**
-     * @throws \LogicException
-     */
-    private static function assertNoDuplicateFieldNames(array $fields): void
-    {
-        $names = [];
-
-        foreach ($fields as $field) {
-            $name = $field['name'] ?? null;
-
-            if ($name === null) {
-                continue;
-            }
-
-            if (isset($names[$name])) {
-                throw new \LogicException("Duplicate field name '{$name}' detected.");
-            }
-
-            $names[$name] = true;
-        }
-    }
-
-    /**
-     * @throws InvalidArgumentException|\LogicException
-     */
-    private function validatePlan(self $plan, bool $isAuthCollection = false): void
-    {
-        foreach ($plan->adds as $field) {
-            $this->assertValidField($field);
-        }
-
-        foreach ($plan->modifies as [$old, $new]) {
-            if ($isAuthCollection && in_array($old['name'], self::AUTH_RESERVED_FIELD_NAMES, true)) {
-                throw new \LogicException("Cannot modify auth reserved field '{$old['name']}'.");
-            }
-
-            $this->assertValidField($new);
-            $this->assertTypeNotChanged($old, $new);
-        }
-
-        foreach ($plan->drops as $field) {
-            if ($isAuthCollection && in_array($field['name'], self::AUTH_RESERVED_FIELD_NAMES, true)) {
-                throw new \LogicException("Cannot drop auth reserved field '{$field['name']}'.");
-            }
-
-            if ($field['required'] ?? false) {
-                throw new \LogicException(
-                    "Cannot drop required field '{$field['name']}'."
-                );
-            }
-        }
-    }
-
-    /**
-     * @throws InvalidArgumentException
-     */
-    private function assertValidField(array $field): void
-    {
-        app(SchemaPolicy::class)->assertValidColumnDefinition($field);
-    }
-
-    /**
-     * @throws \LogicException
-     */
-    private function assertTypeNotChanged(array $old, array $new): void
-    {
-        $from = CollectionFieldType::tryFrom($old['type']);
-        $to = CollectionFieldType::tryFrom($new['type']);
-
-        if ($from !== $to) {
-            throw new \LogicException(
-                "Field type cannot be changed on field '{$new['name']}': '{$from->value}' to '{$to->value}' is not allowed."
-            );
         }
     }
 

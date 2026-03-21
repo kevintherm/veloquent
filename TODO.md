@@ -3,6 +3,14 @@
 
 - Revamp the entire diffing system for fields and indexes
     - fix bug existing indexes on existing index, only happen when index with generated name exists (more than a couple of fields)
+- remove setting unique index from the fields
+    - unique property on the fields object is strictly for readonly purpose
+    - unique property on the fields object are modified through managing indexes automatically
+        - only if the index is that specific field with type unique
+- sort on web dashboard is still locally not server side
+- delete records
+    - single delete
+    - mass delete
 - fix bug reserved field on copy collection
 - relation field on record form uses a full on modal/dialog
 - fix bug: relation picker modal

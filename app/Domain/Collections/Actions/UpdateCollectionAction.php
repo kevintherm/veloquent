@@ -2,7 +2,9 @@
 
 namespace App\Domain\Collections\Actions;
 
+use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
+use App\Domain\Collections\Validators\CollectionFieldValidator;
 use App\Domain\QueryCompiler\Services\QueryFilter;
 use App\Domain\SchemaManagement\Services\SchemaChangePlan;
 use Illuminate\Support\Arr;
@@ -10,6 +12,10 @@ use Illuminate\Validation\ValidationException;
 
 class UpdateCollectionAction
 {
+    public function __construct(
+        private readonly CollectionFieldValidator $collectionFieldValidator,
+    ) {}
+
     public function execute(Collection $collection, array $data): Collection
     {
         $defaultUsersCollectionName = config('velo.default_auth_collection');
@@ -17,11 +23,38 @@ class UpdateCollectionAction
             throw ValidationException::withMessages(['name' => 'Cannot rename default users collection']);
         }
 
-        $fieldsForRules = $data['fields'] ?? $collection->fields;
+        $existingFields = collect($collection->fields ?? [])
+            ->map(fn (mixed $field): array => is_array($field) ? $field : (array) $field)
+            ->values()
+            ->all();
+
+        $fieldsForRules = $data['fields'] ?? $existingFields;
 
         if (isset($data['fields']) && is_array($data['fields'])) {
             $existingFieldsWithIds = $this->ensureCollectionFieldsHaveIds($collection);
             $data['fields'] = $this->assignIdsForIncomingFields($data['fields'], $existingFieldsWithIds);
+            $fieldsForRules = $data['fields'];
+            $existingFields = $existingFieldsWithIds;
+        }
+
+        $this->collectionFieldValidator->validateForUpdate(
+            $fieldsForRules,
+            $existingFields,
+            $data['indexes'] ?? $collection->indexes ?? [],
+            $collection->type === CollectionType::Auth,
+        );
+
+        if (isset($data['fields']) && is_array($data['fields'])) {
+            $data['fields'] = array_values(array_map(function (array $field): array {
+                $fieldId = $field['id'] ?? null;
+
+                if (! is_string($fieldId) || $fieldId === '') {
+                    $field['id'] = SchemaChangePlan::generateFieldId();
+                }
+
+                return $field;
+            }, $data['fields']));
+
             $fieldsForRules = $data['fields'];
         }
 
@@ -69,15 +102,25 @@ class UpdateCollectionAction
 
     private function assignIdsForIncomingFields(array $incomingFields, array $existingFields): array
     {
+        $existingById = collect($existingFields)
+            ->filter(fn (array $field): bool => isset($field['id']) && is_string($field['id']) && $field['id'] !== '')
+            ->keyBy('id');
+
         $existingByName = collect($existingFields)
             ->filter(fn (array $field): bool => isset($field['name']) && is_string($field['name']))
             ->keyBy('name');
 
         return collect($incomingFields)
-            ->map(function (array $field) use ($existingByName): array {
+            ->map(function (array $field) use ($existingById, $existingByName): array {
                 $fieldId = $field['id'] ?? null;
 
                 if (is_string($fieldId) && $fieldId !== '') {
+                    if ($existingById->has($fieldId)) {
+                        return $field;
+                    }
+
+                    $field['id'] = SchemaChangePlan::generateFieldId();
+
                     return $field;
                 }
 

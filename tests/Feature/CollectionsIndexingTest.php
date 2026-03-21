@@ -6,12 +6,14 @@ use App\Domain\Collections\Enums\IndexType;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Collections\Requests\StoreCollectionRequest;
 use App\Domain\Collections\Requests\UpdateCollectionRequest;
+use App\Domain\Collections\Validators\CollectionFieldValidator;
 use App\Domain\Collections\ValueObjects\Index;
 use App\Domain\SchemaManagement\Services\SchemaChangePlan;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 uses(RefreshDatabase::class);
 
@@ -88,26 +90,60 @@ it('renames and drops index metadata when fields are renamed or dropped', functi
     expect($indexNames)->not->toContain(Index::generateIndexName($table, ['code', 'state'], IndexType::Index->value));
 });
 
-it('rejects non-indexable field types in store request indexes', function () {
-    $payload = [
-        'name' => 'logs',
-        'type' => CollectionType::Base->value,
-        'description' => 'Logs',
+it('keeps existing composite index when only column order changes in payload', function () {
+    $collection = Collection::create([
+        'name' => 'audit_trails',
+        'type' => CollectionType::Base,
+        'description' => 'Audit trails',
         'fields' => [
-            ['name' => 'payload', 'type' => CollectionFieldType::Json->value],
+            ['id' => 'aa11aa11', 'name' => 'user_identifier', 'type' => CollectionFieldType::Text->value, 'order' => 0, 'nullable' => false, 'unique' => false, 'default' => null],
+            ['id' => 'bb22bb22', 'name' => 'event_identifier', 'type' => CollectionFieldType::Text->value, 'order' => 1, 'nullable' => false, 'unique' => false, 'default' => null],
+            ['id' => 'cc33cc33', 'name' => 'session_identifier', 'type' => CollectionFieldType::Text->value, 'order' => 2, 'nullable' => false, 'unique' => false, 'default' => null],
+        ],
+        'api_rules' => [
+            'list' => '',
+            'view' => '',
+            'create' => '',
+            'update' => '',
+            'delete' => '',
         ],
         'indexes' => [
-            ['columns' => ['payload'], 'type' => IndexType::Index->value],
+            ['columns' => ['user_identifier', 'event_identifier', 'session_identifier'], 'type' => IndexType::Index->value],
         ],
+    ]);
+
+    $table = $collection->getPhysicalTableName();
+    $originalName = Index::generateIndexName($table, ['user_identifier', 'event_identifier', 'session_identifier'], IndexType::Index->value);
+
+    $collection->update([
+        'indexes' => [
+            ['columns' => ['session_identifier', 'event_identifier', 'user_identifier'], 'type' => IndexType::Index->value],
+        ],
+    ]);
+
+    $indexNames = collect(Schema::getIndexes($table))
+        ->pluck('name')
+        ->filter(fn (mixed $name): bool => is_string($name) && str_starts_with($name, $table.'_'))
+        ->values()
+        ->all();
+
+    expect($indexNames)->toContain($originalName)
+        ->and($indexNames)->toHaveCount(1);
+});
+
+it('rejects non-indexable field types in semantic validator', function () {
+    $validator = app(CollectionFieldValidator::class);
+
+    $payloadFields = [
+        ['name' => 'payload', 'type' => CollectionFieldType::Json->value],
     ];
 
-    $request = StoreCollectionRequest::create('/api/collections', 'POST', $payload);
+    $payloadIndexes = [
+        ['columns' => ['payload'], 'type' => IndexType::Index->value],
+    ];
 
-    $validator = Validator::make($payload, $request->rules());
-    $request->withValidator($validator);
-
-    expect($validator->fails())->toBeTrue();
-    expect($validator->errors()->has('indexes.0.columns.0'))->toBeTrue();
+    expect(fn () => $validator->validateForCreate($payloadFields, $payloadIndexes, false))
+        ->toThrow(ValidationException::class);
 });
 
 it('rejects providing index name in store request', function () {
@@ -132,31 +168,19 @@ it('rejects providing index name in store request', function () {
     expect($validator->errors()->has('indexes.0.name'))->toBeTrue();
 });
 
-it('uses existing fields when validating update request indexes', function () {
-    $collection = new Collection;
-    $collection->type = CollectionType::Base;
-    $collection->fields = [
-        ['id' => 'aa11aa11', 'name' => 'metadata', 'type' => CollectionFieldType::Json->value, 'order' => 0, 'nullable' => false, 'unique' => false, 'default' => null],
+it('rejects unknown index columns in semantic validator', function () {
+    $validator = app(CollectionFieldValidator::class);
+
+    $incomingFields = [
+        ['id' => 'aa11aa11', 'name' => 'title', 'type' => CollectionFieldType::Text->value],
     ];
 
-    $payload = [
-        'indexes' => [
-            ['name' => 'idx_metadata', 'columns' => ['metadata'], 'type' => IndexType::Index->value],
-        ],
+    $incomingIndexes = [
+        ['columns' => ['missing'], 'type' => IndexType::Index->value],
     ];
 
-    $request = UpdateCollectionRequest::create('/api/collections/test', 'PATCH', $payload);
-    $matchedRoute = Route::getRoutes()->match($request);
-    $matchedRoute->setParameter('collection', $collection);
-
-    $request->setRouteResolver(fn () => $matchedRoute);
-
-    $validator = Validator::make($payload, $request->rules());
-    $request->withValidator($validator);
-
-    expect($validator->fails())->toBeTrue();
-    expect($validator->errors()->has('indexes.0.name'))->toBeTrue();
-    expect($validator->errors()->has('indexes.0.columns.0'))->toBeTrue();
+    expect(fn () => $validator->validateForUpdate($incomingFields, $incomingFields, $incomingIndexes, false))
+        ->toThrow(ValidationException::class);
 });
 
 it('allows extra field options for non-relation fields', function () {
@@ -183,13 +207,15 @@ it('allows extra field options for non-relation fields', function () {
     expect($validator->fails())->toBeFalse();
 });
 
-it('rejects changing existing field type in update request', function () {
+it('rejects changing existing field type in semantic validator', function () {
+    $storedField = ['id' => 'aa11aa11', 'name' => 'title', 'type' => CollectionFieldType::Text->value, 'order' => 0, 'nullable' => false, 'unique' => false, 'default' => null];
+
     $collection = Collection::create([
         'name' => 'events',
         'type' => CollectionType::Base,
         'description' => 'Events',
         'fields' => [
-            ['id' => 'aa11aa11', 'name' => 'title', 'type' => CollectionFieldType::Text->value, 'order' => 0, 'nullable' => false, 'unique' => false, 'default' => null],
+            $storedField,
         ],
         'api_rules' => [
             'list' => '',
@@ -201,22 +227,16 @@ it('rejects changing existing field type in update request', function () {
         'indexes' => [],
     ]);
 
-    $payload = [
-        'fields' => [
-            ['id' => 'aa11aa11', 'name' => 'title', 'type' => CollectionFieldType::Number->value],
-        ],
+    $incomingFields = [
+        ['id' => 'aa11aa11', 'name' => 'title', 'type' => CollectionFieldType::Number->value],
     ];
 
-    $request = UpdateCollectionRequest::create('/api/collections/events', 'PATCH', $payload);
-    $matchedRoute = Route::getRoutes()->match($request);
-    $matchedRoute->setParameter('collection', $collection);
-    $request->setRouteResolver(fn () => $matchedRoute);
+    $storedFields = [$storedField];
 
-    $validator = Validator::make($payload, $request->rules());
-    $request->withValidator($validator);
+    $validator = app(CollectionFieldValidator::class);
 
-    expect($validator->fails())->toBeTrue();
-    expect($validator->errors()->has('fields.0.type'))->toBeTrue();
+    expect(fn () => $validator->validateForUpdate($incomingFields, $storedFields, [], false))
+        ->toThrow(ValidationException::class);
 });
 
 it('allows recreating a deleted field with the same name and a different type', function () {
