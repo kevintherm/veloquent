@@ -12,10 +12,9 @@ import { openRecordForm } from "@/lib/recordFormSheet";
 
 const route = useRoute();
 const router = useRouter();
-const { activeCollection, recordsReloadNonce } = useDashboardState();
+const { activeCollection, collections, recordsReloadNonce } = useDashboardState();
 const records = ref([]);
 const loading = ref(false);
-const collectionsById = ref({});
 
 const selectedRecords = ref([]);
 const searchQuery = ref("");
@@ -97,22 +96,15 @@ const fetchRecords = async () => {
     }
 };
 
-const fetchCollectionsMap = async () => {
-    try {
-        const response = await axios.get("/api/collections");
-        const items = Array.isArray(response?.data?.data) ? response.data.data : [];
+const collectionsById = computed(() => {
+    return collections.value.reduce((carry, collection) => {
+        if (collection?.id) {
+            carry[collection.id] = collection;
+        }
 
-        collectionsById.value = items.reduce((carry, collection) => {
-            if (collection?.id) {
-                carry[collection.id] = collection;
-            }
-
-            return carry;
-        }, {});
-    } catch {
-        collectionsById.value = {};
-    }
-};
+        return carry;
+    }, {});
+});
 
 const recordColumns = computed(() => {
     const excludedColumns = new Set(["collection_id", "collection_name"]);
@@ -318,7 +310,6 @@ watch(
         showColumnPicker.value = false;
         sortBy.value = null;
         sortDirection.value = "asc";
-        await fetchCollectionsMap();
         await fetchRecords();
     },
     { immediate: true }

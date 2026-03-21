@@ -1,8 +1,6 @@
 
 ## TODO
 
-- Revamp the entire diffing system for fields and indexes
-    - fix bug existing indexes on existing index, only happen when index with generated name exists (more than a couple of fields)
 - remove setting unique index from the fields
     - unique property on the fields object is strictly for readonly purpose
     - unique property on the fields object are modified through managing indexes automatically

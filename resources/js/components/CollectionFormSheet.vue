@@ -602,7 +602,7 @@ watch(showNewFieldForm, () => {
 });
 
 onMounted(async () => {
-  await fetchAvailableCollections();
+  // await fetchAvailableCollections();
   await fetchCollectionInfo();
 });
 </script>
