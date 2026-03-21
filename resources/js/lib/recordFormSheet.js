@@ -26,7 +26,20 @@ export const openRecordForm = (payload = {}) => {
     return sheetId;
 };
 
-export const closeRecordForm = (sheetId) => {
+export const closeRecordForm = (sheetId, payload = null) => {
+    const sheetIndex = sheetStack.value.findIndex((sheet) => sheet.id === sheetId);
+    
+    if (sheetIndex === -1) {
+        return;
+    }
+
+    const sheet = sheetStack.value[sheetIndex];
+    
+    // Call onSave callback if provided and payload is not null
+    if (payload && typeof sheet?.onSave === "function") {
+        sheet.onSave(payload);
+    }
+
     sheetStack.value = sheetStack.value.filter((sheet) => sheet.id !== sheetId);
 };
 
