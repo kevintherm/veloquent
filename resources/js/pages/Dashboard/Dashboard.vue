@@ -64,6 +64,9 @@ const fetchRecords = async () => {
     loading.value = true;
 
     const query = debouncedSearchQuery.value.trim();
+    const sort = sortBy.value
+        ? (sortDirection.value === "desc" ? `-${sortBy.value}` : sortBy.value)
+        : null;
 
     try {
         const response = await axios.get(`/api/collections/${activeCollection.value.name}/records`, {
@@ -71,6 +74,7 @@ const fetchRecords = async () => {
                 page: currentPage.value,
                 per_page: itemsPerPage,
                 filter: query,
+                sort,
             },
         });
 
@@ -182,48 +186,6 @@ const displayedColumns = computed(() => {
     const visible = new Set(visibleColumns.value);
 
     return recordColumns.value.filter((column) => visible.has(column));
-});
-
-const sortedRecords = computed(() => {
-    const rows = [...records.value];
-
-    if (!sortBy.value) {
-        return rows;
-    }
-
-    const direction = sortDirection.value === "desc" ? -1 : 1;
-    const column = sortBy.value;
-    const type = columnTypes.value[column] ?? "text";
-
-    rows.sort((left, right) => {
-        const leftValue = left?.[column] ?? null;
-        const rightValue = right?.[column] ?? null;
-
-        if (leftValue === rightValue) {
-            return 0;
-        }
-
-        if (leftValue === null || leftValue === undefined) {
-            return 1;
-        }
-
-        if (rightValue === null || rightValue === undefined) {
-            return -1;
-        }
-
-        if (["number", "timestamp", "datetime", "date"].includes(type)) {
-            const leftNumeric = type === "number" ? Number(leftValue) : new Date(leftValue).getTime();
-            const rightNumeric = type === "number" ? Number(rightValue) : new Date(rightValue).getTime();
-
-            if (Number.isFinite(leftNumeric) && Number.isFinite(rightNumeric)) {
-                return (leftNumeric - rightNumeric) * direction;
-            }
-        }
-
-        return String(leftValue).localeCompare(String(rightValue), undefined, { numeric: true }) * direction;
-    });
-
-    return rows;
 });
 
 const toggleColumn = (column) => {
@@ -376,6 +338,15 @@ watch(debouncedSearchQuery, async () => {
     await fetchRecords();
 });
 
+watch([sortBy, sortDirection], async () => {
+    if (currentPage.value !== 1) {
+        currentPage.value = 1;
+        return;
+    }
+
+    await fetchRecords();
+});
+
 watch(currentPage, async () => {
     await fetchRecords();
 });
@@ -483,7 +454,7 @@ onUnmounted(() => {
             <BulkActions :selected-records="selectedRecords" @clear-selection="selectedRecords = []"/>
 
             <DataTable
-                :records="sortedRecords"
+                :records="records"
                 :columns="displayedColumns"
                 :column-types="columnTypes"
                 :relation-fields="relationFieldsMeta"

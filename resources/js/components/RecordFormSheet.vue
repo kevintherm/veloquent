@@ -703,17 +703,13 @@ onMounted(async () => {
             </div>
 
             <div v-else class="space-y-2">
-              <Button
-                variant="outline"
-                type="button"
-                class="w-full justify-start font-normal"
-                @click="openRelationDialog(field)"
-              >
+              <Button variant="outline" type="button" class="w-full justify-start font-normal"
+                @click="openRelationDialog(field)">
                 {{ relationSelectionSummary(field) }}
               </Button>
               <p v-if="relationLoading[field.name]" class="text-xs text-muted-foreground">Loading related records...</p>
               <p v-else-if="relationErrors[field.name]" class="text-xs text-destructive">{{ relationErrors[field.name]
-                }}</p>
+              }}</p>
               <p v-else-if="relationSelectionLabels(field).length" class="text-xs text-muted-foreground">
                 Selected: {{ relationSelectionLabels(field).join(", ") }}
               </p>
@@ -736,70 +732,64 @@ onMounted(async () => {
         </p>
       </form>
 
-      <div
-        v-if="relationDialogState.open"
-        class="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4"
-      >
-        <div class="flex h-[min(80vh,720px)] w-full max-w-3xl flex-col rounded-lg border bg-background shadow-xl">
-          <div class="flex items-center justify-between border-b px-4 py-3">
-            <div>
-              <h3 class="text-base font-semibold">Select Related Record</h3>
-              <p class="text-xs text-muted-foreground">
-                {{ currentRelationDialogField?.name }}
-              </p>
+      <Transition name="relation-dialog">
+        <div v-if="relationDialogState.open" class="fixed inset-0 z-60 flex items-center justify-center bg-black/70 p-4">
+          <div class="relation-dialog-panel flex h-[min(80vh,720px)] w-full max-w-3xl flex-col rounded-lg border bg-background shadow-xl">
+            <div class="flex items-center justify-between border-b px-4 py-3">
+              <div>
+                <h3 class="text-base font-semibold">Select Related Record</h3>
+                <p class="text-xs text-muted-foreground">
+                  {{ currentRelationDialogField?.name }}
+                </p>
+              </div>
+              <Button variant="ghost" size="icon" type="button" @click="closeRelationDialog">
+                <X class="h-4 w-4" />
+              </Button>
             </div>
-            <Button variant="ghost" size="icon" type="button" @click="closeRelationDialog">
-              <X class="h-4 w-4" />
-            </Button>
-          </div>
 
-          <div class="border-b px-4 py-3">
-            <div class="relative">
-              <Search class="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                v-model="relationDialogState.search"
-                class="pl-8"
-                placeholder="Search related records"
-              />
+            <div class="border-b px-4 py-3">
+              <div class="relative">
+                <Search class="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input v-model="relationDialogState.search" class="pl-8" placeholder="Search related records" />
+              </div>
             </div>
-          </div>
 
-          <div class="min-h-0 flex-1 overflow-y-auto p-4">
-            <div v-if="currentRelationDialogField && relationLoading[currentRelationDialogField.name]" class="text-sm text-muted-foreground">
-              Loading related records...
+            <div class="min-h-0 flex-1 overflow-y-auto p-4">
+              <div v-if="currentRelationDialogField && relationLoading[currentRelationDialogField.name]"
+                class="text-sm text-muted-foreground">
+                Loading related records...
+              </div>
+              <div v-else-if="currentRelationDialogField && relationErrors[currentRelationDialogField.name]"
+                class="text-sm text-destructive">
+                {{ relationErrors[currentRelationDialogField.name] }}
+              </div>
+              <div v-else-if="filteredRelationDialogOptions.length === 0" class="text-sm text-muted-foreground">
+                No related records found.
+              </div>
+              <div v-else class="space-y-2">
+                <button v-for="option in filteredRelationDialogOptions"
+                  :key="`${relationDialogState.fieldName}-${option.value}`" type="button"
+                  class="flex w-full items-center justify-between rounded-md border px-3 py-2 text-left hover:bg-muted"
+                  :class="isRelationDialogValueSelected(option.value) ? 'border-primary bg-primary/10' : 'border-input'"
+                  @click="toggleRelationDialogValue(currentRelationDialogField, option.value)">
+                  <span class="truncate text-sm">{{ option.label }}</span>
+                  <span class="font-mono text-xs text-muted-foreground">{{ option.value }}</span>
+                </button>
+              </div>
             </div>
-            <div v-else-if="currentRelationDialogField && relationErrors[currentRelationDialogField.name]" class="text-sm text-destructive">
-              {{ relationErrors[currentRelationDialogField.name] }}
-            </div>
-            <div v-else-if="filteredRelationDialogOptions.length === 0" class="text-sm text-muted-foreground">
-              No related records found.
-            </div>
-            <div v-else class="space-y-2">
-              <button
-                v-for="option in filteredRelationDialogOptions"
-                :key="`${relationDialogState.fieldName}-${option.value}`"
-                type="button"
-                class="flex w-full items-center justify-between rounded-md border px-3 py-2 text-left hover:bg-muted"
-                :class="isRelationDialogValueSelected(option.value) ? 'border-primary bg-primary/10' : 'border-input'"
-                @click="toggleRelationDialogValue(currentRelationDialogField, option.value)"
-              >
-                <span class="truncate text-sm">{{ option.label }}</span>
-                <span class="font-mono text-xs text-muted-foreground">{{ option.value }}</span>
-              </button>
-            </div>
-          </div>
 
-          <div class="flex items-center justify-between border-t px-4 py-3">
-            <Button variant="ghost" type="button" @click="clearRelationDialogSelection">
-              Clear Selection
-            </Button>
-            <div class="flex gap-2">
-              <Button variant="outline" type="button" @click="closeRelationDialog">Cancel</Button>
-              <Button type="button" @click="applyRelationDialogSelection">Apply</Button>
+            <div class="flex items-center justify-between border-t px-4 py-3">
+              <Button variant="ghost" type="button" @click="clearRelationDialogSelection">
+                Clear Selection
+              </Button>
+              <div class="flex gap-2">
+                <Button variant="outline" type="button" @click="closeRelationDialog">Cancel</Button>
+                <Button type="button" @click="applyRelationDialogSelection">Apply</Button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </Transition>
 
       <SheetFooter class="absolute bottom-0 left-0 right-0 p-6 bg-background border-t">
         <div class="flex gap-2 w-full">
@@ -812,3 +802,26 @@ onMounted(async () => {
     </SheetContent>
   </Sheet>
 </template>
+
+<style scoped>
+.relation-dialog-enter-active,
+.relation-dialog-leave-active {
+  transition: opacity 180ms ease;
+}
+
+.relation-dialog-enter-active .relation-dialog-panel,
+.relation-dialog-leave-active .relation-dialog-panel {
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.relation-dialog-enter-from,
+.relation-dialog-leave-to {
+  opacity: 0;
+}
+
+.relation-dialog-enter-from .relation-dialog-panel,
+.relation-dialog-leave-to .relation-dialog-panel {
+  opacity: 0;
+  transform: translateY(12px) scale(0.98);
+}
+</style>
