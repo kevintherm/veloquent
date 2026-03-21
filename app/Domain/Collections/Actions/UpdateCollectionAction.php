@@ -37,10 +37,12 @@ class UpdateCollectionAction
             $existingFields = $existingFieldsWithIds;
         }
 
+        $indexesForValidation = $data['indexes'] ?? $collection->indexes ?? [];
+
         $this->collectionFieldValidator->validateForUpdate(
             $fieldsForRules,
             $existingFields,
-            $data['indexes'] ?? $collection->indexes ?? [],
+            $indexesForValidation,
             $collection->type === CollectionType::Auth,
         );
 

@@ -359,7 +359,7 @@ readonly class CollectionObserver
      */
     private function syncFieldUniqueFlags(array $fields, array $indexes, bool $isAuthCollection): array
     {
-        $reservedNames = SchemaChangePlan::getAllReservedFields($isAuthCollection);
+        $reservedNames = SchemaChangePlan::getAllReservedFields(false);
 
         $uniqueFieldNames = collect($indexes)
             ->filter(fn (Index $index): bool => $index->type === 'unique' && count($index->columns) === 1)
@@ -370,6 +370,12 @@ readonly class CollectionObserver
         return collect($fields)
             ->map(function (array $field) use ($reservedNames, $uniqueFieldNames): array {
                 $fieldName = $field['name'] ?? null;
+
+                if ($fieldName === 'id') {
+                    $field['unique'] = true;
+
+                    return $field;
+                }
 
                 if (! is_string($fieldName) || in_array($fieldName, $reservedNames, true)) {
                     return $field;

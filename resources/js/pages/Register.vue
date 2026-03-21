@@ -15,10 +15,10 @@ import { useAuth } from "@/lib/auth";
 
 const router = useRouter();
 const { fetchUser, login } = useAuth();
-const name = ref("");
-const email = ref("");
-const password = ref("");
-const password_confirmation = ref("");
+const name = ref("Admin");
+const email = ref("admin@velophp.com");
+const password = ref("password");
+const password_confirmation = ref("password");
 const error = ref("");
 const loading = ref(false);
 
