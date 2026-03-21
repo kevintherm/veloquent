@@ -31,17 +31,19 @@ it('preserves existing ids on re-merge', function () {
     expect($titleField['id'])->toBe('abc12345');
 });
 
-it('throws on duplicate field names in buildPlan', function () {
+it('treats duplicate names as independent additions in pure buildPlan', function () {
     $before = [];
     $after = [
         ['id' => 'aaa11111', 'name' => 'title', 'type' => CollectionFieldType::Text->value, 'nullable' => false, 'unique' => false, 'default' => null],
         ['id' => 'bbb22222', 'name' => 'title', 'type' => CollectionFieldType::Text->value, 'nullable' => false, 'unique' => false, 'default' => null],
     ];
 
-    SchemaChangePlan::buildPlan($before, $after);
-})->throws(LogicException::class, "Duplicate field name 'title' detected.");
+    $plan = SchemaChangePlan::buildPlan($before, $after);
 
-it('rejects all type changes', function () {
+    expect($plan->adds)->toHaveCount(2);
+});
+
+it('builds modify entries for type changes and defers validation to caller', function () {
     $before = [
         ['id' => 'aaa11111', 'name' => 'title', 'type' => CollectionFieldType::Text->value, 'nullable' => false, 'unique' => false, 'default' => null],
     ];
@@ -49,8 +51,10 @@ it('rejects all type changes', function () {
         ['id' => 'aaa11111', 'name' => 'title', 'type' => CollectionFieldType::LongText->value, 'nullable' => false, 'unique' => false, 'default' => null],
     ];
 
-    SchemaChangePlan::buildPlan($before, $after);
-})->throws(LogicException::class, 'Field type cannot be changed');
+    $plan = SchemaChangePlan::buildPlan($before, $after);
+
+    expect($plan->modifies)->toHaveCount(1);
+});
 
 it('detects renames via same id different name', function () {
     $before = [

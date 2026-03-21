@@ -85,7 +85,6 @@ readonly class CollectionObserver
 
         $tableName = $collection->getPhysicalTableName();
         $desiredIndexes = $this->extractIndexes($collection->indexes ?? []);
-        $existingIndexesOnTable = $this->extractIndexes($collection->getOriginal('indexes'));
 
         $originalFields = $this->extractFields($collection->getOriginal('fields'));
         $newFields = $this->extractFields($collection->fields ?? []);
@@ -93,14 +92,8 @@ readonly class CollectionObserver
         try {
 
             if ($fieldsWereDirty) {
-                $preDropIndexNames = $this->indexNamesToDropBeforeFieldChanges(
-                    $tableName,
-                    $existingIndexesOnTable,
-                    $originalFields,
-                    $newFields
-                );
-
-                $this->indexSyncService->dropIndexesByNames($tableName, $preDropIndexNames);
+                $affectedColumns = $this->fieldNamesAffectedByUpdate($originalFields, $newFields);
+                $this->indexSyncService->dropIndexesReferencingColumns($tableName, $affectedColumns);
 
                 $desiredIndexes = $this->updateIndexesForFieldChanges($originalFields, $newFields, $desiredIndexes);
                 $collection->indexes = array_map(
@@ -329,7 +322,7 @@ readonly class CollectionObserver
                 return new Index(columns: $columns, type: $index->type);
             })
             ->reject(fn (Index $index): bool => $index->columns === [])
-            ->unique(fn (Index $index): string => implode('|', [...$index->columns, $index->type]))
+            ->unique(fn (Index $index): string => $index->identityKey())
             ->values()
             ->all();
 
@@ -386,35 +379,6 @@ readonly class CollectionObserver
 
                 return $field;
             })
-            ->values()
-            ->all();
-    }
-
-    /**
-     * @param  array<int, Index>  $existingIndexes
-     * @param  array<int, array<string, mixed>>  $beforeFields
-     * @param  array<int, array<string, mixed>>  $afterFields
-     * @return array<int, string>
-     */
-    private function indexNamesToDropBeforeFieldChanges(string $table, array $existingIndexes, array $beforeFields, array $afterFields): array
-    {
-        $affectedOldColumns = $this->fieldNamesAffectedByUpdate($beforeFields, $afterFields);
-
-        if ($affectedOldColumns === []) {
-            return [];
-        }
-
-        return collect($existingIndexes)
-            ->filter(function (Index $index) use ($affectedOldColumns): bool {
-                foreach ($affectedOldColumns as $column) {
-                    if ($index->referencesColumn($column)) {
-                        return true;
-                    }
-                }
-
-                return false;
-            })
-            ->map(fn (Index $index): string => $index->generateName($table))
             ->values()
             ->all();
     }

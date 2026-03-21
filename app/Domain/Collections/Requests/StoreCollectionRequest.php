@@ -7,7 +7,6 @@ use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Enums\IndexType;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Collections\ValueObjects\Index;
-use App\Domain\SchemaManagement\Services\SchemaChangePlan;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Enum;
 use Illuminate\Validation\Validator;
@@ -84,105 +83,16 @@ class StoreCollectionRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
-            $type = CollectionType::tryFrom((string) $this->input('type'));
-            $isAuthCollection = $type === CollectionType::Auth;
-            $reservedNames = SchemaChangePlan::getAllReservedFields($isAuthCollection);
-            $reservedDefinitions = SchemaChangePlan::getReservedFieldDefinitions($isAuthCollection);
-
-            $seenNames = [];
-            $fieldTypesByName = [];
-
-            foreach ($reservedDefinitions as $reservedName => $definition) {
-                $fieldTypesByName[$reservedName] = CollectionFieldType::from($definition['type']);
-            }
-
             foreach ($this->input('fields', []) as $index => $field) {
-                $fieldName = $field['name'] ?? null;
-
-                if (is_string($fieldName)) {
-                    if (in_array($fieldName, $reservedNames, true)) {
-                        $validator->errors()->add("fields.{$index}.name", 'Reserved field names cannot be defined manually.');
-                    }
-
-                    if (isset($seenNames[$fieldName])) {
-                        $validator->errors()->add("fields.{$index}.name", "Duplicate field name '{$fieldName}'.");
-                    }
-
-                    $seenNames[$fieldName] = true;
-                }
-
                 $fieldType = CollectionFieldType::tryFrom($field['type'] ?? '');
                 if ($fieldType === null || ! is_array($field)) {
                     continue;
-                }
-
-                if (is_string($fieldName)) {
-                    $fieldTypesByName[$fieldName] = $fieldType;
                 }
 
                 if ($fieldType === CollectionFieldType::Relation) {
                     $this->validateRelationFieldDefinition($validator, $index, $field);
                 }
             }
-
-            $seenIndexSignatures = [];
-
-            foreach ($this->input('indexes', []) as $indexPosition => $indexData) {
-                if (! is_array($indexData)) {
-                    continue;
-                }
-
-                $unknownProperties = array_diff(array_keys($indexData), ['columns', 'type']);
-                if ($unknownProperties !== []) {
-                    $validator->errors()->add(
-                        "indexes.{$indexPosition}",
-                        'Unknown properties for index definition: '.implode(', ', $unknownProperties)
-                    );
-                }
-
-                $columns = $indexData['columns'] ?? [];
-                $indexType = IndexType::tryFrom((string) ($indexData['type'] ?? ''));
-
-                if (! is_array($columns) || $indexType === null) {
-                    continue;
-                }
-
-                $normalizedColumns = array_values(array_map(fn (mixed $column): string => (string) $column, $columns));
-
-                if (count($normalizedColumns) !== count(array_unique($normalizedColumns))) {
-                    $validator->errors()->add("indexes.{$indexPosition}.columns", 'Index columns must not contain duplicates.');
-                }
-
-                foreach ($normalizedColumns as $columnPosition => $columnName) {
-                    if (! array_key_exists($columnName, $fieldTypesByName)) {
-                        $validator->errors()->add(
-                            "indexes.{$indexPosition}.columns.{$columnPosition}",
-                            "Unknown index column '{$columnName}'."
-                        );
-
-                        continue;
-                    }
-
-                    if (! $fieldTypesByName[$columnName]->isIndexable()) {
-                        $validator->errors()->add(
-                            "indexes.{$indexPosition}.columns.{$columnPosition}",
-                            "Field '{$columnName}' of type '{$fieldTypesByName[$columnName]->value}' cannot be indexed."
-                        );
-                    }
-                }
-
-                $signature = implode('|', [...$normalizedColumns, $indexType->value]);
-
-                if (isset($seenIndexSignatures[$signature])) {
-                    $validator->errors()->add(
-                        "indexes.{$indexPosition}",
-                        'Duplicate index definition detected for the same columns and type.'
-                    );
-                }
-
-                $seenIndexSignatures[$signature] = true;
-            }
-
         });
     }
 

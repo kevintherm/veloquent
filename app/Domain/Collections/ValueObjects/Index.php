@@ -42,6 +42,14 @@ class Index implements \ArrayAccess, \JsonSerializable
         return self::generateIndexName($table, $this->columns, $this->type);
     }
 
+    public function identityKey(): string
+    {
+        $columns = $this->columns;
+        sort($columns);
+
+        return implode('|', $columns).'|'.$this->type;
+    }
+
     public static function generateIndexName(string $table, array $columns, string $type): string
     {
         $baseName = implode('_', [
