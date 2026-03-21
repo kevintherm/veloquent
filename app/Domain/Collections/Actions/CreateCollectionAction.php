@@ -17,15 +17,21 @@ class CreateCollectionAction
 
     public function execute(array $data): Collection
     {
-        $isAuthCollection = ($data['type'] ?? null) === CollectionType::Auth->value;
+        $collectionType = $data['type'] ?? null;
+
+        if ($collectionType instanceof CollectionType) {
+            $collectionType = $collectionType->value;
+        }
+
+        $isAuthCollection = $collectionType === CollectionType::Auth->value;
+        $mergedFields = SchemaChangePlan::mergeWithSystemFields($data['fields'], $isAuthCollection);
+        $indexes = $data['indexes'] ?? [];
 
         $this->collectionFieldValidator->validateForCreate(
             $data['fields'] ?? [],
-            $data['indexes'] ?? [],
+            $indexes,
             $isAuthCollection,
         );
-
-        $mergedFields = SchemaChangePlan::mergeWithSystemFields($data['fields'], $isAuthCollection);
 
         if (isset($data['api_rules'])) {
             $this->validateApiRules($data['api_rules'], Arr::pluck($mergedFields, 'name'));
@@ -35,7 +41,7 @@ class CreateCollectionAction
             ...$data,
             'table_name' => SchemaChangePlan::generateTableName($data['name'], $data['is_system'] ?? false),
             'fields' => $mergedFields,
-            'indexes' => $data['indexes'] ?? [],
+            'indexes' => $indexes,
         ]);
     }
 

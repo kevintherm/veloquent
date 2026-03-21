@@ -87,10 +87,6 @@ readonly class SchemaDDLService
             $col->nullable();
         }
 
-        if (($column['unique'] ?? false) === true) {
-            $col->unique();
-        }
-
         if (array_key_exists('default', $column)) {
             $col->default($column['default']);
         }

@@ -1,14 +1,26 @@
 
 ## TODO
 
-- remove setting unique index from the fields
-    - unique property on the fields object is strictly for readonly purpose
-    - unique property on the fields object are modified through managing indexes automatically
-        - only if the index is that specific field with type unique
+- Naming conventions
+    - clarify in code/docs: `SchemaChangePlan::getAllReservedFields(false)` in unique sync intentionally means base reserved fields only
+    - reason: auth reserved fields (for example `email`) must still sync `unique` from single-column unique indexes
+- Relation filtering
+    - e.g users.name = "John"
+    - Detect a dot in the field path — author.name signals a relation traversal
+    - Look up the schema — check the current collection's field definitions to confirm author is a relation field, and get its target collection/table name
+    - Register a LEFT JOIN — LEFT JOIN users AS __posts_author ON posts.author_id = __posts_author.id
+    - Rewrite the field to the aliased column — __posts_author.name
+    - Pass that aliased column string into your normal filter/sort path as if it were a plain field
+    - alias naming: You need a deterministic, collision-safe alias for each join.
+        - author           → __posts_author
+        - author.publisher → __posts_author__publisher
+- Relation expand limit: 10
+- Schema corrupt detection
+    - Fix: Rebuild entire schema, manual trigger
+- Improv: Hide copy,truncate,delete actions from manage collections under a dropdown
 - UI Dashboard
     - Manage systems
-        - Schema corrupt detection
-            - Fix: Rebuild entire schema, manual trigger
+        - Schema corrupt fix button
         - Setup system variables
             - Rate limit
             - Trust proxies
@@ -24,8 +36,6 @@
     - No expand field count limit
     - expandedRelations as dynamic property 
     - Field|array type inconsistency
-- Reserved field checking should first check if those fields were really in the metadata collection first
-    - e.g updating a superusers collection failed bcs email_visibility and verified were missing even though it is not necessary
 - Hooks system
 - Optimize Record model
     - cache collections

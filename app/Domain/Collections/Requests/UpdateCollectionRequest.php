@@ -44,7 +44,7 @@ class UpdateCollectionRequest extends FormRequest
             'fields.*.name' => 'required|string|regex:/^[a-zA-Z_]+$/',
             'fields.*.type' => ['required', new Enum(CollectionFieldType::class)],
             'fields.*.nullable' => 'sometimes|boolean',
-            'fields.*.unique' => 'sometimes|boolean',
+            'fields.*.unique' => 'sometimes',
             'fields.*.default' => 'sometimes',
 
             'indexes' => 'sometimes|array',
@@ -84,7 +84,9 @@ class UpdateCollectionRequest extends FormRequest
                     ...$field,
                     'type' => $type->value,
                     'order' => $index,
-                ])->only($type->allowedProperties())->all();
+                ])->only($type->allowedProperties())
+                    ->except(['unique'])
+                    ->all();
             })
             ->values()
             ->all();

@@ -1,5 +1,6 @@
 <?php
 
+use App\Domain\Collections\Actions\CreateCollectionAction;
 use App\Domain\Collections\Enums\CollectionFieldType;
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Enums\IndexType;
@@ -162,10 +163,35 @@ it('rejects providing index name in store request', function () {
     $request = StoreCollectionRequest::create('/api/collections', 'POST', $payload);
 
     $validator = Validator::make($payload, $request->rules());
+    $request->setValidator($validator);
     $request->withValidator($validator);
 
     expect($validator->fails())->toBeTrue();
     expect($validator->errors()->has('indexes.0.name'))->toBeTrue();
+});
+
+it('accepts but ignores fields unique flag in store request', function () {
+    $payload = [
+        'name' => 'profiles_unique_flag',
+        'type' => CollectionType::Base->value,
+        'description' => 'Profiles',
+        'fields' => [
+            ['name' => 'email', 'type' => CollectionFieldType::Email->value, 'unique' => true],
+        ],
+        'indexes' => [],
+    ];
+
+    $request = StoreCollectionRequest::create('/api/collections', 'POST', $payload);
+
+    $validator = Validator::make($payload, $request->rules());
+    $request->setValidator($validator);
+    $request->withValidator($validator);
+
+    expect($validator->fails())->toBeFalse();
+
+    $fields = $request->getFields();
+
+    expect($fields[0])->not->toHaveKey('unique');
 });
 
 it('rejects unknown index columns in semantic validator', function () {
@@ -258,13 +284,16 @@ it('allows recreating a deleted field with the same name and a different type', 
     ]);
 
     $reservedDefinitions = SchemaChangePlan::getReservedFieldDefinitions();
+    $idField = collect($reservedDefinitions['id'])->except(['unique'])->all();
+    $createdAtField = collect($reservedDefinitions['created_at'])->except(['unique'])->all();
+    $updatedAtField = collect($reservedDefinitions['updated_at'])->except(['unique'])->all();
 
     $payload = [
         'fields' => [
-            $reservedDefinitions['id'],
+            $idField,
             ['name' => 'title', 'type' => CollectionFieldType::Number->value],
-            $reservedDefinitions['created_at'],
-            $reservedDefinitions['updated_at'],
+            $createdAtField,
+            $updatedAtField,
         ],
     ];
 
@@ -274,9 +303,50 @@ it('allows recreating a deleted field with the same name and a different type', 
     $request->setRouteResolver(fn () => $matchedRoute);
 
     $validator = Validator::make($payload, $request->rules());
+    $request->setValidator($validator);
     $request->withValidator($validator);
 
     expect($validator->fails())->toBeFalse();
+});
+
+it('accepts but ignores fields unique flag in update request', function () {
+    $collection = Collection::create([
+        'name' => 'people_unique_flag',
+        'type' => CollectionType::Base,
+        'description' => 'People',
+        'fields' => [
+            ['id' => 'aa11aa11', 'name' => 'email', 'type' => CollectionFieldType::Email->value, 'order' => 0, 'nullable' => false, 'unique' => false, 'default' => null],
+        ],
+        'api_rules' => [
+            'list' => '',
+            'view' => '',
+            'create' => '',
+            'update' => '',
+            'delete' => '',
+        ],
+        'indexes' => [],
+    ]);
+
+    $payload = [
+        'fields' => [
+            ['id' => 'aa11aa11', 'name' => 'email', 'type' => CollectionFieldType::Email->value, 'unique' => true],
+        ],
+    ];
+
+    $request = UpdateCollectionRequest::create('/api/collections/people_unique_flag', 'PATCH', $payload);
+    $matchedRoute = Route::getRoutes()->match($request);
+    $matchedRoute->setParameter('collection', $collection);
+    $request->setRouteResolver(fn () => $matchedRoute);
+
+    $validator = Validator::make($payload, $request->rules());
+    $request->setValidator($validator);
+    $request->withValidator($validator);
+
+    expect($validator->fails())->toBeFalse();
+
+    $fields = $request->getFields();
+
+    expect($fields[0])->not->toHaveKey('unique');
 });
 
 it('syncs fields unique metadata from declared unique indexes', function () {
@@ -314,4 +384,143 @@ it('syncs fields unique metadata from declared unique indexes', function () {
     $fieldMap = collect($collection->fields)->keyBy('name');
 
     expect($fieldMap['username']['unique'])->toBeFalse();
+});
+
+it('does not mark fields unique from composite unique indexes', function () {
+    $collection = Collection::create([
+        'name' => 'user_handles',
+        'type' => CollectionType::Base,
+        'description' => 'User handles',
+        'fields' => [
+            ['id' => 'aa11aa11', 'name' => 'tenant', 'type' => CollectionFieldType::Text->value, 'order' => 0, 'nullable' => false, 'unique' => false, 'default' => null],
+            ['id' => 'bb22bb22', 'name' => 'handle', 'type' => CollectionFieldType::Text->value, 'order' => 1, 'nullable' => false, 'unique' => false, 'default' => null],
+        ],
+        'api_rules' => [
+            'list' => '',
+            'view' => '',
+            'create' => '',
+            'update' => '',
+            'delete' => '',
+        ],
+        'indexes' => [
+            ['columns' => ['tenant', 'handle'], 'type' => IndexType::Unique->value],
+        ],
+    ]);
+
+    $collection->refresh();
+    $fieldMap = collect($collection->fields)->keyBy('name');
+
+    expect($fieldMap['tenant']['unique'])->toBeFalse();
+    expect($fieldMap['handle']['unique'])->toBeFalse();
+});
+
+it('syncs field unique metadata on index-only updates', function () {
+    $collection = Collection::create([
+        'name' => 'subscribers',
+        'type' => CollectionType::Base,
+        'description' => 'Subscribers',
+        'fields' => [
+            ['id' => 'aa11aa11', 'name' => 'email', 'type' => CollectionFieldType::Email->value, 'order' => 0, 'nullable' => false, 'unique' => false, 'default' => null],
+        ],
+        'api_rules' => [
+            'list' => '',
+            'view' => '',
+            'create' => '',
+            'update' => '',
+            'delete' => '',
+        ],
+        'indexes' => [],
+    ]);
+
+    $collection->update([
+        'indexes' => [
+            ['columns' => ['email'], 'type' => IndexType::Unique->value],
+        ],
+    ]);
+
+    $collection->refresh();
+    $fieldMap = collect($collection->fields)->keyBy('name');
+
+    expect($fieldMap['email']['unique'])->toBeTrue();
+});
+
+it('syncs auth reserved email unique metadata from explicit unique index', function () {
+    $collection = app(CreateCollectionAction::class)->execute([
+        'name' => 'members_auth',
+        'type' => CollectionType::Auth,
+        'description' => 'Members auth',
+        'fields' => [
+            ['id' => 'aa11aa11', 'name' => 'display_name', 'type' => CollectionFieldType::Text->value, 'order' => 0, 'nullable' => false, 'unique' => false, 'default' => null],
+        ],
+        'api_rules' => [
+            'list' => '',
+            'view' => '',
+            'create' => '',
+            'update' => '',
+            'delete' => '',
+        ],
+        'indexes' => [
+            ['columns' => ['email'], 'type' => IndexType::Unique->value],
+        ],
+    ]);
+
+    $collection->refresh();
+
+    $storedIndexes = collect($collection->indexes)
+        ->map(fn (mixed $index): array => is_array($index) ? $index : $index->toArray())
+        ->values()
+        ->all();
+
+    expect($storedIndexes)->toContain([
+        'columns' => ['email'],
+        'type' => IndexType::Unique->value,
+    ]);
+
+    $table = $collection->getPhysicalTableName();
+    $indexNames = collect(Schema::getIndexes($table))->pluck('name')->all();
+
+    expect($indexNames)->toContain(Index::generateIndexName($table, ['email'], IndexType::Unique->value));
+    expect($indexNames)->not->toContain(Index::generateIndexName($table, ['id'], IndexType::Unique->value));
+
+    $fieldMap = collect($collection->fields)->keyBy('name');
+    expect($fieldMap['email']['unique'])->toBeTrue();
+});
+
+it('keeps id field unique metadata always true', function () {
+    $collection = app(CreateCollectionAction::class)->execute([
+        'name' => 'id_unique_lock',
+        'type' => CollectionType::Base,
+        'description' => 'ID unique lock',
+        'fields' => [
+            ['id' => 'aa11aa11', 'name' => 'title', 'type' => CollectionFieldType::Text->value, 'order' => 0, 'nullable' => false, 'unique' => false, 'default' => null],
+        ],
+        'api_rules' => [
+            'list' => '',
+            'view' => '',
+            'create' => '',
+            'update' => '',
+            'delete' => '',
+        ],
+        'indexes' => [],
+    ]);
+
+    $collection->refresh();
+
+    $updatedFields = collect($collection->fields)
+        ->map(fn (mixed $field): array => is_array($field) ? $field : $field->toArray())
+        ->map(fn (array $field): array => $field['name'] === 'id' ? [...$field, 'unique' => false] : $field)
+        ->values()
+        ->all();
+
+    $collection->update([
+        'fields' => $updatedFields,
+    ]);
+
+    $collection->refresh();
+    $idField = collect($collection->fields)
+        ->map(fn (mixed $field): array => is_array($field) ? $field : $field->toArray())
+        ->firstWhere('name', 'id');
+
+    expect($idField)->not->toBeNull();
+    expect($idField['unique'] ?? null)->toBeTrue();
 });

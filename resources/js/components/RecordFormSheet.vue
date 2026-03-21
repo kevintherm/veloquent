@@ -480,7 +480,7 @@ const isRequiredField = (field) => {
 };
 
 const isDisabledField = (field) => {
-  return ["id", "created_at", "updated_at"].includes(field?.name);
+  return ["id", "created_at", "updated_at"].includes(field?.name) && isUpdating.value;
 };
 
 const resolveInputType = (field) => {
