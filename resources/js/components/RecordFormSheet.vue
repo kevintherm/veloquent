@@ -479,6 +479,10 @@ const isRequiredField = (field) => {
   return !["id", "created_at", "updated_at"].includes(field?.name) && field?.nullable === false;
 };
 
+const isDisabledField = (field) => {
+  return ["id", "created_at", "updated_at"].includes(field?.name);
+};
+
 const resolveInputType = (field) => {
   if (isAuthCollection.value && field?.name === "password") {
     return "password";
@@ -787,10 +791,13 @@ onMounted(async () => {
             <textarea v-if="field.type === 'longtext' || field.type === 'json'" :id="`field-${sheetId}-${field.name}`"
               v-model="formState[field.name]"
               class="min-h-24 rounded-md border border-input bg-background px-3 py-2 text-sm"
+              :class="isDisabledField(field) ? 'cursor-not-allowed bg-muted' : ''"
+              :disabled="isDisabledField(field)"
               :placeholder="`Enter ${displayFieldName(field.name)}...`"></textarea>
 
             <Input v-else-if="field.type !== 'boolean' && field.type !== 'relation'"
               :id="`field-${sheetId}-${field.name}`" v-model="formState[field.name]" :type="resolveInputType(field)"
+              :disabled="isDisabledField(field)"
               :placeholder="`Enter ${displayFieldName(field.name)}...`" />
 
             <div v-else-if="field.type === 'boolean'" class="flex items-center gap-2 pt-1">

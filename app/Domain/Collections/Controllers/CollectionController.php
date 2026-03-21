@@ -55,7 +55,7 @@ class CollectionController extends ApiController
 
     public function update(UpdateCollectionRequest $request, Collection $collection): JsonResponse
     {
-        Gate::authorize('update-collections', [$collection]);
+        Gate::authorize('update-collections', [$collection->toArray()]);
 
         $payload = $request->validated();
         if ($request->has('fields')) {

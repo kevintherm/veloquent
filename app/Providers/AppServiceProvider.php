@@ -41,49 +41,18 @@ class AppServiceProvider extends ServiceProvider
 
     private function registerGates(): void
     {
-        Gate::define('list-collections', function (?Record $user) {
-            return $user && $user->getTable() === 'superusers';
-        });
+        foreach (['list', 'view'] as $action) {
+            Gate::define("{$action}-collections", fn (?Record $user) => $user?->isSuperuser());
+        }
 
-        Gate::define('view-collections', function (?Record $user) {
-            return $user && $user->getTable() === 'superusers';
-        });
+        foreach (['create', 'update', 'delete'] as $action) {
+            Gate::define("{$action}-collections", fn (?Record $user, array|Collection $data) => $user?->isSuperuser() && ($data['is_system'] ?? false) === false);
+        }
 
-        Gate::define('create-collections', function (?Record $user, array|Collection $data) {
-            return $user && $user->getTable() === 'superusers' && ($data['is_system'] ?? false) === false;
-        });
+        Gate::define('truncate-collections', fn (?Record $user, Collection $collection) => $user?->isSuperuser() && $collection->is_system === false);
 
-        Gate::define('update-collections', function (?Record $user, array|Collection $data) {
-            return $user && $user->getTable() === 'superusers' && ($data['is_system'] ?? false) === false;
-        });
-
-        Gate::define('delete-collections', function (?Record $user, array|Collection $data) {
-            return $user && $user->getTable() === 'superusers' && $data['is_system'] === false;
-        });
-
-        Gate::define('truncate-collections', function (?Record $user, Collection $collection) {
-            return $user && $user->getTable() === 'superusers' && $collection->is_system === false;
-        });
-
-        Gate::define('list-records', function (?Record $user, Collection $collection) {
-            return ($user && $user->getTable() === 'superusers') || $collection->is_system === false;
-        });
-
-        Gate::define('view-records', function (?Record $user, Collection $collection) {
-            return ($user && $user->getTable() === 'superusers') || $collection->is_system === false;
-        });
-
-        Gate::define('create-records', function (?Record $user, Collection $collection) {
-            return ($user && $user->getTable() === 'superusers') || $collection->is_system === false;
-        });
-
-        Gate::define('update-records', function (?Record $user, Collection $collection) {
-            return ($user && $user->getTable() === 'superusers') || $collection->is_system === false;
-        });
-
-        Gate::define('delete-records', function (?Record $user, Collection $collection) {
-            return ($user && $user->getTable() === 'superusers') || $collection->is_system === false;
-        });
-
+        foreach (['list', 'view', 'create', 'update', 'delete'] as $action) {
+            Gate::define("{$action}-records", fn (?Record $user, Collection $collection) => $user?->isSuperuser() || $collection->is_system === false);
+        }
     }
 }
