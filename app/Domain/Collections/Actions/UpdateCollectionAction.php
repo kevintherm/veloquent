@@ -4,6 +4,7 @@ namespace App\Domain\Collections\Actions;
 
 use App\Domain\Collections\Models\Collection;
 use App\Domain\QueryCompiler\Services\QueryFilter;
+use App\Domain\SchemaManagement\Services\SchemaChangePlan;
 use Illuminate\Support\Arr;
 use Illuminate\Validation\ValidationException;
 
@@ -18,6 +19,12 @@ class UpdateCollectionAction
 
         $fieldsForRules = $data['fields'] ?? $collection->fields;
 
+        if (isset($data['fields']) && is_array($data['fields'])) {
+            $existingFieldsWithIds = $this->ensureCollectionFieldsHaveIds($collection);
+            $data['fields'] = $this->assignIdsForIncomingFields($data['fields'], $existingFieldsWithIds);
+            $fieldsForRules = $data['fields'];
+        }
+
         if (isset($data['api_rules'])) {
             $this->validateApiRules($data['api_rules'], Arr::pluck($fieldsForRules, 'name'));
         }
@@ -26,6 +33,81 @@ class UpdateCollectionAction
         $collection->refresh();
 
         return $collection;
+    }
+
+    private function ensureCollectionFieldsHaveIds(Collection $collection): array
+    {
+        $existingFields = collect($collection->fields ?? [])
+            ->map(fn (mixed $field): array => is_array($field) ? $field : (array) $field)
+            ->values();
+
+        $hadMissingIds = false;
+
+        $normalizedFields = $existingFields
+            ->map(function (array $field) use (&$hadMissingIds): array {
+                $fieldId = $field['id'] ?? null;
+
+                if (! is_string($fieldId) || $fieldId === '') {
+                    $field['id'] = SchemaChangePlan::generateFieldId();
+                    $hadMissingIds = true;
+                }
+
+                return $field;
+            })
+            ->all();
+
+        if ($hadMissingIds) {
+            $collection->forceFill(['fields' => $normalizedFields])->saveQuietly();
+            $collection->refresh();
+        }
+
+        return collect($collection->fields ?? [])
+            ->map(fn (mixed $field): array => is_array($field) ? $field : (array) $field)
+            ->values()
+            ->all();
+    }
+
+    private function assignIdsForIncomingFields(array $incomingFields, array $existingFields): array
+    {
+        $existingByName = collect($existingFields)
+            ->filter(fn (array $field): bool => isset($field['name']) && is_string($field['name']))
+            ->keyBy('name');
+
+        return collect($incomingFields)
+            ->map(function (array $field) use ($existingByName): array {
+                $fieldId = $field['id'] ?? null;
+
+                if (is_string($fieldId) && $fieldId !== '') {
+                    return $field;
+                }
+
+                $fieldName = $field['name'] ?? null;
+                $fieldType = $field['type'] ?? null;
+
+                if (is_string($fieldName) && $existingByName->has($fieldName)) {
+                    $existingField = $existingByName->get($fieldName);
+                    $existingFieldId = $existingField['id'] ?? null;
+                    $existingFieldType = $existingField['type'] ?? null;
+
+                    if (
+                        is_string($existingFieldId)
+                        && $existingFieldId !== ''
+                        && is_string($fieldType)
+                        && is_string($existingFieldType)
+                        && $fieldType === $existingFieldType
+                    ) {
+                        $field['id'] = $existingFieldId;
+
+                        return $field;
+                    }
+                }
+
+                $field['id'] = SchemaChangePlan::generateFieldId();
+
+                return $field;
+            })
+            ->values()
+            ->all();
     }
 
     private function validateApiRules(array $apiRules, array $fields): void

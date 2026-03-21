@@ -165,11 +165,6 @@ class UpdateCollectionRequest extends FormRequest
                         ->first(fn (mixed $existing): bool => (string) ($existing['id'] ?? '') === $fieldId);
                 }
 
-                if ($existingField === null && is_string($fieldName)) {
-                    $existingField = collect($collection->fields)
-                        ->first(fn (mixed $existing): bool => (string) ($existing['name'] ?? '') === $fieldName);
-                }
-
                 if ($existingField !== null) {
                     $existingFieldArray = is_array($existingField)
                         ? $existingField

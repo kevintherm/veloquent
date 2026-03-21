@@ -117,16 +117,16 @@ readonly class SchemaDDLService
                     $t->renameColumn($from, $to);
                 }
 
-                foreach ($plan->adds as $field) {
-                    $this->columnBlueprint($t, $field);
-                }
-
                 foreach ($plan->modifies as [, $field]) {
                     $this->columnBlueprint($t, $field, change: true);
                 }
 
                 foreach ($plan->drops as $field) {
                     $t->dropColumn($field['name']);
+                }
+
+                foreach ($plan->adds as $field) {
+                    $this->columnBlueprint($t, $field);
                 }
             });
         });

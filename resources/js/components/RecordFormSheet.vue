@@ -14,7 +14,7 @@ import {
   Input,
   Label,
 } from "@/components/ui";
-import { Plus } from "lucide-vue-next";
+import { Plus, Search, X } from "lucide-vue-next";
 import { resolveCollectionFieldTypeIcon } from "@/lib/collectionFieldTypeIcons";
 import { openRecordForm } from "@/lib/recordFormSheet";
 import { useDashboardState } from "@/lib/dashboardState";
@@ -45,6 +45,12 @@ const fieldErrors = ref({});
 const relationOptions = ref({});
 const relationLoading = ref({});
 const relationErrors = ref({});
+const relationDialogState = ref({
+  open: false,
+  fieldName: null,
+  search: "",
+  selected: [],
+});
 const availableCollections = ref([]);
 const { requestRecordsReload } = useDashboardState();
 
@@ -193,12 +199,48 @@ const initializeFormState = () => {
   fieldErrors.value = {};
 };
 
-const relationDisplayValue = (fieldName, value) => {
-  const options = relationOptions.value[fieldName] ?? [];
-  const firstValue = Array.isArray(value) ? value[0] : value;
-  const option = options.find((item) => item.value === firstValue);
+const normalizeRelationSelection = (value) => {
+  if (Array.isArray(value)) {
+    return value
+      .filter((item) => item !== null && item !== undefined && item !== "")
+      .map((item) => String(item));
+  }
 
-  return option ? option.label : firstValue;
+  if (value === null || value === undefined || value === "") {
+    return [];
+  }
+
+  return [String(value)];
+};
+
+const relationSelectionLabels = (field) => {
+  const fieldName = field?.name;
+
+  if (!fieldName) {
+    return [];
+  }
+
+  const selectedValues = normalizeRelationSelection(formState.value[fieldName]);
+  const options = relationOptions.value[fieldName] ?? [];
+
+  return selectedValues.map((value) => {
+    const option = options.find((item) => String(item.value) === value);
+    return option?.label ?? value;
+  });
+};
+
+const relationSelectionSummary = (field) => {
+  const labels = relationSelectionLabels(field);
+
+  if (!labels.length) {
+    return "No related records selected.";
+  }
+
+  if (labels.length === 1) {
+    return labels[0];
+  }
+
+  return `${labels.length} related records selected`;
 };
 
 const fetchAvailableCollections = async () => {
@@ -277,6 +319,107 @@ const loadAllRelationOptions = async () => {
   });
 
   await Promise.all(relationFields.map((field) => loadRelationOptions(field)));
+};
+
+const currentRelationDialogField = computed(() => {
+  if (!relationDialogState.value.fieldName) {
+    return null;
+  }
+
+  return orderedFields.value.find((field) => field?.name === relationDialogState.value.fieldName) ?? null;
+});
+
+const filteredRelationDialogOptions = computed(() => {
+  const fieldName = relationDialogState.value.fieldName;
+
+  if (!fieldName) {
+    return [];
+  }
+
+  const options = relationOptions.value[fieldName] ?? [];
+  const keyword = relationDialogState.value.search.trim().toLowerCase();
+
+  if (!keyword) {
+    return options;
+  }
+
+  return options.filter((option) => {
+    return String(option?.label ?? "").toLowerCase().includes(keyword)
+      || String(option?.value ?? "").toLowerCase().includes(keyword);
+  });
+});
+
+const openRelationDialog = async (field) => {
+  if (!field?.name) {
+    return;
+  }
+
+  if (!Array.isArray(relationOptions.value[field.name]) || relationOptions.value[field.name].length === 0) {
+    await loadRelationOptions(field);
+  }
+
+  relationDialogState.value = {
+    open: true,
+    fieldName: field.name,
+    search: "",
+    selected: normalizeRelationSelection(formState.value[field.name]),
+  };
+};
+
+const closeRelationDialog = () => {
+  relationDialogState.value = {
+    open: false,
+    fieldName: null,
+    search: "",
+    selected: [],
+  };
+};
+
+const isRelationDialogValueSelected = (value) => {
+  return relationDialogState.value.selected.includes(String(value));
+};
+
+const toggleRelationDialogValue = (field, value) => {
+  const normalizedValue = String(value);
+  const isMultiRelation = Number(field?.max_select ?? 1) > 1;
+
+  if (!isMultiRelation) {
+    relationDialogState.value.selected = [normalizedValue];
+    return;
+  }
+
+  const currentSelection = [...relationDialogState.value.selected];
+  const valueIndex = currentSelection.indexOf(normalizedValue);
+
+  if (valueIndex === -1) {
+    currentSelection.push(normalizedValue);
+  } else {
+    currentSelection.splice(valueIndex, 1);
+  }
+
+  relationDialogState.value.selected = currentSelection;
+};
+
+const clearRelationDialogSelection = () => {
+  relationDialogState.value.selected = [];
+};
+
+const applyRelationDialogSelection = () => {
+  const field = currentRelationDialogField.value;
+
+  if (!field?.name) {
+    closeRelationDialog();
+    return;
+  }
+
+  const isMultiRelation = Number(field.max_select ?? 1) > 1;
+  const nextSelection = [...relationDialogState.value.selected];
+
+  formState.value[field.name] = isMultiRelation
+    ? nextSelection
+    : (nextSelection[0] ?? "");
+
+  closeRelationDialog();
 };
 
 const fetchCollectionInfo = async () => {
@@ -521,7 +664,7 @@ onMounted(async () => {
 
 <template>
   <Sheet :open="internalOpen" @update:open="(isOpen) => { if (!isOpen) handleClose(); }">
-    <SheetContent side="right" class="sm:max-w-md">
+    <SheetContent side="right" class="sm:max-w-md overflow-hidden">
       <SheetHeader>
         <SheetTitle>{{ isUpdating ? 'Edit' : 'Add' }} {{ fetchedCollection?.name ?? 'Collection' }} Record</SheetTitle>
         <SheetDescription>
@@ -529,13 +672,13 @@ onMounted(async () => {
         </SheetDescription>
       </SheetHeader>
 
-      <form class="grid gap-4 py-4 overflow-y-auto max-h-[calc(100vh-200px)]">
-        <div v-if="loadingCollection" class="px-1 text-sm text-muted-foreground">
+      <form class="grid gap-4 py-4 pr-2 overflow-y-auto max-h-[calc(100vh-200px)]">
+        <div v-if="loadingCollection" class="px-2 text-sm text-muted-foreground">
           Fetching collection information...
         </div>
 
         <template v-else>
-          <div v-for="field in orderedFields" :key="field.id ?? field.name" class="grid gap-2 px-1">
+          <div v-for="field in orderedFields" :key="field.id ?? field.name" class="grid gap-2 px-2">
             <div class="flex items-center justify-between gap-2">
               <Label :for="`field-${sheetId}-${field.name}`" class="flex items-center gap-2">
                 <component :is="resolveCollectionFieldTypeIcon(field.type)" class="h-4 w-4 text-muted-foreground" />
@@ -560,20 +703,19 @@ onMounted(async () => {
             </div>
 
             <div v-else class="space-y-2">
-              <select :id="`field-${sheetId}-${field.name}`" v-model="formState[field.name]"
-                :multiple="Number(field.max_select ?? 1) > 1"
-                class="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-                <option v-if="Number(field.max_select ?? 1) === 1" value="">Select related record</option>
-                <option v-for="option in relationOptions[field.name] ?? []" :key="`${field.name}-${option.value}`"
-                  :value="option.value">
-                  {{ option.label }}
-                </option>
-              </select>
+              <Button
+                variant="outline"
+                type="button"
+                class="w-full justify-start font-normal"
+                @click="openRelationDialog(field)"
+              >
+                {{ relationSelectionSummary(field) }}
+              </Button>
               <p v-if="relationLoading[field.name]" class="text-xs text-muted-foreground">Loading related records...</p>
               <p v-else-if="relationErrors[field.name]" class="text-xs text-destructive">{{ relationErrors[field.name]
                 }}</p>
-              <p v-else-if="formState[field.name]" class="text-xs text-muted-foreground">
-                Selected: {{ relationDisplayValue(field.name, formState[field.name]) }}
+              <p v-else-if="relationSelectionLabels(field).length" class="text-xs text-muted-foreground">
+                Selected: {{ relationSelectionLabels(field).join(", ") }}
               </p>
               <Button variant="outline" size="sm" class="gap-1" type="button"
                 @click="handleOpenRelatedCollectionForm(field)">
@@ -589,10 +731,75 @@ onMounted(async () => {
           </div>
         </template>
 
-        <p v-if="!loadingCollection && orderedFields.length === 0" class="px-1 text-sm text-muted-foreground">
+        <p v-if="!loadingCollection && orderedFields.length === 0" class="px-2 text-sm text-muted-foreground">
           This collection does not have schema fields yet.
         </p>
       </form>
+
+      <div
+        v-if="relationDialogState.open"
+        class="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4"
+      >
+        <div class="flex h-[min(80vh,720px)] w-full max-w-3xl flex-col rounded-lg border bg-background shadow-xl">
+          <div class="flex items-center justify-between border-b px-4 py-3">
+            <div>
+              <h3 class="text-base font-semibold">Select Related Record</h3>
+              <p class="text-xs text-muted-foreground">
+                {{ currentRelationDialogField?.name }}
+              </p>
+            </div>
+            <Button variant="ghost" size="icon" type="button" @click="closeRelationDialog">
+              <X class="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div class="border-b px-4 py-3">
+            <div class="relative">
+              <Search class="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                v-model="relationDialogState.search"
+                class="pl-8"
+                placeholder="Search related records"
+              />
+            </div>
+          </div>
+
+          <div class="min-h-0 flex-1 overflow-y-auto p-4">
+            <div v-if="currentRelationDialogField && relationLoading[currentRelationDialogField.name]" class="text-sm text-muted-foreground">
+              Loading related records...
+            </div>
+            <div v-else-if="currentRelationDialogField && relationErrors[currentRelationDialogField.name]" class="text-sm text-destructive">
+              {{ relationErrors[currentRelationDialogField.name] }}
+            </div>
+            <div v-else-if="filteredRelationDialogOptions.length === 0" class="text-sm text-muted-foreground">
+              No related records found.
+            </div>
+            <div v-else class="space-y-2">
+              <button
+                v-for="option in filteredRelationDialogOptions"
+                :key="`${relationDialogState.fieldName}-${option.value}`"
+                type="button"
+                class="flex w-full items-center justify-between rounded-md border px-3 py-2 text-left hover:bg-muted"
+                :class="isRelationDialogValueSelected(option.value) ? 'border-primary bg-primary/10' : 'border-input'"
+                @click="toggleRelationDialogValue(currentRelationDialogField, option.value)"
+              >
+                <span class="truncate text-sm">{{ option.label }}</span>
+                <span class="font-mono text-xs text-muted-foreground">{{ option.value }}</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between border-t px-4 py-3">
+            <Button variant="ghost" type="button" @click="clearRelationDialogSelection">
+              Clear Selection
+            </Button>
+            <div class="flex gap-2">
+              <Button variant="outline" type="button" @click="closeRelationDialog">Cancel</Button>
+              <Button type="button" @click="applyRelationDialogSelection">Apply</Button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <SheetFooter class="absolute bottom-0 left-0 right-0 p-6 bg-background border-t">
         <div class="flex gap-2 w-full">

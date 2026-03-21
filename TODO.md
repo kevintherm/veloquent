@@ -1,17 +1,13 @@
 
 ## TODO
-- fix bug cannot recreate field to change type
-    - problem: deleted field, recreated with same name different type no id in the payload, returned error existing field type cannot be changed
-    - mark deleted with no id
-    - velo parse diff the before n after
-- scroll top when adding new field
-- close collapse when adding new field or reordering
-- fix input border left and right clipped on record sheet form
-- refresh datatable after truncating collection
-- refresh sidebar after deleting collection
-- make left click on relation field open the record in current tab, and right click on a new tab
-    - context menu preferred?
+
+- Revamp the entire diffing system for fields and indexes
+    - fix bug existing indexes on existing index, only happen when index with generated name exists (more than a couple of fields)
+- fix bug reserved field on copy collection
 - relation field on record form uses a full on modal/dialog
+- fix bug: relation picker modal
+    - new related record button should be inside the relation picker
+    - relation picker does not refresh when new related record is created
 - UI Dashboard
     - Manage systems
         - Schema corrupt detection

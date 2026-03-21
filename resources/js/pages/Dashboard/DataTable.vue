@@ -151,10 +151,10 @@ const relationLinkTitle = (column, relationFields) => {
     const targetName = relationFields?.[column]?.targetCollectionName;
 
     if (!targetName) {
-        return "Open related record in new tab";
+        return "Open related record";
     }
 
-    return `Open related ${targetName} record in new tab`;
+    return `Open related ${targetName} record`;
 };
 
 const resolveColumnIcon = (column, columnTypes) => {

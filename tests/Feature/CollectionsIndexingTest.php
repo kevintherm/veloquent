@@ -7,6 +7,7 @@ use App\Domain\Collections\Models\Collection;
 use App\Domain\Collections\Requests\StoreCollectionRequest;
 use App\Domain\Collections\Requests\UpdateCollectionRequest;
 use App\Domain\Collections\ValueObjects\Index;
+use App\Domain\SchemaManagement\Services\SchemaChangePlan;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
@@ -216,6 +217,46 @@ it('rejects changing existing field type in update request', function () {
 
     expect($validator->fails())->toBeTrue();
     expect($validator->errors()->has('fields.0.type'))->toBeTrue();
+});
+
+it('allows recreating a deleted field with the same name and a different type', function () {
+    $collection = Collection::create([
+        'name' => 'events_archive',
+        'type' => CollectionType::Base,
+        'description' => 'Events archive',
+        'fields' => [
+            ['id' => 'aa11aa11', 'name' => 'title', 'type' => CollectionFieldType::Text->value, 'order' => 0, 'nullable' => false, 'unique' => false, 'default' => null],
+        ],
+        'api_rules' => [
+            'list' => '',
+            'view' => '',
+            'create' => '',
+            'update' => '',
+            'delete' => '',
+        ],
+        'indexes' => [],
+    ]);
+
+    $reservedDefinitions = SchemaChangePlan::getReservedFieldDefinitions();
+
+    $payload = [
+        'fields' => [
+            $reservedDefinitions['id'],
+            ['name' => 'title', 'type' => CollectionFieldType::Number->value],
+            $reservedDefinitions['created_at'],
+            $reservedDefinitions['updated_at'],
+        ],
+    ];
+
+    $request = UpdateCollectionRequest::create('/api/collections/events_archive', 'PATCH', $payload);
+    $matchedRoute = Route::getRoutes()->match($request);
+    $matchedRoute->setParameter('collection', $collection);
+    $request->setRouteResolver(fn () => $matchedRoute);
+
+    $validator = Validator::make($payload, $request->rules());
+    $request->withValidator($validator);
+
+    expect($validator->fails())->toBeFalse();
 });
 
 it('syncs fields unique metadata from declared unique indexes', function () {
