@@ -5,12 +5,11 @@
     - unique property on the fields object is strictly for readonly purpose
     - unique property on the fields object are modified through managing indexes automatically
         - only if the index is that specific field with type unique
-- sort on web dashboard is still locally not server side
 - delete records
     - single delete
     - mass delete
 - fix bug reserved field on copy collection
-- relation field on record form uses a full on modal/dialog
+    - remove reserved fields on copy
 - fix bug: relation picker modal
     - new related record button should be inside the relation picker
     - relation picker does not refresh when new related record is created
