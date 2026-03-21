@@ -17,9 +17,7 @@ import { useDashboardState } from "@/lib/dashboardState";
 const { state, logout } = useAuth();
 const router = useRouter();
 const route = useRoute();
-const { activeCollection, collectionsReloadNonce } = useDashboardState();
-
-const collections = ref([]);
+const { activeCollection, collections, collectionsReloadNonce } = useDashboardState();
 const isMobileSidebarOpen = ref(false);
 
 const collectionSearchQuery = ref("");
