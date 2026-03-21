@@ -70,7 +70,13 @@ return new class extends Migration
                     'unique' => false,
                 ],
             ]),
-            'api_rules' => null,
+            'api_rules' => json_encode([
+                'list' => null,
+                'view' => null,
+                'create' => null,
+                'update' => null,
+                'delete' => null
+            ]),
             'schema_updated_at' => $now,
             'created_at' => $now,
             'updated_at' => $now,
@@ -108,7 +114,13 @@ return new class extends Migration
                     'unique' => false,
                 ],
             ]),
-            'api_rules' => null,
+            'api_rules' => json_encode([
+                'list' => null,
+                'view' => null,
+                'create' => null,
+                'update' => null,
+                'delete' => null
+            ]),
             'schema_updated_at' => $now,
             'created_at' => $now,
             'updated_at' => $now,

@@ -24,7 +24,6 @@
     - No expand field count limit
     - expandedRelations as dynamic property 
     - Field|array type inconsistency
-- Superusers should bypass api_rules (reinvented)
 - Reserved field checking should first check if those fields were really in the metadata collection first
     - e.g updating a superusers collection failed bcs email_visibility and verified were missing even though it is not necessary
 - Hooks system

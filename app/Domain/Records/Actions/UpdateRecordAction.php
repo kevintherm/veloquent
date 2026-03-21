@@ -18,18 +18,18 @@ class UpdateRecordAction
 
         $isAuthCollection = $collection->type === CollectionType::Auth;
         $authenticatedUser = Auth::user();
-        $bypassSuperuser = $authenticatedUser instanceof Record && $authenticatedUser->isSuperuser();
+        $bypassApiRules = $authenticatedUser instanceof Record && $authenticatedUser->isSuperuser();
 
         $query = Record::of($collection)->newQuery();
 
-        if (! $bypassSuperuser) {
+        if (! $bypassApiRules) {
             $query->applyRule('update');
         }
 
         $record = $query->findOrFail($recordId);
 
         if ($isAuthCollection
-            && ! $bypassSuperuser
+            && ! $bypassApiRules
             && isset($data['password'])
             && ! isset($data['old_password'])
             && ! empty($data['old_password'])) {
@@ -39,7 +39,7 @@ class UpdateRecordAction
         }
 
         if ($isAuthCollection
-            && ! $bypassSuperuser
+            && ! $bypassApiRules
             && isset($data['password'])
             && isset($data['old_password'])
             && ! Hash::check($data['old_password'], $record->password)) {
