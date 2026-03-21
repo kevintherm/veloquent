@@ -5,9 +5,6 @@
     - unique property on the fields object is strictly for readonly purpose
     - unique property on the fields object are modified through managing indexes automatically
         - only if the index is that specific field with type unique
-- delete records
-    - single delete
-    - mass delete
 - fix bug reserved field on copy collection
     - remove reserved fields on copy
 - fix bug: relation picker modal

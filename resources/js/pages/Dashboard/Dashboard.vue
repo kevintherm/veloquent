@@ -1,7 +1,20 @@
 <script setup>
 import { computed, onUnmounted, ref, watch } from "vue";
 import axios from "axios";
-import { Button, Checkbox, Input } from "@/components/ui";
+import { toast } from "vue-sonner";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    Button,
+    Checkbox,
+    Input,
+} from "@/components/ui";
 import { Search, SlidersHorizontal } from "lucide-vue-next";
 import { useRoute, useRouter } from "vue-router";
 import DashboardLayout from "@/layouts/DashboardLayout.vue";
@@ -29,6 +42,8 @@ const sortBy = ref(null);
 const sortDirection = ref("asc");
 const lastAutoOpenedRecordKey = ref(null);
 const isAutoOpeningRecord = ref(false);
+const bulkActionProcessing = ref(false);
+const showBulkDeleteDialog = ref(false);
 let searchDebounceTimer = null;
 
 const normalizeRecordsPayload = (payload) => {
@@ -242,6 +257,56 @@ const handleOpenRecord = (record) => {
     });
 };
 
+const performBulkDelete = async (collectionName, recordIds) => {
+    // Current implementation uses per-record deletes. Replace with a future bulk endpoint here.
+    return Promise.allSettled(recordIds.map((recordId) => {
+        return axios.delete(
+            `/api/collections/${encodeURIComponent(collectionName)}/records/${encodeURIComponent(recordId)}`
+        );
+    }));
+};
+
+const handleBulkDelete = async () => {
+    if (bulkActionProcessing.value) {
+        return;
+    }
+
+    if (!activeCollection.value?.name || !selectedRecords.value.length) {
+        toast.error("No records selected.");
+        return;
+    }
+
+    bulkActionProcessing.value = true;
+    showBulkDeleteDialog.value = false;
+
+    try {
+        const results = await performBulkDelete(activeCollection.value.name, selectedRecords.value);
+        const failedCount = results.filter((result) => result.status === "rejected").length;
+        const deletedCount = results.length - failedCount;
+
+        if (deletedCount > 0) {
+            toast.success(`Deleted ${deletedCount} record(s).`);
+        }
+
+        if (failedCount > 0) {
+            toast.error(`Failed to delete ${failedCount} record(s).`);
+        }
+
+        await fetchRecords();
+    } finally {
+        bulkActionProcessing.value = false;
+    }
+};
+
+const requestBulkDelete = () => {
+    if (!activeCollection.value?.name || !selectedRecords.value.length) {
+        toast.error("No records selected.");
+        return;
+    }
+
+    showBulkDeleteDialog.value = true;
+};
+
 const normalizedRouteRecordId = computed(() => {
     if (typeof route.query.recordId !== "string") {
         return null;
@@ -451,7 +516,29 @@ onUnmounted(() => {
             </div>
 
             <!-- Floating Bulk Actions Bar -->
-            <BulkActions :selected-records="selectedRecords" @clear-selection="selectedRecords = []"/>
+            <BulkActions
+                :selected-records="selectedRecords"
+                :processing="bulkActionProcessing"
+                @clear-selection="selectedRecords = []"
+                @delete-records="requestBulkDelete"
+            />
+
+            <AlertDialog :open="showBulkDeleteDialog" @update:open="(value) => { showBulkDeleteDialog = value; }">
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete selected records?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will delete {{ selectedRecords.length }} record(s). This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel :disabled="bulkActionProcessing">Cancel</AlertDialogCancel>
+                        <AlertDialogAction :disabled="bulkActionProcessing" @click="handleBulkDelete">
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
             <DataTable
                 :records="records"

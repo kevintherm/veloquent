@@ -13,8 +13,16 @@ import {
   Switch,
   Input,
   Label,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui";
-import { Plus, Search, X } from "lucide-vue-next";
+import { ChevronDown, Copy, Plus, Search, Trash2, X } from "lucide-vue-next";
 import { resolveCollectionFieldTypeIcon } from "@/lib/collectionFieldTypeIcons";
 import { openRecordForm } from "@/lib/recordFormSheet";
 import { useDashboardState } from "@/lib/dashboardState";
@@ -51,6 +59,8 @@ const relationDialogState = ref({
   search: "",
   selected: [],
 });
+const recordActionsMenuOpen = ref(false);
+const showDeleteRecordDialog = ref(false);
 const availableCollections = ref([]);
 const { requestRecordsReload } = useDashboardState();
 
@@ -657,6 +667,73 @@ const handleSave = async () => {
   }
 };
 
+const toggleRecordActionsMenu = () => {
+  recordActionsMenuOpen.value = !recordActionsMenuOpen.value;
+};
+
+const closeRecordActionsMenu = () => {
+  recordActionsMenuOpen.value = false;
+};
+
+const resolveRecordIdentifier = () => {
+  return props.record?.id ?? null;
+};
+
+const handleCopyRawJson = async () => {
+  closeRecordActionsMenu();
+
+  if (!props.record) {
+    toast.error("No record available to copy.");
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(props.record, null, 2));
+    toast.success("Raw JSON copied.");
+  } catch {
+    toast.error("Failed to copy raw JSON.");
+  }
+};
+
+const handleDeleteRecord = async () => {
+  closeRecordActionsMenu();
+
+  const recordId = resolveRecordIdentifier();
+  const identifier = fetchedCollection.value?.id ?? collectionIdentifier.value;
+
+  if (!recordId || !identifier) {
+    toast.error("Unable to resolve record for deletion.");
+    return;
+  }
+
+  submitting.value = true;
+  showDeleteRecordDialog.value = false;
+
+  try {
+    await axios.delete(
+      `/api/collections/${encodeURIComponent(identifier)}/records/${encodeURIComponent(recordId)}`
+    );
+    toast.success("Record deleted.");
+    requestRecordsReload();
+    handleClose();
+  } catch {
+    toast.error("Failed to delete record.");
+  } finally {
+    submitting.value = false;
+  }
+};
+
+const requestDeleteRecord = () => {
+  closeRecordActionsMenu();
+
+  if (!resolveRecordIdentifier()) {
+    toast.error("Unable to resolve record for deletion.");
+    return;
+  }
+
+  showDeleteRecordDialog.value = true;
+};
+
 onMounted(async () => {
   await fetchCollectionInfo();
 });
@@ -793,12 +870,48 @@ onMounted(async () => {
 
       <SheetFooter class="absolute bottom-0 left-0 right-0 p-6 bg-background border-t">
         <div class="flex gap-2 w-full">
+          <div v-if="isUpdating" class="relative">
+            <Button variant="outline" :disabled="submitting || loadingCollection" @click="toggleRecordActionsMenu">
+              Actions
+              <ChevronDown class="h-4 w-4 ml-1" />
+            </Button>
+            <div v-if="recordActionsMenuOpen"
+              class="absolute bottom-11 left-0 z-20 min-w-44 rounded-md border bg-background p-1 shadow-lg">
+              <button type="button" class="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-sm hover:bg-muted"
+                :disabled="submitting" @click="handleCopyRawJson">
+                <Copy class="h-4 w-4" />
+                Copy Raw JSON
+              </button>
+              <button type="button"
+                class="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-sm text-destructive hover:bg-muted"
+                :disabled="submitting" @click="requestDeleteRecord">
+                <Trash2 class="h-4 w-4" />
+                Delete Record
+              </button>
+            </div>
+          </div>
+
           <Button variant="outline" class="flex-1" @click="handleClose">Cancel</Button>
           <Button class="flex-1" :disabled="submitting || loadingCollection" @click="handleSave">
             {{ submitting ? 'Saving...' : 'Save Record' }}
           </Button>
         </div>
       </SheetFooter>
+
+      <AlertDialog :open="showDeleteRecordDialog" @update:open="(value) => { showDeleteRecordDialog = value; }">
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete record?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel :disabled="submitting">Cancel</AlertDialogCancel>
+            <AlertDialogAction :disabled="submitting" @click="handleDeleteRecord">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </SheetContent>
   </Sheet>
 </template>
