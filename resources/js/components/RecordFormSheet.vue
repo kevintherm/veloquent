@@ -58,6 +58,7 @@ const relationDialogState = ref({
   fieldName: null,
   search: "",
   selected: [],
+  refreshCallback: null,
 });
 const recordActionsMenuOpen = ref(false);
 const showDeleteRecordDialog = ref(false);
@@ -299,7 +300,7 @@ const loadRelationOptions = async (field) => {
       `/api/collections/${encodeURIComponent(targetCollection)}/records`,
       {
         params: {
-          per_page: 100,
+          per_page: 250,
         },
       }
     );
@@ -373,6 +374,7 @@ const openRelationDialog = async (field) => {
     fieldName: field.name,
     search: "",
     selected: normalizeRelationSelection(formState.value[field.name]),
+    refreshCallback: () => loadRelationOptions(field),
   };
 };
 
@@ -382,6 +384,7 @@ const closeRelationDialog = () => {
     fieldName: null,
     search: "",
     selected: [],
+    refreshCallback: null,
   };
 };
 
@@ -612,7 +615,7 @@ const applyValidationErrors = (errors) => {
   };
 };
 
-const handleOpenRelatedCollectionForm = (field) => {
+const handleOpenRelatedCollectionForm = (field, callback = null) => {
   const targetCollection = resolveRelationTargetName(field);
 
   if (!targetCollection) {
@@ -622,7 +625,23 @@ const handleOpenRelatedCollectionForm = (field) => {
   openRecordForm({
     collection: targetCollection,
     origin: props.sheetId,
+    onSave: () => {
+      // Call the refresh callback if provided
+      if (callback) {
+        callback();
+      }
+    },
   });
+};
+
+const handleCreateNewRelatedRecord = () => {
+  const field = currentRelationDialogField.value;
+  
+  if (!field) {
+    return;
+  }
+  
+  handleOpenRelatedCollectionForm(field, relationDialogState.value.refreshCallback);
 };
 
 const handleSave = async () => {
@@ -790,11 +809,6 @@ onMounted(async () => {
               <p v-else-if="relationSelectionLabels(field).length" class="text-xs text-muted-foreground">
                 Selected: {{ relationSelectionLabels(field).join(", ") }}
               </p>
-              <Button variant="outline" size="sm" class="gap-1" type="button"
-                @click="handleOpenRelatedCollectionForm(field)">
-                <Plus class="h-3.5 w-3.5" />
-                New Related Record
-              </Button>
             </div>
 
             <p v-if="fieldErrors[field.name]" class="text-xs text-destructive">
@@ -856,9 +870,15 @@ onMounted(async () => {
             </div>
 
             <div class="flex items-center justify-between border-t px-4 py-3">
-              <Button variant="ghost" type="button" @click="clearRelationDialogSelection">
-                Clear Selection
-              </Button>
+              <div class="flex gap-2">
+                <Button variant="ghost" type="button" @click="clearRelationDialogSelection">
+                  Clear Selection
+                </Button>
+                <Button variant="outline" type="button" @click="handleCreateNewRelatedRecord">
+                  <Plus class="h-3.5 w-3.5 mr-1" />
+                  New Related Record
+                </Button>
+              </div>
               <div class="flex gap-2">
                 <Button variant="outline" type="button" @click="closeRelationDialog">Cancel</Button>
                 <Button type="button" @click="applyRelationDialogSelection">Apply</Button>

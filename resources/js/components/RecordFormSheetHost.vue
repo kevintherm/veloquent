@@ -14,6 +14,8 @@ const handleSave = (sheetId, payload) => {
     if (typeof sheet?.onSave === "function") {
         sheet.onSave(payload);
     }
+    
+    closeRecordForm(sheetId, payload);
 };
 </script>
 
