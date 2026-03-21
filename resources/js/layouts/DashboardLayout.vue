@@ -17,7 +17,7 @@ import { useDashboardState } from "@/lib/dashboardState";
 const { state, logout } = useAuth();
 const router = useRouter();
 const route = useRoute();
-const { activeCollection } = useDashboardState();
+const { activeCollection, collectionsReloadNonce } = useDashboardState();
 
 const collections = ref([]);
 const isMobileSidebarOpen = ref(false);
@@ -141,6 +141,10 @@ watch(
         ensureCollectionPath();
     }
 );
+
+watch(collectionsReloadNonce, async () => {
+    await fetchCollections();
+});
 
 const handleLogout = async () => {
     await logout();

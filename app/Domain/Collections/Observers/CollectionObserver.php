@@ -81,7 +81,6 @@ readonly class CollectionObserver
 
         $fieldsWereDirty = $collection->isDirty('fields');
         $indexesWereDirty = $collection->isDirty('indexes');
-        $nameWasDirty = $collection->isDirty('name');
         $isAuthCollection = $collection->type === CollectionType::Auth;
 
         $tableName = $collection->getPhysicalTableName();
@@ -92,19 +91,6 @@ readonly class CollectionObserver
         $newFields = $this->extractFields($collection->fields ?? []);
 
         try {
-            if ($nameWasDirty) {
-                $oldTableName = Collection::formatTableName($collection->getOriginal('name'), $collection->is_system);
-                $this->ddlService->renameTable($oldTableName, $collection->getPhysicalTableName());
-
-                $protectedOldNames = $this->protectedUniqueIndexNames($oldTableName, $originalFields, $existingIndexesOnTable);
-                $this->indexSyncService->dropManagedIndexesForPreviousTableName(
-                    $tableName,
-                    $oldTableName,
-                    $protectedOldNames
-                );
-
-                $collection->schema_updated_at = now();
-            }
 
             if ($fieldsWereDirty) {
                 $preDropIndexNames = $this->indexNamesToDropBeforeFieldChanges(
@@ -135,7 +121,7 @@ readonly class CollectionObserver
                 $collection->schema_updated_at = now();
             }
 
-            if ($indexesWereDirty || $fieldsWereDirty || $nameWasDirty) {
+            if ($indexesWereDirty || $fieldsWereDirty) {
                 $effectiveFields = $fieldsWereDirty
                     ? $newFields
                     : $this->extractFields($collection->fields ?? []);
