@@ -17,6 +17,14 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui";
 import { Plus, Trash2, Copy, ArrowDown, ArrowUp, Settings2 } from "lucide-vue-next";
 import { useDashboardState } from "@/lib/dashboardState";
@@ -149,6 +157,8 @@ const showNewFieldForm = ref(false);
 const showNewIndexForm = ref(false);
 const editingFieldIndex = ref(null);
 const fieldsListContainer = ref(null);
+const showDeleteCollectionDialog = ref(false);
+const showTruncateCollectionDialog = ref(false);
 
 const normalizeCollectionPayload = (payload) => {
   if (payload?.data && !Array.isArray(payload.data)) {
@@ -523,15 +533,8 @@ const handleDelete = async () => {
     return;
   }
 
-  const confirmed = window.confirm(
-    `Are you sure you want to delete "${fetchedCollection.value.name}"? This action cannot be undone.`
-  );
-
-  if (!confirmed) {
-    return;
-  }
-
   submitting.value = true;
+  showDeleteCollectionDialog.value = false;
 
   try {
     await axios.delete(`/api/collections/${encodeURIComponent(fetchedCollection.value.id)}`);
@@ -551,15 +554,8 @@ const handleTruncate = async () => {
     return;
   }
 
-  const confirmed = window.confirm(
-    `Are you sure you want to truncate all records in "${fetchedCollection.value.name}"? This action cannot be undone.`
-  );
-
-  if (!confirmed) {
-    return;
-  }
-
   submitting.value = true;
+  showTruncateCollectionDialog.value = false;
 
   try {
     await axios.delete(`/api/collections/${encodeURIComponent(fetchedCollection.value.id)}/truncate`);
@@ -570,6 +566,22 @@ const handleTruncate = async () => {
   } finally {
     submitting.value = false;
   }
+};
+
+const requestDeleteCollection = () => {
+  if (!fetchedCollection.value?.id) {
+    return;
+  }
+
+  showDeleteCollectionDialog.value = true;
+};
+
+const requestTruncateCollection = () => {
+  if (!fetchedCollection.value?.id) {
+    return;
+  }
+
+  showTruncateCollectionDialog.value = true;
 };
 
 const handleCopy = () => {
@@ -1044,15 +1056,47 @@ onMounted(async () => {
               <Copy class="h-4 w-4 mr-1" />
               Copy
             </Button>
-            <Button variant="destructive" class="flex-1" @click="handleTruncate" :disabled="submitting">
+            <Button variant="destructive" class="flex-1" @click="requestTruncateCollection" :disabled="submitting">
               Truncate
             </Button>
-            <Button variant="destructive" class="flex-1" @click="handleDelete" :disabled="submitting">
+            <Button variant="destructive" class="flex-1" @click="requestDeleteCollection" :disabled="submitting">
               Delete
             </Button>
           </div>
         </div>
       </SheetFooter>
+
+      <AlertDialog :open="showTruncateCollectionDialog"
+        @update:open="(value) => { showTruncateCollectionDialog = value; }">
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Truncate collection?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will delete all records in "{{ fetchedCollection?.name }}" and cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel :disabled="submitting">Cancel</AlertDialogCancel>
+            <AlertDialogAction :disabled="submitting" @click="handleTruncate">Truncate</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog :open="showDeleteCollectionDialog"
+        @update:open="(value) => { showDeleteCollectionDialog = value; }">
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete collection?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete "{{ fetchedCollection?.name }}" and cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel :disabled="submitting">Cancel</AlertDialogCancel>
+            <AlertDialogAction :disabled="submitting" @click="handleDelete">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </SheetContent>
   </Sheet>
 </template>

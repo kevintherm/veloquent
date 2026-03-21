@@ -34,6 +34,16 @@ export { default as TableHead } from "./TableHead.vue";
 export { default as TableHeader } from "./TableHeader.vue";
 export { default as TableRow } from "./TableRow.vue";
 
+export { default as AlertDialog } from "./alert-dialog/AlertDialog.vue";
+export { default as AlertDialogAction } from "./alert-dialog/AlertDialogAction.vue";
+export { default as AlertDialogCancel } from "./alert-dialog/AlertDialogCancel.vue";
+export { default as AlertDialogContent } from "./alert-dialog/AlertDialogContent.vue";
+export { default as AlertDialogDescription } from "./alert-dialog/AlertDialogDescription.vue";
+export { default as AlertDialogFooter } from "./alert-dialog/AlertDialogFooter.vue";
+export { default as AlertDialogHeader } from "./alert-dialog/AlertDialogHeader.vue";
+export { default as AlertDialogTitle } from "./alert-dialog/AlertDialogTitle.vue";
+export { default as AlertDialogTrigger } from "./alert-dialog/AlertDialogTrigger.vue";
+
 export const sheetVariants = cva(
   "fixed z-50 gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
   {
