@@ -1,9 +1,7 @@
 
 ## TODO
 
-- Naming conventions
-    - clarify in code/docs: `SchemaChangePlan::getAllReservedFields(false)` in unique sync intentionally means base reserved fields only
-    - reason: auth reserved fields (for example `email`) must still sync `unique` from single-column unique indexes
+- Make the columns in datatable fixed so it doesn't do layout change on loading state
 - Relation filtering
     - e.g users.name = "John"
     - Detect a dot in the field path — author.name signals a relation traversal
@@ -36,6 +34,9 @@
     - No expand field count limit
     - expandedRelations as dynamic property 
     - Field|array type inconsistency
+- Naming conventions
+    - clarify in code/docs: `SchemaChangePlan::getAllReservedFields(false)` in unique sync intentionally means base reserved fields only
+    - reason: auth reserved fields (for example `email`) must still sync `unique` from single-column unique indexes
 - Hooks system
 - Optimize Record model
     - cache collections
