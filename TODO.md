@@ -5,10 +5,8 @@
     - unique property on the fields object is strictly for readonly purpose
     - unique property on the fields object are modified through managing indexes automatically
         - only if the index is that specific field with type unique
-- fix bug reserved field on copy collection
-    - remove reserved fields on copy
 - fix bug: relation picker modal
-    - new related record button should be inside the relation picker
+    - new related record button shouzld be inside the relation picker
     - relation picker does not refresh when new related record is created
 - UI Dashboard
     - Manage systems

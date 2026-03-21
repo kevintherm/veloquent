@@ -591,12 +591,38 @@ const handleCopy = () => {
 
   isCreateMode.value = true;
 
+  const copiedFields = (fetchedCollection.value.fields || [])
+    .filter((field) => !reservedFieldNames.has(String(field?.name ?? "")))
+    .map((field, index) => {
+      const copiedField = {
+        ...field,
+        order: index,
+      };
+
+      delete copiedField.id;
+
+      return copiedField;
+    });
+
+  const copiedIndexes = (fetchedCollection.value.indexes || [])
+    .map((index) => {
+      const columns = Array.isArray(index?.columns)
+        ? index.columns.filter((column) => !reservedFieldNames.has(String(column ?? "")))
+        : [];
+
+      return {
+        ...index,
+        columns,
+      };
+    })
+    .filter((index) => index.columns.length > 0);
+
   const copyData = {
     name: `${fetchedCollection.value.name}_copy`,
     description: fetchedCollection.value.description || "",
     type: fetchedCollection.value.type || "base",
-    fields: JSON.parse(JSON.stringify(fetchedCollection.value.fields || [])),
-    indexes: JSON.parse(JSON.stringify(fetchedCollection.value.indexes || [])),
+    fields: JSON.parse(JSON.stringify(copiedFields)),
+    indexes: JSON.parse(JSON.stringify(copiedIndexes)),
     api_rules: normalizeApiRules(JSON.parse(JSON.stringify(fetchedCollection.value.api_rules || {}))),
   };
 
