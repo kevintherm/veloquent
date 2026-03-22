@@ -30,12 +30,13 @@ class CollectionBuilder extends Builder
 
     public function applyFilter(?string $filter): static
     {
-        if (! $filter) {
+        $systemSorts = ['created_at', 'updated_at', 'id'];
+        $allowed = array_merge($this->getModel()->getFillable(), $systemSorts);
+
+        if (!$filter) {
             return $this;
         }
 
-        $allowedFields = $this->getModel()->getFillable();
-
-        return $this->where(fn ($q) => QueryFilter::for($q, $allowedFields)->run($filter));
+        return $this->where(fn($q) => QueryFilter::for($q, $allowed)->run($filter));
     }
 }

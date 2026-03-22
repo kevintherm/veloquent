@@ -29,7 +29,7 @@ Use `search-docs` for detailed broadcasting patterns and documentation.
 ### Installing Broadcasting
 
 ```bash
-php artisan install:broadcasting
+vendor/bin/sail artisan install:broadcasting
 ```
 
 Use flags for specific drivers: `--reverb`, `--pusher`, `--ably`. This creates `config/broadcasting.php` and `routes/channels.php`.
@@ -37,7 +37,7 @@ Use flags for specific drivers: `--reverb`, `--pusher`, `--ably`. This creates `
 ### Creating a Broadcast Event
 
 ```bash
-php artisan make:event OrderShipped
+vendor/bin/sail artisan make:event OrderShipped
 ```
 
 <!-- Broadcast Event -->
@@ -89,13 +89,13 @@ Broadcast::channel('orders.{orderId}', function (User $user, int $orderId) {
 Create a channel class for complex authorization:
 
 ```bash
-php artisan make:channel OrderChannel
+vendor/bin/sail artisan make:channel OrderChannel
 ```
 
 List all registered channels:
 
 ```bash
-php artisan channel:list
+vendor/bin/sail artisan channel:list
 ```
 
 ### Client-Side Setup
@@ -136,9 +136,9 @@ Echo.private(`orders.${orderId}`)
 ### Running Required Processes
 
 ```bash
-php artisan queue:work    # Required for ShouldBroadcast events
+vendor/bin/sail artisan queue:work    # Required for ShouldBroadcast events
 
-php artisan reverb:start  # Required for Reverb driver
+vendor/bin/sail artisan reverb:start  # Required for Reverb driver
 
 ```
 
@@ -181,7 +181,7 @@ Use `search-docs` to find detailed code examples and configuration for each of t
 
 - Closure-based in `routes/channels.php` — use for simple authorization logic (e.g., checking ownership).
 - Model binding: `Broadcast::channel('orders.{order}', fn (User $user, Order $order) => ...)` — use when authorization depends on the model instance (auto-resolves from route parameter).
-- Channel classes via `php artisan make:channel` — use for complex authorization logic that benefits from dependency injection or reusable logic across channels.
+- Channel classes via `vendor/bin/sail artisan make:channel` — use for complex authorization logic that benefits from dependency injection or reusable logic across channels.
 - Multiple guards: `['guards' => ['web', 'admin']]` — use when the channel should be accessible by users authenticated via different guards (e.g., both regular users and admins).
 
 ### Model Broadcasting
@@ -207,7 +207,7 @@ Use `search-docs` to find detailed code examples and configuration for each of t
 - CORS: When frontend/backend are on different origins, add `broadcasting/auth` to `config/cors.php` paths and set `supports_credentials` to `true`.
 - Missing `VITE_` prefix: Client-side env vars must start with `VITE_`.
 - `channels.php` not loaded: Verify it's included in `withRouting()` in `bootstrap/app.php`.
-- Reverb is long-running: Code changes require `php artisan reverb:restart`.
+- Reverb is long-running: Code changes require `vendor/bin/sail artisan reverb:restart`.
 - Presence channel auth must return an array of user data (`['id' => $user->id, 'name' => $user->name]`), not `true`. Returning `true` silently fails.
 - Dot prefix rule: When using `broadcastAs()`, client must prefix with `.` (e.g., `.listen('.custom.name')`). Without the dot, Echo looks for `App\Events\custom.name` which silently fails.
 - Reverb host separation: `REVERB_SERVER_HOST`/`REVERB_SERVER_PORT` (internal bind) vs `REVERB_HOST`/`REVERB_PORT` (public address) vs `VITE_REVERB_HOST`/`VITE_REVERB_PORT` (client JS).

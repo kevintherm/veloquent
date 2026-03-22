@@ -1,9 +1,9 @@
 {
     "mcpServers": {
         "laravel-boost": {
-            "command": "/usr/bin/php",
+            "command": "vendor/bin/sail",
             "args": [
-                "/home/kevin/Projects/laravel/velo-revamp/artisan",
+                "artisan",
                 "boost:mcp"
             ]
         }

@@ -1,7 +1,6 @@
 
 ## TODO
 
-- Make the columns in datatable fixed so it doesn't do layout change on loading state
 - Relation filtering
     - e.g users.name = "John"
     - Detect a dot in the field path — author.name signals a relation traversal
@@ -37,6 +36,7 @@
 - Naming conventions
     - clarify in code/docs: `SchemaChangePlan::getAllReservedFields(false)` in unique sync intentionally means base reserved fields only
     - reason: auth reserved fields (for example `email`) must still sync `unique` from single-column unique indexes
+- Store cached target_collection_name for field type relation
 - Hooks system
 - Optimize Record model
     - cache collections

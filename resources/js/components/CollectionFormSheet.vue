@@ -197,7 +197,12 @@ const normalizeIndexForForm = (index) => {
 
 const fetchAvailableCollections = async () => {
   try {
-    const response = await axios.get("/api/collections");
+    const response = await axios.get("/api/collections", {
+      params: {
+        filter: `is_system = false`,
+      },
+    });
+
     const rows = Array.isArray(response?.data?.data) ? response.data.data : [];
 
     availableCollections.value = rows;
@@ -640,7 +645,7 @@ watch(showNewFieldForm, () => {
 });
 
 onMounted(async () => {
-  // await fetchAvailableCollections();
+  await fetchAvailableCollections();
   await fetchCollectionInfo();
 });
 </script>
@@ -1108,8 +1113,7 @@ onMounted(async () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog :open="showDeleteCollectionDialog"
-        @update:open="(value) => { showDeleteCollectionDialog = value; }">
+      <AlertDialog :open="showDeleteCollectionDialog" @update:open="(value) => { showDeleteCollectionDialog = value; }">
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete collection?</AlertDialogTitle>
