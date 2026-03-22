@@ -14,7 +14,6 @@
 - Relation expand limit: 10
 - Disable relation field indexing
     - causes state corruption
-- Fix bug: created_at and updated_at broken state
 - Schema corrupt detection
     - Corrupt on update: Rebuild entire schema, manual trigger
     - Corrupt on create: Drop entire table, manual trigger

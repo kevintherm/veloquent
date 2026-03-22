@@ -482,7 +482,10 @@ const isRequiredField = (field) => {
 };
 
 const isDisabledField = (field) => {
-  return ["id", "created_at", "updated_at"].includes(field?.name) && isUpdating.value;
+  if (["created_at", "updated_at"].includes(field?.name)) {
+    return true;
+  }
+  return field?.name === "id" && isUpdating.value;
 };
 
 const resolveInputType = (field) => {
