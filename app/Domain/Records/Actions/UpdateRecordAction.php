@@ -47,7 +47,9 @@ class UpdateRecordAction
                 'old_password' => 'The old password is incorrect.',
             ]);
         }
-
+ 
+        $data = array_diff_key($data, array_flip(['created_at', 'updated_at']));
+ 
         $record->update($data);
         $record->fresh();
 
