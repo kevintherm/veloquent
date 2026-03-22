@@ -38,7 +38,7 @@ Route::post('/onboarding/initialized', [OnboardingController::class, 'initialize
 Route::post('/onboarding/superuser', [OnboardingController::class, 'createSuperuser'])->name('onboarding.superuser.create');
 
 Route::middleware('auth:api')->group(function () {
-    Route::get('/user', fn(Request $request) => $request->user());
+    Route::get('/user', fn (Request $request) => $request->user());
     Route::post('/collections/{collection}/subscribe', [SubscribeController::class, 'subscribe']);
     Route::delete('/collections/{collection}/subscribe', [SubscribeController::class, 'unsubscribe']);
 });
