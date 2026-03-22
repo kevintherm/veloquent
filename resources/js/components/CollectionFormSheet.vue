@@ -821,15 +821,23 @@ onMounted(async () => {
                   </div>
                 </div>
 
-                <!-- <div class="pt-4 border-t border-primary/10 mt-1">
+                <div class="pt-4 border-t border-primary/10 mt-1">
                   <Label
                     class="text-xs font-semibold tracking-wide text-primary/80 uppercase mb-3 block">Constraints</Label>
+                  <div class="flex flex-wrap items-center gap-6">
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                      <Checkbox v-model="newField.nullable" />
+                      <span
+                        class="text-sm font-medium text-foreground/80 group-hover:text-foreground transition-colors">Allow
+                        Null Values</span>
+                    </label>
+                  </div>
                   <div class="flex gap-3 justify-end mt-2">
                     <Button variant="outline" size="sm" class="border-primary/20 hover:bg-primary/10"
                       @click="showNewFieldForm = false">Cancel</Button>
                     <Button size="sm" @click="addField">Add Field</Button>
                   </div>
-                </div> -->
+                </div>
               </div>
 
               <!-- Fields List -->
@@ -1000,8 +1008,8 @@ onMounted(async () => {
                 <Label>Columns</Label>
                 <div class="flex flex-wrap gap-2">
                   <template v-for="field in formState.fields" :key="field.name">
-                    <button v-if="isFieldIndexable(field.type)" type="button"
-                      @click="toggleColumnInIndex(field.name)" class="px-3 py-1 text-sm rounded-full border"
+                    <button v-if="isFieldIndexable(field.type)" type="button" @click="toggleColumnInIndex(field.name)"
+                      class="px-3 py-1 text-sm rounded-full border"
                       :class="newIndex.columns.includes(field.name) ? 'bg-primary text-primary-foreground' : 'bg-background'">
                       {{ field.name }}
                     </button>
