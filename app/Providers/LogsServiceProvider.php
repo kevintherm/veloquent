@@ -35,17 +35,17 @@ class LogsServiceProvider extends ServiceProvider
             $response = $event->response;
 
             // Only log API requests, and skip the log viewer endpoints themselves
-            if (! $request->is('api/*') || $request->is('api/logs', 'api/logs/*')) {
+            if (!$request->is('api/*') || $request->is('api/logs', 'api/logs/*')) {
                 return;
             }
 
             $sensitiveKeys = ['password', 'password_confirmation', 'token', 'authorization'];
             $payload = $request->except($sensitiveKeys);
 
-            // Truncate values that exceed 1000 characters
+            // Truncate values
             array_walk_recursive($payload, function (&$value) {
-                if (is_string($value) && Str::length($value) > 1000) {
-                    $value = Str::limit($value, 1000);
+                if (is_string($value) && Str::length($value) > 500) {
+                    $value = Str::limit($value, 500);
                 }
             });
 

@@ -3,8 +3,6 @@ import {
     ArrowDown,
     ArrowUp,
     ArrowUpDown,
-    ChevronLeft,
-    ChevronRight,
 } from "lucide-vue-next";
 import { toast } from "vue-sonner";
 import { resolveCollectionFieldTypeIcon } from "@/lib/collectionFieldTypeIcons";
@@ -20,6 +18,16 @@ import {
     TableCell,
     Checkbox,
 } from "@/components/ui";
+import {
+    Pagination,
+    PaginationContent,
+    PaginationEllipsis,
+    PaginationFirst,
+    PaginationItem,
+    PaginationLast,
+    PaginationNext,
+    PaginationPrevious,
+} from "@/components/ui/pagination";
 
 defineProps({
     records: {
@@ -72,7 +80,7 @@ defineProps({
     }
 })
 
-defineEmits(['toggle-all', 'toggle-record', 'prev-page', 'next-page', 'open-record', 'sort'])
+defineEmits(['toggle-all', 'toggle-record', 'change-page', 'open-record', 'sort'])
 
 const skeletonRows = 5;
 
@@ -293,17 +301,26 @@ const copyRecordId = async (recordId) => {
                     Showing 0 records
                 </template>
             </div>
-            <div class="flex items-center gap-2">
-                <Button variant="outline" size="icon" class="h-8 w-8" :disabled="currentPage === 1"
-                    @click="$emit('prev-page')">
-                    <ChevronLeft class="h-4 w-4" />
-                </Button>
-                <div class="text-sm font-medium">Page {{ currentPage }} of {{ totalPages }}</div>
-                <Button variant="outline" size="icon" class="h-8 w-8" :disabled="currentPage === totalPages"
-                    @click="$emit('next-page')">
-                    <ChevronRight class="h-4 w-4" />
-                </Button>
-            </div>
+            <Pagination v-if="totalPages > 1" v-slot="{ page }" :total="filteredRecordsLength" :sibling-count="1"
+                show-edges :page="currentPage" :items-per-page="itemsPerPage"
+                @update:page="$emit('change-page', $event)" class="justify-end">
+                <PaginationContent v-slot="{ items }">
+                    <PaginationFirst />
+                    <PaginationPrevious />
+
+                    <template v-for="(item, index) in items">
+                        <PaginationItem v-if="item.type === 'page'" :key="index" :value="item.value" as-child>
+                            <Button class="w-9 h-9 p-0" :variant="item.value === page ? 'default' : 'outline'">
+                                {{ item.value }}
+                            </Button>
+                        </PaginationItem>
+                        <PaginationEllipsis v-else :key="item.type" :index="index" />
+                    </template>
+
+                    <PaginationNext />
+                    <PaginationLast />
+                </PaginationContent>
+            </Pagination>
         </div>
     </Card>
 </template>

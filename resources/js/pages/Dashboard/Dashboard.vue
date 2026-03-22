@@ -555,8 +555,7 @@ onUnmounted(() => {
                 @toggle-all="toggleAll"
                 @toggle-record="toggleRecord"
                 @sort="handleSort"
-                @prev-page="currentPage--"
-                @next-page="currentPage++"
+                @change-page="(p) => currentPage = p"
                 @open-record="handleOpenRecord"
             />
         </div>

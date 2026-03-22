@@ -21,7 +21,17 @@ import {
     CardHeader,
     CardTitle
 } from "@/components/ui";
-import { Copy, AlertCircle, Info, AlertTriangle, Search, ChevronLeft, ChevronRight, Activity, Clock, Server, RefreshCw } from "lucide-vue-next";
+import {
+    Pagination,
+    PaginationContent,
+    PaginationEllipsis,
+    PaginationFirst,
+    PaginationItem,
+    PaginationLast,
+    PaginationNext,
+    PaginationPrevious,
+} from "@/components/ui/pagination";
+import { Copy, AlertCircle, Info, AlertTriangle, Search, Activity, Clock, Server, RefreshCw, Timer } from "lucide-vue-next";
 import { toast } from "vue-sonner";
 
 const dates = ref([]);
@@ -192,6 +202,18 @@ const formatDate = (dateStr) => {
     }
 };
 
+const getUrlPath = (url) => {
+    if (!url) return "";
+    try {
+        const urlObj = new URL(url);
+        return urlObj.pathname + urlObj.search;
+    } catch {
+        // Fallback for relative URLs or invalid ones
+        const match = url.match(/^https?:\/\/[^\/]+(\/.*)/);
+        return match ? match[1] : url;
+    }
+};
+
 const copyToClipboard = async (text) => {
     if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(text);
@@ -202,7 +224,7 @@ const copyToClipboard = async (text) => {
 <template>
     <DashboardLayout>
         <div class="space-y-6">
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between gap-4">
                 <div>
                     <h2 class="text-3xl font-bold tracking-tight">System Logs</h2>
                     <p class="text-muted-foreground mt-2">
@@ -233,7 +255,7 @@ const copyToClipboard = async (text) => {
                     </div>
                     <div>
                         <h3 class="text-3xl font-bold">{{filteredLogs.filter(l => l.level.toUpperCase() ===
-                            'ERROR').length }}</h3>
+                            'ERROR').length}}</h3>
                         <p class="text-sm text-muted-foreground font-medium">Errors</p>
                     </div>
                 </Card>
@@ -243,7 +265,7 @@ const copyToClipboard = async (text) => {
                     </div>
                     <div>
                         <h3 class="text-3xl font-bold">{{filteredLogs.filter(l => l.level.toUpperCase() ===
-                            'WARNING').length }}</h3>
+                            'WARNING').length}}</h3>
                         <p class="text-sm text-muted-foreground font-medium">Warnings</p>
                     </div>
                 </Card>
@@ -375,8 +397,13 @@ const copyToClipboard = async (text) => {
                                 </TableRow>
                                 <TableRow v-for="(log, idx) in paginatedLogs" :key="idx"
                                     class="cursor-pointer hover:bg-muted/50" @click="openLogDetails(log)">
-                                    <TableCell class="text-xs whitespace-nowrap text-muted-foreground">
-                                        {{ formatDate(log.datetime) }}
+                                    <TableCell class="text-xs whitespace-nowrap text-muted-foreground py-4">
+                                        <div class="font-medium text-foreground">{{ formatDate(log.datetime) }}</div>
+                                        <div v-if="log.context?.duration || log.context?.time"
+                                            class="flex items-center gap-1 mt-1 text-[10px]">
+                                            <Timer class="h-3 w-3" />
+                                            {{ log.context?.duration || log.context?.time }}ms
+                                        </div>
                                     </TableCell>
                                     <TableCell>
                                         <div class="flex items-center gap-2">
@@ -388,6 +415,12 @@ const copyToClipboard = async (text) => {
                                     </TableCell>
                                     <TableCell class="font-mono text-sm max-w-[500px]">
                                         <div class="truncate" :title="log.message">{{ log.message }}</div>
+                                        <div v-if="log.message === 'HTTP_REQUEST' && log.context?.method"
+                                            class="text-[10px] text-muted-foreground mt-0.5 flex gap-1 items-center">
+                                            <span class="font-bold text-primary uppercase">{{ log.context.method
+                                            }}</span>
+                                            <span class="truncate">{{ getUrlPath(log.context.url) }}</span>
+                                        </div>
                                     </TableCell>
                                     <TableCell class="text-right">
                                         <Button variant="ghost" size="sm"
@@ -399,24 +432,35 @@ const copyToClipboard = async (text) => {
                     </div>
 
                     <!-- Pagination Controls -->
-                    <div class="p-4 border-t bg-muted/20 flex items-center justify-between" v-if="totalPages > 1">
+                    <div class="p-4 border-t bg-muted/20 flex flex-col sm:flex-row gap-4 items-center justify-between"
+                        v-if="totalPages > 1">
                         <p class="text-sm text-muted-foreground">
                             Showing <span class="font-medium">{{ (currentPage - 1) * itemsPerPage + 1 }}</span> to <span
                                 class="font-medium">{{ Math.min(currentPage * itemsPerPage, filteredLogs.length)
                                 }}</span> of <span class="font-medium">{{ filteredLogs.length }}</span> results
                         </p>
-                        <div class="flex items-center gap-2">
-                            <Button variant="outline" size="sm" :disabled="currentPage === 1" @click="currentPage--">
-                                <ChevronLeft class="h-4 w-4 mr-1" />
-                                Previous
-                            </Button>
-                            <div class="text-sm font-medium px-2">Page {{ currentPage }} of {{ totalPages }}</div>
-                            <Button variant="outline" size="sm" :disabled="currentPage === totalPages"
-                                @click="currentPage++">
-                                Next
-                                <ChevronRight class="h-4 w-4 ml-1" />
-                            </Button>
-                        </div>
+                        <Pagination v-slot="{ page }" :total="filteredLogs.length" :sibling-count="1" show-edges
+                            :default-page="1" v-model:page="currentPage" :items-per-page="itemsPerPage"
+                            class="justify-end">
+                            <PaginationContent v-slot="{ items }">
+                                <PaginationFirst />
+                                <PaginationPrevious />
+
+                                <template v-for="(item, index) in items">
+                                    <PaginationItem v-if="item.type === 'page'" :key="index" :value="item.value"
+                                        as-child>
+                                        <Button class="w-9 h-9 p-0"
+                                            :variant="item.value === page ? 'default' : 'outline'">
+                                            {{ item.value }}
+                                        </Button>
+                                    </PaginationItem>
+                                    <PaginationEllipsis v-else :key="item.type" :index="index" />
+                                </template>
+
+                                <PaginationNext />
+                                <PaginationLast />
+                            </PaginationContent>
+                        </Pagination>
                     </div>
                 </CardContent>
             </Card>
