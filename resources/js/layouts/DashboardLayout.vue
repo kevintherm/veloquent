@@ -44,6 +44,13 @@ const resolveCollectionFromRoute = () => {
 };
 
 const ensureCollectionPath = () => {
+    const isCollectionRoute = route.params.collection !== undefined;
+    const isRootRoute = route.path === "/";
+
+    if (!isCollectionRoute && !isRootRoute) {
+        return;
+    }
+
     const collectionName = activeCollection.value?.name;
 
     if (!collectionName) {
