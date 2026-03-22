@@ -28,38 +28,14 @@ readonly class CollectionObserver
     public function creating(Collection $collection): void
     {
         $this->validateApiRules($collection);
-
-        if (empty($collection->table_name)) {
-            $collection->table_name = SchemaChangePlan::generateTableName($collection->name, $collection->is_system ?? false);
-        }
+        $this->ensureTableNameIsSet($collection);
 
         $this->startJob($collection, SchemaOperation::Create);
 
-        $tableName = $collection->getPhysicalTableName();
-        $isAuthCollection = $collection->type === CollectionType::Auth;
-
         try {
-            $fieldsForDDL = SchemaChangePlan::stripForDDL($collection->fields ?? []);
-            $this->ddlService->createTable($tableName, $fieldsForDDL);
-
-            $desiredIndexes = $this->extractIndexes($collection->indexes ?? []);
-            $effectiveFields = $this->syncFieldUniqueFlags(
-                $this->extractFields($collection->fields ?? []),
-                $desiredIndexes,
-                $isAuthCollection,
-            );
-            $collection->fields = $effectiveFields;
-
-            $protectedIndexNames = $this->protectedUniqueIndexNames($tableName, $effectiveFields, $desiredIndexes);
-            $this->indexSyncService->sync($tableName, $desiredIndexes, $protectedIndexNames);
-
-            $collection->schema_updated_at = now();
+            $this->createSchema($collection);
         } catch (\Throwable $e) {
-            if (! $this->isMySQL()) {
-                SchemaJob::where('table_name', $tableName)->delete();
-            }
-
-            throw $e;
+            $this->handleJobFailure($collection, $e);
         }
     }
 
@@ -74,76 +50,14 @@ readonly class CollectionObserver
     public function updating(Collection $collection): void
     {
         $this->validateApiRules($collection);
-
-        if ($collection->isDirty('type')) {
-            throw new InvalidArgumentException('Collection type cannot be changed');
-        }
+        $this->ensureTypeIsNotChanged($collection);
 
         $this->startJob($collection, SchemaOperation::Update);
 
-        $fieldsWereDirty = $collection->isDirty('fields');
-        $indexesWereDirty = $collection->isDirty('indexes');
-        $isAuthCollection = $collection->type === CollectionType::Auth;
-
-        $tableName = $collection->getPhysicalTableName();
-        $desiredIndexes = $this->extractIndexes($collection->indexes ?? []);
-
-        $originalFields = $this->extractFields($collection->getOriginal('fields'));
-        $newFields = $this->extractFields($collection->fields ?? []);
-
         try {
-
-            if ($fieldsWereDirty) {
-                $affectedColumns = $this->fieldNamesAffectedByUpdate($originalFields, $newFields);
-                $this->indexSyncService->dropIndexesReferencingColumns($tableName, $affectedColumns);
-
-                $desiredIndexes = $this->updateIndexesForFieldChanges($originalFields, $newFields, $desiredIndexes);
-                $collection->indexes = array_map(
-                    fn (Index $index): array => $index->toArray(),
-                    $desiredIndexes
-                );
-
-                $originalFieldsForDDL = SchemaChangePlan::stripForDDL($originalFields);
-                $newFieldsForDDL = SchemaChangePlan::stripForDDL($newFields);
-
-                $this->ddlService->updateTable(
-                    $tableName,
-                    $originalFieldsForDDL,
-                    $newFieldsForDDL,
-                    $isAuthCollection
-                );
-
-                $collection->schema_updated_at = now();
-            }
-
-            if ($indexesWereDirty || $fieldsWereDirty) {
-                $effectiveFields = $fieldsWereDirty
-                    ? $newFields
-                    : $this->extractFields($collection->fields ?? []);
-
-                $effectiveFields = $this->syncFieldUniqueFlags(
-                    $effectiveFields,
-                    $desiredIndexes,
-                    $isAuthCollection,
-                );
-                $collection->fields = $effectiveFields;
-
-                $protectedIndexNames = $this->protectedUniqueIndexNames($tableName, $effectiveFields, $desiredIndexes);
-
-                $this->indexSyncService->sync(
-                    $tableName,
-                    $desiredIndexes,
-                    $protectedIndexNames
-                );
-            }
-
-            $collection->schema_updated_at = now();
+            $this->updateSchema($collection);
         } catch (\Throwable $e) {
-            if (! $this->isMySQL()) {
-                SchemaJob::where('table_name', $tableName)->delete();
-            }
-
-            throw $e;
+            $this->handleJobFailure($collection, $e);
         }
     }
 
@@ -158,12 +72,30 @@ readonly class CollectionObserver
 
         $this->startJob($collection, SchemaOperation::Drop);
 
-        $this->ddlService->deleteTable($collection->getPhysicalTableName());
+        try {
+            $this->ddlService->deleteTable($collection->getPhysicalTableName());
+        } catch (\Throwable $e) {
+            $this->handleJobFailure($collection, $e);
+        }
     }
 
     public function deleted(Collection $collection): void
     {
         $this->endJob($collection);
+    }
+
+    private function ensureTableNameIsSet(Collection $collection): void
+    {
+        if (empty($collection->table_name)) {
+            $collection->table_name = SchemaChangePlan::generateTableName($collection->name, $collection->is_system ?? false);
+        }
+    }
+
+    private function ensureTypeIsNotChanged(Collection $collection): void
+    {
+        if ($collection->isDirty('type')) {
+            throw new InvalidArgumentException('Collection type cannot be changed');
+        }
     }
 
     private function startJob(Collection $collection, SchemaOperation $op): void
@@ -179,6 +111,90 @@ readonly class CollectionObserver
     private function endJob(Collection $collection): void
     {
         SchemaJob::where('table_name', $collection->getPhysicalTableName())->delete();
+    }
+
+    private function handleJobFailure(Collection $collection, \Throwable $e): void
+    {
+        if (! $this->isMySQL()) {
+            $this->endJob($collection);
+        }
+
+        throw $e;
+    }
+
+    private function createSchema(Collection $collection): void
+    {
+        $tableName = $collection->getPhysicalTableName();
+
+        $fieldsForDDL = SchemaChangePlan::stripForDDL($collection->fields ?? []);
+        $this->ddlService->createTable($tableName, $fieldsForDDL);
+
+        $desiredIndexes = $this->extractIndexes($collection->indexes ?? []);
+        $effectiveFields = $this->syncFieldUniqueFlags(
+            $this->extractFields($collection->fields ?? []),
+            $desiredIndexes
+        );
+        $collection->fields = $effectiveFields;
+
+        $protectedIndexNames = $this->protectedUniqueIndexNames($tableName, $effectiveFields, $desiredIndexes);
+        $this->indexSyncService->sync($tableName, $desiredIndexes, $protectedIndexNames);
+
+        $collection->schema_updated_at = now();
+    }
+
+    private function updateSchema(Collection $collection): void
+    {
+        $fieldsWereDirty = $collection->isDirty('fields');
+        $indexesWereDirty = $collection->isDirty('indexes');
+
+        if (! $fieldsWereDirty && ! $indexesWereDirty) {
+            $collection->schema_updated_at = now();
+
+            return;
+        }
+
+        $tableName = $collection->getPhysicalTableName();
+        $isAuthCollection = $collection->type === CollectionType::Auth;
+
+        $originalFields = $this->extractFields($collection->getOriginal('fields'));
+        $newFields = $this->extractFields($collection->fields ?? []);
+        $desiredIndexes = $this->extractIndexes($collection->indexes ?? []);
+
+        if ($fieldsWereDirty) {
+            $affectedColumns = $this->fieldNamesAffectedByUpdate($originalFields, $newFields);
+            $this->indexSyncService->dropIndexesReferencingColumns($tableName, $affectedColumns);
+
+            $desiredIndexes = $this->updateIndexesForFieldChanges($originalFields, $newFields, $desiredIndexes);
+            $collection->indexes = array_map(
+                fn (Index $index): array => $index->toArray(),
+                $desiredIndexes
+            );
+
+            $this->ddlService->updateTable(
+                $tableName,
+                SchemaChangePlan::stripForDDL($originalFields),
+                SchemaChangePlan::stripForDDL($newFields),
+                $isAuthCollection
+            );
+        }
+
+        $effectiveFields = $fieldsWereDirty ? $newFields : $this->extractFields($collection->fields ?? []);
+
+        $effectiveFields = $this->syncFieldUniqueFlags(
+            $effectiveFields,
+            $desiredIndexes
+        );
+        $collection->fields = $effectiveFields;
+
+        $protectedIndexNames = $this->protectedUniqueIndexNames($tableName, $effectiveFields, $desiredIndexes);
+
+        $this->indexSyncService->sync(
+            $tableName,
+            $desiredIndexes,
+            $protectedIndexNames
+        );
+
+        $collection->schema_updated_at = now();
     }
 
     private function validateApiRules(Collection $collection): void
@@ -361,7 +377,7 @@ readonly class CollectionObserver
      * @param  array<int, Index>  $indexes
      * @return array<int, array<string, mixed>>
      */
-    private function syncFieldUniqueFlags(array $fields, array $indexes, bool $isAuthCollection): array
+    private function syncFieldUniqueFlags(array $fields, array $indexes): array
     {
         $reservedNames = SchemaChangePlan::getAllReservedFields(false);
 

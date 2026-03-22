@@ -1,6 +1,8 @@
-
 ## TODO
 
+- Fix toast z-index should be infront of everything
+- Fix: cannot copy auth collection in CollectionFormSheet because reserved auth fields like email, password, etc are copied too
+    - Strip reserved fields any indexes from the copied collection data
 - Schema corrupt detection
     - Corrupt on update: Rebuild entire schema, manual trigger
     - Corrupt on create: Drop entire table, manual trigger
