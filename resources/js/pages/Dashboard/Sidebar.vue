@@ -53,7 +53,13 @@ const handleLogoutClick = async () => {
 };
 
 const regularCollections = computed(() => {
-    return props.filteredCollections.filter((collection) => !collection.is_system);
+    return props.filteredCollections
+        .filter((collection) => !collection.is_system)
+        .sort((a, b) => {
+            if (a.name === "users") return -1;
+            if (b.name === "users") return 1;
+            return a.name.localeCompare(b.name);
+        });
 });
 
 const systemCollections = computed(() => {
@@ -87,8 +93,9 @@ watch(
                     </div>
                 </div>
 
-                <router-link v-for="collection in regularCollections" :key="collection.id" :to="`/${encodeURIComponent(collection.name)}`"
-                    @click="handleCollectionSelect(collection)" draggable="false" :class="[
+                <router-link v-for="collection in regularCollections" :key="collection.id"
+                    :to="`/${encodeURIComponent(collection.name)}`" @click="handleCollectionSelect(collection)"
+                    draggable="false" :class="[
                         'w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors',
                         activeCollection.id === collection.id
                             ? 'bg-primary/10 text-primary'
@@ -108,8 +115,9 @@ watch(
                         </Button>
                     </CollapsibleTrigger>
                     <CollapsibleContent class="flex flex-col gap-2">
-                        <router-link v-for="collection in systemCollections" :key="collection.id" :to="`/${encodeURIComponent(collection.name)}`"
-                            @click="handleCollectionSelect(collection)" draggable="false" :class="[
+                        <router-link v-for="collection in systemCollections" :key="collection.id"
+                            :to="`/${encodeURIComponent(collection.name)}`" @click="handleCollectionSelect(collection)"
+                            draggable="false" :class="[
                                 'w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors',
                                 activeCollection.id === collection.id
                                     ? 'bg-primary/10 text-primary'
@@ -150,7 +158,8 @@ watch(
                     <p class="text-xs text-muted-foreground truncate">{{ state.user.email }}</p>
                 </div>
             </div>
-            <Button @click="handleLogoutClick" variant="ghost" class="w-full justify-start gap-2 h-9 text-muted-foreground">
+            <Button @click="handleLogoutClick" variant="ghost"
+                class="w-full justify-start gap-2 h-9 text-muted-foreground">
                 <LogOut class="h-4 w-4" />
                 Logout
             </Button>

@@ -12,8 +12,17 @@
         - author           → __posts_author
         - author.publisher → __posts_author__publisher
 - Relation expand limit: 10
+- Disable relation field indexing
+    - causes state corruption
+- Fix bug: created_at and updated_at broken state
 - Schema corrupt detection
-    - Fix: Rebuild entire schema, manual trigger
+    - Corrupt on update: Rebuild entire schema, manual trigger
+    - Corrupt on create: Drop entire table, manual trigger
+        - sends unique error message to user
+        - inside collection form sheet:
+            - option to trigger table dropping, user can safely send the POST request to create the collection again
+        - outside collection form sheet:
+            - show option to detect table unsync with metadata with option to trigger clean orphan tables
 - Improv: Hide copy,truncate,delete actions from manage collections under a dropdown
 - UI Dashboard
     - Manage systems
@@ -28,6 +37,7 @@
             - Export n imports
                 - Collections metadata only
     - View Logs
+    - Fix bug: cannot open settings page
 - RecordExpansionService revise
     - resolveTargetCollection N+1 on collection lookup
     - No expand field count limit

@@ -205,12 +205,12 @@ const copyRecordId = async (recordId) => {
                         </TableHead>
                         <TableHead v-for="column in columns" :key="column"
                             :class="isFixedWidthColumn(column) ? 'w-45 min-w-45 whitespace-nowrap' : 'w-64 min-w-64'">
-                            <button type="button" class="inline-flex items-center gap-2"
-                                @click="$emit('sort', column)">
+                            <button type="button" class="inline-flex items-center gap-2" @click="$emit('sort', column)">
                                 <component :is="resolveColumnIcon(column, columnTypes)"
                                     class="h-3.5 w-3.5 text-muted-foreground" />
                                 <span>{{ columnLabel(column) }}</span>
-                                <component :is="sortIconFor(column, sortBy, sortDirection)" class="h-3.5 w-3.5 text-muted-foreground" />
+                                <component :is="sortIconFor(column, sortBy, sortDirection)"
+                                    class="h-3.5 w-3.5 text-muted-foreground" />
                             </button>
                         </TableHead>
                     </TableRow>
@@ -244,16 +244,12 @@ const copyRecordId = async (recordId) => {
                                     {{ formatValue(record[column]) }}
                                 </button>
                                 <div v-else-if="isRelationColumn(column, relationFields)" class="flex flex-col gap-1">
-                                    <a
-                                        v-for="relationId in normalizeRelationIds(record[column])"
+                                    <a v-for="relationId in normalizeRelationIds(record[column])"
                                         :key="`${record.id}-${column}-${relationId}`"
-                                        :href="relationRecordUrl(column, relationId, relationFields)"
-                                        target="_blank"
+                                        :href="relationRecordUrl(column, relationId, relationFields)" target="_blank"
                                         rel="noopener noreferrer"
                                         class="font-mono text-xs text-primary underline underline-offset-2 truncate"
-                                        :title="relationLinkTitle(column, relationFields)"
-                                        @click.stop
-                                    >
+                                        :title="relationLinkTitle(column, relationFields)" @click.stop>
                                         {{ relationId }}
                                     </a>
                                     <span v-if="normalizeRelationIds(record[column]).length === 0">-</span>
@@ -267,12 +263,12 @@ const copyRecordId = async (recordId) => {
                     <template v-if="loading">
                         <TableRow v-for="rowIndex in skeletonRows" :key="`skeleton-row-${rowIndex}`">
                             <TableCell>
-                                <Skeleton class="h-4 w-4 rounded-sm" />
+                                <Skeleton class="h-8 w-4 rounded-sm" />
                             </TableCell>
                             <TableCell v-for="column in columns" :key="`skeleton-${rowIndex}-${column}`" :class="[
                                 isFixedWidthColumn(column) ? 'w-45 min-w-45 whitespace-nowrap' : 'w-64 min-w-64 max-w-64',
                             ]">
-                                <Skeleton class="h-4 w-full" />
+                                <Skeleton class="h-8 w-full" />
                             </TableCell>
                         </TableRow>
                     </template>
