@@ -171,7 +171,12 @@ const normalizeCollectionPayload = (payload) => {
   return payload;
 };
 
-const reservedFieldNames = new Set(["id", "created_at", "updated_at"]);
+const baseReservedFieldNames = new Set(["id", "created_at", "updated_at"]);
+const authReservedFieldNames = new Set(["id", "created_at", "updated_at", "email", "password", "email_visibility", "verified"]);
+
+const getReservedFieldNames = (type) => {
+  return type === "auth" ? authReservedFieldNames : baseReservedFieldNames;
+};
 
 const normalizeFieldForForm = (field) => {
   const normalized = { ...field };
@@ -356,7 +361,7 @@ const addField = () => {
     (f) => f.name === newField.value.name.trim()
   );
 
-  if (reservedFieldNames.has(newField.value.name.trim())) {
+  if (getReservedFieldNames(formState.value.type).has(newField.value.name.trim())) {
     toast.error("Reserved fields are managed by the system.");
     return;
   }
@@ -626,8 +631,10 @@ const handleCopy = () => {
 
   isCreateMode.value = true;
 
+  const reservedFields = getReservedFieldNames(fetchedCollection.value.type);
+
   const copiedFields = (fetchedCollection.value.fields || [])
-    .filter((field) => !reservedFieldNames.has(String(field?.name ?? "")))
+    .filter((field) => !reservedFields.has(String(field?.name ?? "")))
     .map((field, index) => {
       const copiedField = {
         ...field,
@@ -642,7 +649,7 @@ const handleCopy = () => {
   const copiedIndexes = (fetchedCollection.value.indexes || [])
     .map((index) => {
       const columns = Array.isArray(index?.columns)
-        ? index.columns.filter((column) => !reservedFieldNames.has(String(column ?? "")))
+        ? index.columns.filter((column) => !reservedFields.has(String(column ?? "")))
         : [];
 
       return {
