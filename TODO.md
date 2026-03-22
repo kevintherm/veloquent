@@ -9,6 +9,9 @@
         - outside collection form sheet:
             - show option to detect table unsync with metadata with option to trigger clean orphan tables
 - UI Dashboard
+    - Deleting existing fields improvements:
+        - Mark field as deleted, when sending the payload strip the field from the payload
+        - Field mark as deleted so user can revert the changes, before actually sending the request
     - Manage systems
         - Schema corrupt fix button
         - Setup system variables
@@ -21,7 +24,6 @@
             - Export n imports
                 - Collections metadata only
     - View Logs
-    - Fix bug: cannot open settings page
 - fix: Truncating collection bypasses RelationIntegrityService
 - fix: inconsistent validation and exception messages
 - RecordExpansionService revise

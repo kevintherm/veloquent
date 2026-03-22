@@ -8,6 +8,7 @@ import {
 } from "@/components/ui";
 import { FlaskConical } from "lucide-vue-next";
 import RealtimeTest from "@/pages/Settings/RealtimeTest.vue";
+import ApiTest from "@/pages/Settings/ApiTest.vue";
 </script>
 
 <template>
@@ -27,6 +28,7 @@ import RealtimeTest from "@/pages/Settings/RealtimeTest.vue";
         </TabsList>
 
         <TabsContent value="tests" class="space-y-4">
+          <ApiTest />
           <RealtimeTest />
         </TabsContent>
       </Tabs>
