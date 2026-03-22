@@ -1,5 +1,6 @@
 <?php
 
+use App\Domain\SchemaManagement\Exceptions\SchemaCorruptException;
 use App\Http\Middleware\TokenAuthMiddleware;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
@@ -42,6 +43,15 @@ return Application::configure(basePath: dirname(__DIR__))
                         'errors' => $errors,
                     ], $code);
                 };
+
+                if ($e instanceof SchemaCorruptException) {
+                    return response()->json([
+                        'message' => $e->getMessage(),
+                        'error_type' => 'SCHEMA_CORRUPT',
+                        'activity' => $e->activity->value,
+                        'collection_id' => $e->collectionId,
+                    ], 409);
+                }
 
                 if ($e instanceof ValidationException) {
                     return $errorResponse('Validation error', Response::HTTP_UNPROCESSABLE_ENTITY, $e->errors());

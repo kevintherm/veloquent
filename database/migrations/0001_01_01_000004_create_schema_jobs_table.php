@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('schema_jobs', function (Blueprint $table) {
             $table->id();
-            $table->foreignUlid('collection_id');
+            $table->foreignUlid('collection_id')->index();
             $table->string('operation');
             $table->string('table_name');
             $table->timestamp('started_at');

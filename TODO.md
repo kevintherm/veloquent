@@ -1,13 +1,19 @@
 ## TODO
 
-- Schema corrupt detection
-    - Corrupt on update: Rebuild entire schema, manual trigger
-    - Corrupt on create: Drop entire table, manual trigger
-        - sends unique error message to user
-        - inside collection form sheet:
-            - option to trigger table dropping, user can safely send the POST request to create the collection again
-        - outside collection form sheet:
-            - show option to detect table unsync with metadata with option to trigger clean orphan tables
+- Parse logs from unformatted log as message and context
+    ```
+    // [2025-03-20 12:34:56] production.ERROR: Something failed {"key":"val"} []
+    $pattern = '/^\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\] (\w+)\.(\w+): (.+)$/';
+
+    if (preg_match($pattern, $line, $m)) {
+        return [
+            'timestamp'   => $m[1],
+            'environment' => $m[2],
+            'level'       => strtolower($m[3]),
+            'message'     => $m[4],
+        ];
+    }
+    ```
 - UI Dashboard
     - Deleting existing fields improvements:
         - Mark field as deleted, when sending the payload strip the field from the payload
@@ -26,6 +32,10 @@
     - View Logs
 - fix: Truncating collection bypasses RelationIntegrityService
 - fix: inconsistent validation and exception messages
+- Unify errors
+    - Creating/Updating uses ValidationException
+    - Other errors use regular exception
+- improv: refactor redundant extractIndexes() methods
 - RecordExpansionService revise
     - resolveTargetCollection N+1 on collection lookup
     - No expand field count limit

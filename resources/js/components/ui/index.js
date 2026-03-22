@@ -11,6 +11,7 @@ export { default as SheetTrigger } from "./SheetTrigger.vue";
 
 export { default as Card } from "./Card.vue";
 export { default as CardContent } from "./CardContent.vue";
+export { default as CardDescription } from "./CardDescription.vue";
 export { default as CardHeader } from "./CardHeader.vue";
 export { default as CardTitle } from "./CardTitle.vue";
 
@@ -43,6 +44,16 @@ export { default as AlertDialogFooter } from "./alert-dialog/AlertDialogFooter.v
 export { default as AlertDialogHeader } from "./alert-dialog/AlertDialogHeader.vue";
 export { default as AlertDialogTitle } from "./alert-dialog/AlertDialogTitle.vue";
 export { default as AlertDialogTrigger } from "./alert-dialog/AlertDialogTrigger.vue";
+
+export { default as Dialog } from "./dialog/Dialog.vue";
+export { default as DialogClose } from "./dialog/DialogClose.vue";
+export { default as DialogContent } from "./dialog/DialogContent.vue";
+export { default as DialogDescription } from "./dialog/DialogDescription.vue";
+export { default as DialogFooter } from "./dialog/DialogFooter.vue";
+export { default as DialogHeader } from "./dialog/DialogHeader.vue";
+export { default as DialogScrollContent } from "./dialog/DialogScrollContent.vue";
+export { default as DialogTitle } from "./dialog/DialogTitle.vue";
+export { default as DialogTrigger } from "./dialog/DialogTrigger.vue";
 
 export { default as DropdownMenu } from "./dropdown-menu/DropdownMenu.vue";
 export { default as DropdownMenuTrigger } from "./dropdown-menu/DropdownMenuTrigger.vue";

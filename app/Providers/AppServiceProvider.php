@@ -54,5 +54,7 @@ class AppServiceProvider extends ServiceProvider
         foreach (['list', 'view', 'create', 'update', 'delete'] as $action) {
             Gate::define("{$action}-records", fn (?Record $user, Collection $collection) => $user?->isSuperuser() || $collection->is_system === false);
         }
+
+        Gate::define('manage-schema', fn ($user) => $user?->isSuperuser());
     }
 }
