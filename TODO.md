@@ -23,7 +23,6 @@
             - option to trigger table dropping, user can safely send the POST request to create the collection again
         - outside collection form sheet:
             - show option to detect table unsync with metadata with option to trigger clean orphan tables
-- Improv: Hide copy,truncate,delete actions from manage collections under a dropdown
 - UI Dashboard
     - Manage systems
         - Schema corrupt fix button

@@ -22,7 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui";
-import { ChevronDown, Copy, Plus, Search, Trash2, X } from "lucide-vue-next";
+import { MoreHorizontal, Copy, Plus, Search, Trash2, X, Menu, MoreVertical } from "lucide-vue-next";
 import { resolveCollectionFieldTypeIcon } from "@/lib/collectionFieldTypeIcons";
 import { openRecordForm } from "@/lib/recordFormSheet";
 import { useDashboardState } from "@/lib/dashboardState";
@@ -65,8 +65,10 @@ const showDeleteRecordDialog = ref(false);
 const availableCollections = ref([]);
 const { requestRecordsReload } = useDashboardState();
 
+const localRecordId = ref(props.record?.id);
+
 const isUpdating = computed(() => {
-  return Boolean(props.record?.id);
+  return Boolean(localRecordId.value);
 });
 
 const collectionIdentifier = computed(() => {
@@ -640,11 +642,11 @@ const handleOpenRelatedCollectionForm = (field, callback = null) => {
 
 const handleCreateNewRelatedRecord = () => {
   const field = currentRelationDialogField.value;
-  
+
   if (!field) {
     return;
   }
-  
+
   handleOpenRelatedCollectionForm(field, relationDialogState.value.refreshCallback);
 };
 
@@ -668,7 +670,7 @@ const handleSave = async () => {
 
     if (isUpdating.value) {
       response = await axios.put(
-        `/api/collections/${encodeURIComponent(identifier)}/records/${encodeURIComponent(props.record.id)}`,
+        `/api/collections/${encodeURIComponent(identifier)}/records/${encodeURIComponent(localRecordId.value)}`,
         payload
       );
     } else {
@@ -699,7 +701,22 @@ const closeRecordActionsMenu = () => {
 };
 
 const resolveRecordIdentifier = () => {
-  return props.record?.id ?? null;
+  return localRecordId.value ?? null;
+};
+
+const handleCopyRecord = () => {
+  closeRecordActionsMenu();
+
+  localRecordId.value = null;
+
+  const sensitiveFields = ["id", "created_at", "updated_at"];
+  for (const field of sensitiveFields) {
+    if (formState.value[field] !== undefined) {
+      delete formState.value[field];
+    }
+  }
+
+  toast.success("Record copied into a new form.");
 };
 
 const handleCopyRawJson = async () => {
@@ -791,14 +808,12 @@ onMounted(async () => {
             <textarea v-if="field.type === 'longtext' || field.type === 'json'" :id="`field-${sheetId}-${field.name}`"
               v-model="formState[field.name]"
               class="min-h-24 rounded-md border border-input bg-background px-3 py-2 text-sm"
-              :class="isDisabledField(field) ? 'cursor-not-allowed bg-muted' : ''"
-              :disabled="isDisabledField(field)"
+              :class="isDisabledField(field) ? 'cursor-not-allowed bg-muted' : ''" :disabled="isDisabledField(field)"
               :placeholder="`Enter ${displayFieldName(field.name)}...`"></textarea>
 
             <Input v-else-if="field.type !== 'boolean' && field.type !== 'relation'"
               :id="`field-${sheetId}-${field.name}`" v-model="formState[field.name]" :type="resolveInputType(field)"
-              :disabled="isDisabledField(field)"
-              :placeholder="`Enter ${displayFieldName(field.name)}...`" />
+              :disabled="isDisabledField(field)" :placeholder="`Enter ${displayFieldName(field.name)}...`" />
 
             <div v-else-if="field.type === 'boolean'" class="flex items-center gap-2 pt-1">
               <Switch :model-value="Boolean(formState[field.name])"
@@ -812,7 +827,7 @@ onMounted(async () => {
               </Button>
               <p v-if="relationLoading[field.name]" class="text-xs text-muted-foreground">Loading related records...</p>
               <p v-else-if="relationErrors[field.name]" class="text-xs text-destructive">{{ relationErrors[field.name]
-              }}</p>
+                }}</p>
               <p v-else-if="relationSelectionLabels(field).length" class="text-xs text-muted-foreground">
                 Selected: {{ relationSelectionLabels(field).join(", ") }}
               </p>
@@ -831,8 +846,10 @@ onMounted(async () => {
       </form>
 
       <Transition name="relation-dialog">
-        <div v-if="relationDialogState.open" class="fixed inset-0 z-60 flex items-center justify-center bg-black/70 p-4">
-          <div class="relation-dialog-panel flex h-[min(80vh,720px)] w-full max-w-3xl flex-col rounded-lg border bg-background shadow-xl">
+        <div v-if="relationDialogState.open"
+          class="fixed inset-0 z-60 flex items-center justify-center bg-black/70 p-4">
+          <div
+            class="relation-dialog-panel flex h-[min(80vh,720px)] w-full max-w-3xl flex-col rounded-lg border bg-background shadow-xl">
             <div class="flex items-center justify-between border-b px-4 py-3">
               <div>
                 <h3 class="text-base font-semibold">Select Related Record</h3>
@@ -899,21 +916,28 @@ onMounted(async () => {
         <div class="flex gap-2 w-full">
           <div v-if="isUpdating" class="relative">
             <Button variant="outline" :disabled="submitting || loadingCollection" @click="toggleRecordActionsMenu">
-              Actions
-              <ChevronDown class="h-4 w-4 ml-1" />
+              <MoreVertical class="h-4 w-4" />
+              <div class="sr-only">Actions</div>
             </Button>
             <div v-if="recordActionsMenuOpen"
               class="absolute bottom-11 left-0 z-20 min-w-44 rounded-md border bg-background p-1 shadow-lg">
-              <button type="button" class="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-sm hover:bg-muted"
-                :disabled="submitting" @click="handleCopyRawJson">
-                <Copy class="h-4 w-4" />
-                Copy Raw JSON
-              </button>
               <button type="button"
                 class="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-sm text-destructive hover:bg-muted"
                 :disabled="submitting" @click="requestDeleteRecord">
                 <Trash2 class="h-4 w-4" />
                 Delete Record
+              </button>
+              <button type="button"
+                class="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-sm hover:bg-muted"
+                :disabled="submitting" @click="handleCopyRecord">
+                <Copy class="h-4 w-4" />
+                Copy Record
+              </button>
+              <button type="button"
+                class="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-sm hover:bg-muted"
+                :disabled="submitting" @click="handleCopyRawJson">
+                <Copy class="h-4 w-4" />
+                Copy Raw JSON
               </button>
             </div>
           </div>
