@@ -1,8 +1,6 @@
 
 ## TODO
 
-- Disable relation field indexing
-    - causes state corruption
 - Relation filtering
     - e.g users.name = "John"
     - Detect a dot in the field path — author.name signals a relation traversal

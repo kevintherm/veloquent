@@ -200,6 +200,13 @@ const normalizeIndexForForm = (index) => {
   };
 };
 
+/**
+ * @TODO: Relation indexing is not yet supported and needs implementation.
+ */
+const isFieldIndexable = (type) => {
+  return !["json", "longtext", "url", "relation"].includes(type);
+};
+
 const isRelationNeeded = computed(() => {
   return formState.value.fields.some(f => f.type === 'relation') ||
     newField.value.type === 'relation';
@@ -828,8 +835,8 @@ onMounted(async () => {
                         class="text-sm font-medium text-foreground/80 group-hover:text-foreground transition-colors">Allow
                         Null Values</span>
                     </label>
-                    <label class="flex items-center gap-2 cursor-pointer group">
-                      <Checkbox v-model="newField.unique" />
+                    <label class="flex items-center gap-2 cursor-pointer group" :class="{ 'opacity-50 cursor-not-allowed': !isFieldIndexable(newField.type) }">
+                      <Checkbox v-model="newField.unique" :disabled="!isFieldIndexable(newField.type)" />
                       <span
                         class="text-sm font-medium text-foreground/80 group-hover:text-foreground transition-colors">Must
                         Be Unique</span>
@@ -972,8 +979,8 @@ onMounted(async () => {
                           class="text-sm font-medium text-foreground/80 group-hover:text-foreground transition-colors">Allow
                           Null Values</span>
                       </label>
-                      <label class="flex items-center gap-2 cursor-pointer group">
-                        <Checkbox v-model="field.unique" />
+                      <label class="flex items-center gap-2 cursor-pointer group" :class="{ 'opacity-50 cursor-not-allowed': !isFieldIndexable(field.type) }">
+                        <Checkbox v-model="field.unique" :disabled="!isFieldIndexable(field.type)" />
                         <span
                           class="text-sm font-medium text-foreground/80 group-hover:text-foreground transition-colors">Must
                           Be Unique</span>
@@ -1022,11 +1029,13 @@ onMounted(async () => {
               <div class="grid gap-2">
                 <Label>Columns</Label>
                 <div class="flex flex-wrap gap-2">
-                  <button v-for="field in formState.fields" :key="field.name" type="button"
-                    @click="toggleColumnInIndex(field.name)" class="px-3 py-1 text-sm rounded-full border"
-                    :class="newIndex.columns.includes(field.name) ? 'bg-primary text-primary-foreground' : 'bg-background'">
-                    {{ field.name }}
-                  </button>
+                  <template v-for="field in formState.fields" :key="field.name">
+                    <button v-if="isFieldIndexable(field.type)" type="button"
+                      @click="toggleColumnInIndex(field.name)" class="px-3 py-1 text-sm rounded-full border"
+                      :class="newIndex.columns.includes(field.name) ? 'bg-primary text-primary-foreground' : 'bg-background'">
+                      {{ field.name }}
+                    </button>
+                  </template>
                 </div>
               </div>
               <div class="flex gap-2">
