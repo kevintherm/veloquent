@@ -18,7 +18,6 @@ class Field implements \ArrayAccess, \JsonSerializable
         public ?int $max = null,
         public ?string $target_collection_id = null,
         public bool $cascade_on_delete = false,
-        public ?int $max_select = null,
     ) {}
 
     public static function fromArray(array $data): self
@@ -47,7 +46,6 @@ class Field implements \ArrayAccess, \JsonSerializable
             max: isset($shape['max']) ? (is_null($shape['max']) ? null : (int) $shape['max']) : null,
             target_collection_id: isset($shape['target_collection_id']) ? (is_null($shape['target_collection_id']) ? null : (string) $shape['target_collection_id']) : null,
             cascade_on_delete: (bool) ($shape['cascade_on_delete'] ?? false),
-            max_select: isset($shape['max_select']) ? (is_null($shape['max_select']) ? null : (int) $shape['max_select']) : null,
         );
     }
 
@@ -68,7 +66,6 @@ class Field implements \ArrayAccess, \JsonSerializable
             'max' => $this->max,
             'target_collection_id' => $this->target_collection_id,
             'cascade_on_delete' => $this->cascade_on_delete,
-            'max_select' => $this->max_select,
         ];
 
         return collect($data)
@@ -160,12 +157,6 @@ class Field implements \ArrayAccess, \JsonSerializable
 
         if ($key === 'cascade_on_delete') {
             $this->cascade_on_delete = (bool) $value;
-
-            return;
-        }
-
-        if ($key === 'max_select') {
-            $this->max_select = is_null($value) ? null : (int) $value;
         }
     }
 

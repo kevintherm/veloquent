@@ -5,6 +5,7 @@ namespace App\Domain\Records\Actions;
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Records\Models\Record;
+use App\Domain\Records\Services\RelationIntegrityService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
@@ -12,6 +13,10 @@ use Illuminate\Validation\ValidationException;
 
 class UpdateRecordAction
 {
+    public function __construct(
+        private readonly RelationIntegrityService $relationIntegrityService,
+    ) {}
+
     public function execute(Collection $collection, string $recordId, array $data): Record
     {
         Gate::authorize('update-records', $collection);
@@ -47,9 +52,11 @@ class UpdateRecordAction
                 'old_password' => 'The old password is incorrect.',
             ]);
         }
- 
+
         $data = array_diff_key($data, array_flip(['created_at', 'updated_at']));
- 
+
+        $this->relationIntegrityService->validateRelationIds($collection->fields ?? [], $data);
+
         $record->update($data);
         $record->fresh();
 

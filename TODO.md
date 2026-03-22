@@ -1,16 +1,6 @@
 
 ## TODO
 
-- Relation filtering
-    - e.g users.name = "John"
-    - Detect a dot in the field path — author.name signals a relation traversal
-    - Look up the schema — check the current collection's field definitions to confirm author is a relation field, and get its target collection/table name
-    - Register a LEFT JOIN — LEFT JOIN users AS __posts_author ON posts.author_id = __posts_author.id
-    - Rewrite the field to the aliased column — __posts_author.name
-    - Pass that aliased column string into your normal filter/sort path as if it were a plain field
-    - alias naming: You need a deterministic, collision-safe alias for each join.
-        - author           → __posts_author
-        - author.publisher → __posts_author__publisher
 - Schema corrupt detection
     - Corrupt on update: Rebuild entire schema, manual trigger
     - Corrupt on create: Drop entire table, manual trigger

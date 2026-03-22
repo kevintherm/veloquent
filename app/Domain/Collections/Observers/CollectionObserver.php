@@ -5,6 +5,7 @@ namespace App\Domain\Collections\Observers;
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Collections\ValueObjects\Index;
+use App\Domain\Records\Services\RelationIntegrityService;
 use App\Domain\SchemaManagement\Enums\SchemaOperation;
 use App\Domain\SchemaManagement\Models\SchemaJob;
 use App\Domain\SchemaManagement\Services\IndexSyncService;
@@ -18,6 +19,7 @@ readonly class CollectionObserver
     public function __construct(
         private SchemaDDLService $ddlService,
         private IndexSyncService $indexSyncService,
+        private RelationIntegrityService $relationIntegrityService,
     ) {}
 
     /**
@@ -152,6 +154,8 @@ readonly class CollectionObserver
 
     public function deleting(Collection $collection): void
     {
+        $this->relationIntegrityService->assertCollectionCanBeDeleted($collection);
+
         $this->startJob($collection, SchemaOperation::Drop);
 
         $this->ddlService->deleteTable($collection->getPhysicalTableName());

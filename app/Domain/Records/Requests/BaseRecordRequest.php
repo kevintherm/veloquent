@@ -31,8 +31,7 @@ abstract class BaseRecordRequest extends FormRequest
             }
 
             $payload[$fieldName] = $this->normalizeRelationInputValue(
-                $payload[$fieldName],
-                $this->isSingleRelationField($field),
+                $payload[$fieldName]
             );
         }
 
@@ -76,70 +75,14 @@ abstract class BaseRecordRequest extends FormRequest
             }
 
             if ($fieldType === CollectionFieldType::Relation) {
-                $maxSelect = $field['max_select'] ?? null;
-                $isSingleRelation = $this->isSingleRelationField($field);
-
-                if ($isSingleRelation) {
-                    $fieldRules[] = function (string $attribute, mixed $value, callable $fail) use ($field): void {
-                        if ($value === null) {
-                            return;
-                        }
-
-                        if (is_array($value) && count($value) > 1) {
-                            $fail('This relation only allows one ID.');
-
-                            return;
-                        }
-
-                        if (! is_string($value) || trim($value) === '') {
-                            $fail('Relation field value must be a valid record ID.');
-
-                            return;
-                        }
-
-                        $targetCollectionId = $field['target_collection_id'] ?? null;
-
-                        if (! is_string($targetCollectionId) || $targetCollectionId === '') {
-                            $fail('Relation field configuration is invalid.');
-
-                            return;
-                        }
-
-                        $targetCollection = Collection::query()->find($targetCollectionId);
-                        if ($targetCollection === null) {
-                            $fail('Relation target collection does not exist.');
-
-                            return;
-                        }
-
-                        $exists = Record::of($targetCollection)
-                            ->newQuery()
-                            ->where('id', trim($value))
-                            ->exists();
-
-                        if (! $exists) {
-                            $fail('One or more related records do not exist.');
-                        }
-                    };
-
-                    $rules[$fieldName] = $fieldRules;
-
-                    continue;
-                }
-
-                $fieldRules[] = 'array';
-
-                if (is_int($maxSelect)) {
-                    $fieldRules[] = 'max:'.$maxSelect;
-                }
+                $fieldRules[] = 'string';
 
                 $fieldRules[] = function (string $attribute, mixed $value, callable $fail) use ($field): void {
-                    if (! is_array($value)) {
+                    if ($value === null || ! is_string($value) || trim($value) === '') {
                         return;
                     }
 
                     $targetCollectionId = $field['target_collection_id'] ?? null;
-
                     if (! is_string($targetCollectionId) || $targetCollectionId === '') {
                         $fail('Relation field configuration is invalid.');
 
@@ -153,30 +96,17 @@ abstract class BaseRecordRequest extends FormRequest
                         return;
                     }
 
-                    $normalizedIds = collect($value)
-                        ->map(fn (mixed $relationId): mixed => is_string($relationId) ? trim($relationId) : $relationId)
-                        ->values();
+                    $exists = Record::of($targetCollection)
+                        ->newQuery()
+                        ->where('id', trim($value))
+                        ->exists();
 
-                    if ($normalizedIds->contains(fn (mixed $relationId): bool => ! is_string($relationId) || $relationId === '')) {
-                        $fail('Relation field values must contain valid record IDs.');
-
-                        return;
-                    }
-
-                    if ($normalizedIds->isEmpty()) {
-                        return;
-                    }
-
-                    $uniqueIds = $normalizedIds->unique()->values()->all();
-                    $existingCount = Record::of($targetCollection)->newQuery()->whereIn('id', $uniqueIds)->count();
-
-                    if ($existingCount !== count($uniqueIds)) {
-                        $fail('One or more related records do not exist.');
+                    if (! $exists) {
+                        $fail('The selected related record does not exist.');
                     }
                 };
 
                 $rules[$fieldName] = $fieldRules;
-                $rules["{$fieldName}.*"] = ['required', 'string'];
 
                 continue;
             }
@@ -257,29 +187,15 @@ abstract class BaseRecordRequest extends FormRequest
                 continue;
             }
 
-            $normalizedValue = $this->normalizeRelationInputValue(
-                $value,
-                $this->isSingleRelationField($field),
-            );
+            $normalizedValue = $this->normalizeRelationInputValue($value);
 
-            if ($this->isSingleRelationField($field)) {
-                if (! is_string($normalizedValue) || trim($normalizedValue) === '') {
-                    continue;
-                }
-
-                $data[$fieldName] = [trim($normalizedValue)];
-
-                continue;
+            if (is_string($normalizedValue) && trim($normalizedValue) !== '') {
+                $data[$fieldName] = trim($normalizedValue);
+            } elseif (is_array($normalizedValue) && count($normalizedValue) > 0) {
+                $data[$fieldName] = (string) $normalizedValue[0];
+            } else {
+                $data[$fieldName] = null;
             }
-
-            if (! is_array($normalizedValue)) {
-                continue;
-            }
-
-            $data[$fieldName] = collect($normalizedValue)
-                ->map(fn (mixed $relationId): string => (string) $relationId)
-                ->values()
-                ->all();
         }
 
         return $data;
@@ -293,33 +209,16 @@ abstract class BaseRecordRequest extends FormRequest
             ->all();
     }
 
-    private function normalizeRelationInputValue(mixed $value, bool $isSingleRelation): mixed
+    private function normalizeRelationInputValue(mixed $value): mixed
     {
         if ($value === null) {
             return null;
         }
 
-        if ($isSingleRelation) {
-            if (is_array($value)) {
-                if (count($value) === 1) {
-                    return is_string($value[0] ?? null) ? $value[0] : null;
-                }
-
-                return $value;
-            }
-
-            return $value;
-        }
-
         if (is_array($value)) {
-            return array_values($value);
+            return $value[0] ?? null;
         }
 
         return $value;
-    }
-
-    private function isSingleRelationField(Field|array $field): bool
-    {
-        return (int) ($field['max_select'] ?? 0) === 1;
     }
 }

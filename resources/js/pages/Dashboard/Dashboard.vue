@@ -186,7 +186,6 @@ const relationFieldsMeta = computed(() => {
         carry[field.name] = {
             targetCollectionId: field.target_collection_id ?? null,
             targetCollectionName: targetCollection?.name ?? null,
-            maxSelect: Number(field.max_select ?? 1),
         };
 
         return carry;

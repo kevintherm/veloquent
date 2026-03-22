@@ -219,7 +219,6 @@ it('allows extra field options for non-relation fields', function () {
                 'name' => 'title',
                 'type' => CollectionFieldType::Text->value,
                 'target_collection_id' => '01ARZ3NDEKTSV4RRFFQ69G5FAV',
-                'max_select' => 5,
             ],
         ],
         'indexes' => [],

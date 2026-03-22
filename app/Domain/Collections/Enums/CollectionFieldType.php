@@ -21,7 +21,7 @@ enum CollectionFieldType: string
             self::Email => ['min' => null, 'max' => null],
             self::Url => ['min' => null, 'max' => null],
             self::LongText => [],
-            self::Relation => ['target_collection_id' => null, 'cascade_on_delete' => false, 'max_select' => null],
+            self::Relation => ['target_collection_id' => null, 'cascade_on_delete' => false],
             self::Number, self::Boolean, self::Datetime, self::Json => [],
         };
     }
@@ -49,7 +49,6 @@ enum CollectionFieldType: string
             ],
             self::Relation => [
                 "{$prefix}.target_collection_id" => ['required', 'string', 'exists:collections,id'],
-                "{$prefix}.max_select" => ['required', 'integer', 'min:1'],
                 "{$prefix}.cascade_on_delete" => ['sometimes', 'boolean'],
             ],
             self::LongText, self::Boolean, self::Datetime, self::Json => [],
@@ -64,7 +63,8 @@ enum CollectionFieldType: string
             self::Boolean => 'boolean',
             self::Datetime => 'date',
             self::Url => 'url',
-            self::Json, self::Relation => 'json',
+            self::Json => 'json',
+            self::Relation => 'string',
         };
     }
 
@@ -74,17 +74,14 @@ enum CollectionFieldType: string
             self::Number => 'float',
             self::Boolean => 'boolean',
             self::Datetime => 'datetime',
-            self::Json, self::Relation => 'json',
+            self::Json => 'json',
             default => null,
         };
     }
 
-    /**
-     * @TODO: Relation indexing is not yet supported and needs implementation.
-     */
     public function isIndexable(): bool
     {
-        return ! in_array($this, [self::Json, self::LongText, self::Url, self::Relation], true);
+        return ! in_array($this, [self::Json, self::LongText, self::Url], true);
     }
 
     public static function commonPropertyNames(): array

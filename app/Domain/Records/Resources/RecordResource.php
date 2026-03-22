@@ -36,19 +36,8 @@ class RecordResource extends JsonResource
                 continue;
             }
 
-            $isSingleRelation = (int) ($field['max_select'] ?? 0) === 1;
-
-            if ($isSingleRelation) {
-                if (is_array($data[$fieldName])) {
-                    $data[$fieldName] = $data[$fieldName][0] ?? null;
-                }
-
-                continue;
-            }
-
-            if (is_string($data[$fieldName])) {
-                $data[$fieldName] = [$data[$fieldName]];
-            }
+            // relation is now always a plain string (FK), so we don't need to wrap/unwrap it here
+            // it will be overwritten by expansion logic below if expanded
         }
 
         foreach (($this->resource->expandedRelations ?? []) as $fieldName => $expandedValue) {
