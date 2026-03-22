@@ -91,6 +91,11 @@ const fetchCollections = async () => {
         return;
     }
 
+    if (route.path === "/settings" || route.path === "/logs") {
+        activeCollection.value = {};
+        return;
+    }
+
     const routeCollection = resolveCollectionFromRoute();
     const currentId = activeCollection.value?.id;
     const selectedCollection = collections.value.find((collection) => collection.id === currentId);
@@ -112,6 +117,10 @@ const filteredCollections = computed(() => {
 const mobileHeaderTitle = computed(() => {
     if (route.path === "/settings") {
         return "Settings";
+    }
+    
+    if (route.path === "/logs") {
+        return "System Logs";
     }
 
     return activeCollection.value?.name ?? "Collections";
@@ -142,8 +151,19 @@ watch(
 
 watch(
     () => activeCollection.value?.id,
-    () => {
-        ensureCollectionPath();
+    (newId, oldId) => {
+        if (newId) {
+            ensureCollectionPath();
+        }
+    }
+);
+
+watch(
+    () => route.path,
+    (path) => {
+        if (path === "/settings" || path === "/logs") {
+            activeCollection.value = {};
+        }
     }
 );
 
@@ -196,7 +216,7 @@ const handleLogout = async () => {
             </div>
 
             <!-- Top Bar -->
-            <div v-if="$route.path !== '/settings'" class="hidden lg:block">
+            <div v-if="$route.path !== '/settings' && $route.path !== '/logs'" class="hidden lg:block">
                 <DashboardHeader :active-collection="activeCollection" />
             </div>
 
