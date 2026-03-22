@@ -24,6 +24,10 @@ class LogsServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        if ($this->app->runningInConsole()) {
+            return;
+        }
+
         $this->logHttpRequests();
         $this->logSlowQueries();
     }
@@ -63,7 +67,7 @@ class LogsServiceProvider extends ServiceProvider
 
     protected function logSlowQueries(): void
     {
-        DB::whenQueryingForLongerThan(500, function ($connection, $event) {
+        DB::whenQueryingForLongerThan(1000, function ($connection, $event) {
             Log::warning('SLOW_QUERY', [
                 'sql' => $event->sql,
                 'bindings' => $event->bindings,
