@@ -22,6 +22,8 @@
                 - Collections metadata only
     - View Logs
     - Fix bug: cannot open settings page
+- fix: Truncating collection bypasses RelationIntegrityService
+- fix: inconsistent validation and exception messages
 - RecordExpansionService revise
     - resolveTargetCollection N+1 on collection lookup
     - No expand field count limit
