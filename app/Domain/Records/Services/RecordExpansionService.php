@@ -105,6 +105,10 @@ class RecordExpansionService
             ->unique()
             ->values();
 
+        if ($expandFields->count() > 10) {
+            throw new UnsupportedQueryFeatureException('A maximum of 10 relation expansions are allowed per request.');
+        }
+
         $relationFields = [];
 
         foreach ($expandFields as $fieldName) {
