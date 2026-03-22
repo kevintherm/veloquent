@@ -51,6 +51,6 @@ class Collection extends Model
 
         $prefix = config('velo.collection_prefix');
 
-        return $prefix.$collectionName;
+        return $prefix . $collectionName;
     }
 }

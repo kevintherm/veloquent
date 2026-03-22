@@ -196,7 +196,7 @@ const copyRecordId = async (recordId) => {
 <template>
     <Card>
         <div class="rounded-md border">
-            <Table>
+            <Table class="table-fixed">
                 <TableHeader>
                     <TableRow>
                         <TableHead class="w-12.5">
@@ -204,7 +204,7 @@ const copyRecordId = async (recordId) => {
                                 @update:model-value="(val) => $emit('toggle-all', val)" />
                         </TableHead>
                         <TableHead v-for="column in columns" :key="column"
-                            :class="isFixedWidthColumn(column) ? 'w-45 min-w-45 whitespace-nowrap' : ''">
+                            :class="isFixedWidthColumn(column) ? 'w-45 min-w-45 whitespace-nowrap' : 'w-64 min-w-64'">
                             <button type="button" class="inline-flex items-center gap-2"
                                 @click="$emit('sort', column)">
                                 <component :is="resolveColumnIcon(column, columnTypes)"
@@ -226,7 +226,7 @@ const copyRecordId = async (recordId) => {
                             </TableCell>
                             <TableCell v-for="column in columns" :key="`${record.id}-${column}`" :class="[
                                 'align-top',
-                                isFixedWidthColumn(column) ? 'w-45 min-w-45 whitespace-nowrap' : '',
+                                isFixedWidthColumn(column) ? 'w-45 min-w-45 whitespace-nowrap' : 'w-64 min-w-64 max-w-64',
                             ]">
                                 <div v-if="isDatetimeColumn(column, columnTypes)"
                                     class="leading-tight whitespace-nowrap">
@@ -239,18 +239,18 @@ const copyRecordId = async (recordId) => {
                                     </p>
                                 </div>
                                 <button v-else-if="column === 'id'" type="button"
-                                    class="font-mono text-xs text-muted-foreground underline-offset-2 hover:underline"
+                                    class="font-mono text-xs text-muted-foreground underline-offset-2 hover:underline truncate max-w-full block text-left"
                                     @click.stop="copyRecordId(record[column])">
                                     {{ formatValue(record[column]) }}
                                 </button>
-                                <div v-else-if="isRelationColumn(column, relationFields)" class="flex flex-wrap gap-2">
+                                <div v-else-if="isRelationColumn(column, relationFields)" class="flex flex-col gap-1">
                                     <a
                                         v-for="relationId in normalizeRelationIds(record[column])"
                                         :key="`${record.id}-${column}-${relationId}`"
                                         :href="relationRecordUrl(column, relationId, relationFields)"
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        class="font-mono text-xs text-primary underline underline-offset-2"
+                                        class="font-mono text-xs text-primary underline underline-offset-2 truncate"
                                         :title="relationLinkTitle(column, relationFields)"
                                         @click.stop
                                     >
@@ -258,22 +258,24 @@ const copyRecordId = async (recordId) => {
                                     </a>
                                     <span v-if="normalizeRelationIds(record[column]).length === 0">-</span>
                                 </div>
-                                <span v-else>
+                                <span v-else class="line-clamp-2">
                                     {{ formatValue(record[column]) }}
                                 </span>
                             </TableCell>
                         </TableRow>
                     </template>
-                    <TableRow v-if="loading">
-                        <TableCell :colspan="columns.length + 1" class="space-y-3 py-4">
-                            <div v-for="rowIndex in skeletonRows" :key="`skeleton-row-${rowIndex}`" class="grid gap-3"
-                                :style="{ gridTemplateColumns: `2rem repeat(${columns.length}, minmax(0, 1fr))` }">
+                    <template v-if="loading">
+                        <TableRow v-for="rowIndex in skeletonRows" :key="`skeleton-row-${rowIndex}`">
+                            <TableCell>
                                 <Skeleton class="h-4 w-4 rounded-sm" />
-                                <Skeleton v-for="column in columns" :key="`skeleton-${rowIndex}-${column}`"
-                                    class="h-4 w-full" />
-                            </div>
-                        </TableCell>
-                    </TableRow>
+                            </TableCell>
+                            <TableCell v-for="column in columns" :key="`skeleton-${rowIndex}-${column}`" :class="[
+                                isFixedWidthColumn(column) ? 'w-45 min-w-45 whitespace-nowrap' : 'w-64 min-w-64 max-w-64',
+                            ]">
+                                <Skeleton class="h-4 w-full" />
+                            </TableCell>
+                        </TableRow>
+                    </template>
                     <TableRow v-else-if="records.length === 0">
                         <TableCell :colspan="columns.length + 1" class="h-24 text-center text-muted-foreground">
                             No records found.
