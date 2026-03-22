@@ -4,6 +4,7 @@ import Login from './pages/Login.vue'
 import NotFound from './pages/NotFound.vue'
 import Register from './pages/Register.vue'
 import Settings from './pages/Settings/Settings.vue'
+import LogsOverview from './pages/Logs/LogsOverview.vue'
 import { useAuth } from './lib/auth'
 import { isOnboardingInitialized } from './lib/onboarding'
 import { getAuthToken } from './lib/tokenAuth'
@@ -13,6 +14,7 @@ const routes = [
   { path: '/login', component: Login },
   { path: '/register', component: Register },
   { path: '/settings', component: Settings },
+  { path: '/logs', component: LogsOverview },
   { path: '/:collection', component: Dashboard },
   {
     path: '/:pathMatch(.*)*',

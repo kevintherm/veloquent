@@ -4,7 +4,9 @@ use App\Domain\Auth\Controllers\AuthController;
 use App\Domain\Collections\Controllers\CollectionController;
 use App\Domain\Realtime\Controllers\SubscribeController;
 use App\Domain\Records\Controllers\RecordController;
+use App\Http\Controllers\LogViewerController;
 use App\Http\Controllers\OnboardingController;
+use App\Http\Middleware\SuperuserOnly;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -41,4 +43,9 @@ Route::get('/user', fn (Request $request) => $request->user());
 Route::middleware('auth:api')->group(function () {
     Route::post('/collections/{collection}/subscribe', [SubscribeController::class, 'subscribe']);
     Route::delete('/collections/{collection}/subscribe', [SubscribeController::class, 'unsubscribe']);
+});
+
+Route::middleware(['auth:api', SuperuserOnly::class])->group(function () {
+    Route::get('/logs/dates', [LogViewerController::class, 'getDates'])->name('logs.dates');
+    Route::get('/logs', [LogViewerController::class, 'index'])->name('logs.index');
 });
