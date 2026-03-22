@@ -2,6 +2,7 @@
 import axios from "axios";
 import { ref } from "vue";
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Label, Separator } from "@/components/ui";
+import { Timer } from "lucide-vue-next";
 
 const methods = ["GET", "POST", "PUT", "DELETE"];
 const selectedMethod = ref("GET");
@@ -10,6 +11,7 @@ const requestBody = ref("");
 const responseStatus = ref(null);
 const responseData = ref(null);
 const responseSize = ref(null);
+const responseTime = ref(null);
 const loading = ref(false);
 
 const formatSize = (bytes) => {
@@ -25,6 +27,9 @@ const sendRequest = async () => {
     responseStatus.value = null;
     responseData.value = null;
     responseSize.value = null;
+    responseTime.value = null;
+
+    const startTime = performance.now();
 
     try {
         let payload = null;
@@ -60,6 +65,7 @@ const sendRequest = async () => {
         const content = JSON.stringify(responseData.value);
         responseSize.value = formatSize(new Blob([content]).size);
     } finally {
+        responseTime.value = Math.round(performance.now() - startTime);
         loading.value = false;
     }
 };
@@ -118,6 +124,11 @@ const sendRequest = async () => {
                     <div v-if="responseSize" class="flex items-center gap-2">
                         <span class="text-muted-foreground">Size:</span>
                         <span>{{ responseSize }}</span>
+                    </div>
+                    <div v-if="responseTime !== null" class="flex items-center gap-1.5 ml-auto">
+                        <Timer class="h-3.5 w-3.5 text-muted-foreground" />
+                        <span class="text-muted-foreground">Time:</span>
+                        <span>{{ responseTime }}ms</span>
                     </div>
                 </div>
                 <div class="rounded-md border border-border bg-muted/30 p-3">
