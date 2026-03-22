@@ -33,10 +33,10 @@ class CollectionBuilder extends Builder
         $systemSorts = ['created_at', 'updated_at', 'id'];
         $allowed = array_merge($this->getModel()->getFillable(), $systemSorts);
 
-        if (!$filter) {
+        if (! $filter) {
             return $this;
         }
 
-        return $this->where(fn($q) => QueryFilter::for($q, $allowed)->run($filter));
+        return $this->where(fn ($q) => QueryFilter::for($q, $allowed)->run($filter));
     }
 }

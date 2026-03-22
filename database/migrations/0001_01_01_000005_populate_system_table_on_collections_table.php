@@ -75,7 +75,7 @@ return new class extends Migration
                 'view' => null,
                 'create' => null,
                 'update' => null,
-                'delete' => null
+                'delete' => null,
             ]),
             'schema_updated_at' => $now,
             'created_at' => $now,
@@ -119,7 +119,7 @@ return new class extends Migration
                 'view' => null,
                 'create' => null,
                 'update' => null,
-                'delete' => null
+                'delete' => null,
             ]),
             'schema_updated_at' => $now,
             'created_at' => $now,
