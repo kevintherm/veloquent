@@ -11,9 +11,7 @@ use Illuminate\Support\Facades\Gate;
 
 class GetRecordsAction
 {
-    public function __construct(private RecordExpansionService $recordExpansionService)
-    {
-    }
+    public function __construct(private RecordExpansionService $recordExpansionService) {}
 
     public function execute(Collection $collection, string $sort, string $filter, int $perPage = 15, string $expand = ''): LengthAwarePaginator
     {
@@ -24,7 +22,7 @@ class GetRecordsAction
 
         $query = Record::of($collection)->newQuery();
 
-        if (!$bypassApiRules) {
+        if (! $bypassApiRules) {
             $query->applyRule('list');
         }
 

@@ -39,7 +39,7 @@ class LogsServiceProvider extends ServiceProvider
             $response = $event->response;
 
             // Only log API requests, and skip the log viewer endpoints themselves
-            if (!$request->is('api/*') || $request->is('api/logs', 'api/logs/*')) {
+            if (! $request->is('api/*') || $request->is('api/logs', 'api/logs/*')) {
                 return;
             }
 
