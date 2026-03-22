@@ -1,6 +1,8 @@
 
 ## TODO
 
+- Disable relation field indexing
+    - causes state corruption
 - Relation filtering
     - e.g users.name = "John"
     - Detect a dot in the field path — author.name signals a relation traversal
@@ -11,9 +13,6 @@
     - alias naming: You need a deterministic, collision-safe alias for each join.
         - author           → __posts_author
         - author.publisher → __posts_author__publisher
-- Relation expand limit: 10
-- Disable relation field indexing
-    - causes state corruption
 - Schema corrupt detection
     - Corrupt on update: Rebuild entire schema, manual trigger
     - Corrupt on create: Drop entire table, manual trigger
