@@ -147,7 +147,6 @@ const newField = ref({
   min: null,
   max: null,
   target_collection_id: null,
-  max_select: 1,
   cascade_on_delete: false,
   order: 0,
 });
@@ -179,7 +178,6 @@ const normalizeFieldForForm = (field) => {
 
   if (normalized.type === "relation") {
     normalized.target_collection_id = normalized.target_collection_id ?? normalized.collection ?? null;
-    normalized.max_select = Number(normalized.max_select ?? 1);
     normalized.cascade_on_delete = Boolean(normalized.cascade_on_delete ?? false);
   }
 
@@ -204,7 +202,7 @@ const normalizeIndexForForm = (index) => {
  * @TODO: Relation indexing is not yet supported and needs implementation.
  */
 const isFieldIndexable = (type) => {
-  return !["json", "longtext", "url", "relation"].includes(type);
+  return !["json", "longtext", "url"].includes(type);
 };
 
 const isRelationNeeded = computed(() => {
@@ -383,7 +381,6 @@ const addField = () => {
     min: null,
     max: null,
     target_collection_id: null,
-    max_select: 1,
     cascade_on_delete: false,
     order: 0,
   };
@@ -483,12 +480,10 @@ const buildPayload = () => {
     }
     if (cleaned.type !== "relation") {
       delete cleaned.target_collection_id;
-      delete cleaned.max_select;
       delete cleaned.cascade_on_delete;
       delete cleaned.collection;
     } else {
       cleaned.target_collection_id = cleaned.target_collection_id ?? cleaned.collection ?? null;
-      cleaned.max_select = Number(cleaned.max_select ?? 1);
       cleaned.cascade_on_delete = Boolean(cleaned.cascade_on_delete ?? false);
       delete cleaned.collection;
     }
@@ -803,12 +798,6 @@ onMounted(async () => {
                     </select>
                   </div>
 
-                  <div v-if="newField.type === 'relation'" class="space-y-2">
-                    <Label class="text-xs font-semibold tracking-wide text-primary/80 uppercase">Max Select</Label>
-                    <Input v-model.number="newField.max_select" type="number" min="1"
-                      class="h-9 focus-visible:ring-1 border-primary/20 bg-background"
-                      placeholder="1 for single, 2+ for multiple" />
-                  </div>
 
                   <div v-if="['text', 'email', 'url'].includes(newField.type)"
                     class="space-y-2 grid grid-cols-2 gap-3 col-span-1 border-border/50">
@@ -825,29 +814,15 @@ onMounted(async () => {
                   </div>
                 </div>
 
-                <div class="pt-4 border-t border-primary/10 mt-1">
+                <!-- <div class="pt-4 border-t border-primary/10 mt-1">
                   <Label
                     class="text-xs font-semibold tracking-wide text-primary/80 uppercase mb-3 block">Constraints</Label>
-                  <div class="flex flex-wrap items-center gap-6 mb-4">
-                    <label class="flex items-center gap-2 cursor-pointer group">
-                      <Checkbox v-model="newField.nullable" />
-                      <span
-                        class="text-sm font-medium text-foreground/80 group-hover:text-foreground transition-colors">Allow
-                        Null Values</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer group" :class="{ 'opacity-50 cursor-not-allowed': !isFieldIndexable(newField.type) }">
-                      <Checkbox v-model="newField.unique" :disabled="!isFieldIndexable(newField.type)" />
-                      <span
-                        class="text-sm font-medium text-foreground/80 group-hover:text-foreground transition-colors">Must
-                        Be Unique</span>
-                    </label>
-                  </div>
                   <div class="flex gap-3 justify-end mt-2">
                     <Button variant="outline" size="sm" class="border-primary/20 hover:bg-primary/10"
                       @click="showNewFieldForm = false">Cancel</Button>
                     <Button size="sm" @click="addField">Add Field</Button>
                   </div>
-                </div>
+                </div> -->
               </div>
 
               <!-- Fields List -->
@@ -945,12 +920,6 @@ onMounted(async () => {
                       </select>
                     </div>
 
-                    <div v-if="field.type === 'relation'" class="space-y-2">
-                      <Label class="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Max
-                        Select</Label>
-                      <Input v-model.number="field.max_select" type="number" min="1" class="h-9 focus-visible:ring-1"
-                        placeholder="1 for single, 2+ for multiple" />
-                    </div>
 
                     <div v-if="['text', 'email', 'url'].includes(field.type)"
                       class="space-y-2 grid grid-cols-2 gap-3 col-span-1 border-border/50">
@@ -978,12 +947,6 @@ onMounted(async () => {
                         <span
                           class="text-sm font-medium text-foreground/80 group-hover:text-foreground transition-colors">Allow
                           Null Values</span>
-                      </label>
-                      <label class="flex items-center gap-2 cursor-pointer group" :class="{ 'opacity-50 cursor-not-allowed': !isFieldIndexable(field.type) }">
-                        <Checkbox v-model="field.unique" :disabled="!isFieldIndexable(field.type)" />
-                        <span
-                          class="text-sm font-medium text-foreground/80 group-hover:text-foreground transition-colors">Must
-                          Be Unique</span>
                       </label>
                     </div>
                   </div>

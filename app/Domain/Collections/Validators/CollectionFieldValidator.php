@@ -351,17 +351,10 @@ class CollectionFieldValidator
                     continue;
                 }
 
-                /**
-                 * @TODO: Relation indexing is not yet supported and needs implementation.
-                 */
-                $message = $columnType === CollectionFieldType::Relation
-                    ? "Field '{$columnName}' of type 'relation' is not yet supported for indexing."
-                    : "Field '{$columnName}' of type '{$columnType->value}' cannot be indexed.";
-
                 $this->addError(
                     $errors,
                     "indexes.{$indexPosition}.columns.{$columnPosition}",
-                    $message
+                    "Field '{$columnName}' of type '{$columnType->value}' cannot be indexed."
                 );
             }
         }

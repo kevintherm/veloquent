@@ -3,9 +3,9 @@
 namespace App\Domain\Records\QueryBuilder;
 
 use App\Domain\Collections\Enums\CollectionFieldType;
-use App\Domain\Collections\ValueObjects\Field;
-use App\Domain\QueryCompiler\Exceptions\UnsupportedQueryFeatureException;
+use App\Domain\Collections\Models\Collection;
 use App\Domain\QueryCompiler\Services\QueryFilter;
+use App\Domain\Records\Services\RelationJoinResolver;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Arr;
 use RuntimeException;
@@ -51,10 +51,16 @@ class RecordBuilder extends Builder
             return $this;
         }
 
-        $allowedFields = Arr::pluck($collection->fields, 'name');
-        $this->where(fn ($q) => QueryFilter::for($q, $allowedFields)->run($rule));
+        $allowedFields = $this->getAllowedFilterFields($collection);
+        $resolver = new RelationJoinResolver($collection, $this);
 
-        return $this;
+        // Ensure we select only the base table columns to avoid collisions with joined tables
+        $this->select($collection->getPhysicalTableName().'.*');
+
+        return $this->where(fn ($q) => QueryFilter::for($q, $allowedFields)
+            ->withRelationJoinResolver($resolver)
+            ->run($rule)
+        );
     }
 
     public function applyFilter(?string $filter): static
@@ -67,31 +73,48 @@ class RecordBuilder extends Builder
             throw new RuntimeException("Model's collection is not set");
         }
 
-        $this->assertRelationFilterNotUsed($filter, $collection->fields ?? []);
+        $allowedFields = $this->getAllowedFilterFields($collection);
+        $resolver = new RelationJoinResolver($collection, $this);
 
-        $allowedFields = Arr::pluck($collection->fields ?? [], 'name');
+        // Ensure we select only the base table columns to avoid collisions with joined tables
+        $this->select($collection->getPhysicalTableName().'.*');
 
-        return $this->where(fn ($q) => QueryFilter::for($q, $allowedFields)->run($filter));
+        return $this->where(fn ($q) => QueryFilter::for($q, $allowedFields)
+            ->withRelationJoinResolver($resolver)
+            ->run($filter)
+        );
     }
 
-    private function assertRelationFilterNotUsed(string $filter, array $fields): void
+    private function getAllowedFilterFields(Collection $collection, string $prefix = '', int $depth = 0): array
     {
-        if (preg_match('/\b[a-zA-Z_]+\.[a-zA-Z_]+\b/', $filter) === 1) {
-            throw new UnsupportedQueryFeatureException('Filtering nested relation fields is not implemented.');
+        // System fields are always allowed at the root
+        $fields = $depth === 0 ? ['id', 'token', 'created_at', 'updated_at'] : [];
+
+        if ($depth > 2) { // Limit recursion depth for safety
+            return $fields;
         }
 
-        $relationFieldNames = collect($fields)
-            ->filter(fn (Field|array $field): bool => ($field['type'] ?? null) === CollectionFieldType::Relation->value)
-            ->pluck('name')
-            ->filter(fn (mixed $fieldName): bool => is_string($fieldName) && $fieldName !== '')
-            ->all();
+        foreach ($collection->fields ?? [] as $field) {
+            $name = (string) $field['name'];
+            $fullPath = $prefix ? "{$prefix}.{$name}" : $name;
+            $fields[] = $fullPath;
 
-        foreach ($relationFieldNames as $fieldName) {
-            $pattern = '/(^|\s|\()'.preg_quote($fieldName, '/').'\s*(=|!=|>|<|>=|<=|in\b|not\s+in\b|like\b|not\s+like\b|is\s+null\b|is\s+not\s+null\b)/i';
+            if (($field['type'] ?? null) === CollectionFieldType::Relation->value) {
+                // Add standard sub-fields for relations (id, created_at, etc.)
+                $fields[] = "{$fullPath}.id";
+                $fields[] = "{$fullPath}.created_at";
+                $fields[] = "{$fullPath}.updated_at";
 
-            if (preg_match($pattern, $filter) === 1) {
-                throw new UnsupportedQueryFeatureException('Filtering relation fields is not implemented.');
+                $targetCollectionId = $field['target_collection_id'] ?? null;
+                if ($targetCollectionId) {
+                    $targetCollection = Collection::query()->find($targetCollectionId);
+                    if ($targetCollection) {
+                        $fields = array_merge($fields, $this->getAllowedFilterFields($targetCollection, $fullPath, $depth + 1));
+                    }
+                }
             }
         }
+
+        return array_unique($fields);
     }
 }

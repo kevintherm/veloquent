@@ -6,12 +6,17 @@ use App\Domain\Collections\Models\Collection;
 use App\Domain\QueryCompiler\Services\QueryFilter;
 use App\Domain\Records\Models\Record;
 use App\Domain\Records\Services\CreateRuleContextBuilder;
+use App\Domain\Records\Services\RelationIntegrityService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 
 class CreateRecordAction
 {
+    public function __construct(
+        private readonly RelationIntegrityService $relationIntegrityService,
+    ) {}
+
     public function execute(Collection $collection, array $data): Record
     {
         Gate::authorize('create-records', $collection);
@@ -40,9 +45,11 @@ class CreateRecordAction
                 }
             }
         }
- 
+
         $data = array_diff_key($data, array_flip(['created_at', 'updated_at']));
- 
+
+        $this->relationIntegrityService->validateRelationIds($collection->fields ?? [], $data);
+
         return Record::of($collection)->create($data);
     }
 }

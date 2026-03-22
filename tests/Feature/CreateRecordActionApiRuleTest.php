@@ -25,7 +25,7 @@ it('denies create when collection create api rule is null', function () {
         'delete' => '',
     ];
 
-    expect(fn () => (new CreateRecordAction)->execute($collection, ['title' => 'Hello']))
+    expect(fn () => resolve(CreateRecordAction::class)->execute($collection, ['title' => 'Hello']))
         ->toThrow(AuthorizationException::class);
 });
 
@@ -58,6 +58,6 @@ it('denies create when create api rule evaluates to false', function () {
         'delete' => '',
     ];
 
-    expect(fn () => (new CreateRecordAction)->execute($collection, ['id' => 1, 'title' => 'Hello']))
+    expect(fn () => resolve(CreateRecordAction::class)->execute($collection, ['id' => 1, 'title' => 'Hello']))
         ->toThrow(AuthorizationException::class);
 });

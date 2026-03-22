@@ -150,21 +150,7 @@ const defaultFieldValue = (field) => {
     }
 
     if (field.type === "relation") {
-      const isMultiRelation = Number(field.max_select ?? 1) > 1;
-
-      if (isMultiRelation) {
-        return Array.isArray(existingValue)
-          ? existingValue.filter((value) => value !== null && value !== undefined && value !== "")
-          : existingValue
-            ? [existingValue]
-            : [];
-      }
-
-      if (Array.isArray(existingValue)) {
-        return existingValue[0] ?? "";
-      }
-
-      return existingValue ?? "";
+      return existingValue;
     }
 
     return existingValue;
@@ -190,9 +176,7 @@ const defaultFieldValue = (field) => {
     return false;
   }
 
-  if (field.type === "relation" && Number(field.max_select ?? 1) > 1) {
-    return [];
-  }
+  return "";
 
   return "";
 };
@@ -396,23 +380,7 @@ const isRelationDialogValueSelected = (value) => {
 
 const toggleRelationDialogValue = (field, value) => {
   const normalizedValue = String(value);
-  const isMultiRelation = Number(field?.max_select ?? 1) > 1;
-
-  if (!isMultiRelation) {
-    relationDialogState.value.selected = [normalizedValue];
-    return;
-  }
-
-  const currentSelection = [...relationDialogState.value.selected];
-  const valueIndex = currentSelection.indexOf(normalizedValue);
-
-  if (valueIndex === -1) {
-    currentSelection.push(normalizedValue);
-  } else {
-    currentSelection.splice(valueIndex, 1);
-  }
-
-  relationDialogState.value.selected = currentSelection;
+  relationDialogState.value.selected = [normalizedValue];
 };
 
 const clearRelationDialogSelection = () => {
@@ -427,12 +395,9 @@ const applyRelationDialogSelection = () => {
     return;
   }
 
-  const isMultiRelation = Number(field.max_select ?? 1) > 1;
   const nextSelection = [...relationDialogState.value.selected];
 
-  formState.value[field.name] = isMultiRelation
-    ? nextSelection
-    : (nextSelection[0] ?? "");
+  formState.value[field.name] = nextSelection[0] ?? "";
 
   closeRelationDialog();
 };
@@ -542,16 +507,6 @@ const coerceFieldValue = (field, rawValue) => {
   }
 
   if (field.type === "relation") {
-    const isMultiRelation = Number(field.max_select ?? 1) > 1;
-
-    if (isMultiRelation) {
-      if (!Array.isArray(rawValue)) {
-        return [];
-      }
-
-      return rawValue.filter((value) => value !== null && value !== undefined && value !== "");
-    }
-
     if (Array.isArray(rawValue)) {
       return rawValue[0] ?? null;
     }

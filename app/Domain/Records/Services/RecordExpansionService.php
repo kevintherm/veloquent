@@ -11,6 +11,9 @@ use App\Domain\Records\Models\Record;
 
 class RecordExpansionService
 {
+    /**
+     * @TODO: Circular relation detection for nested expand queries is not yet implemented.
+     */
     public function expandMany(Collection $sourceCollection, array $records, ?string $expand): void
     {
         $relationFields = $this->parse($sourceCollection, $expand);
@@ -27,14 +30,14 @@ class RecordExpansionService
             }
 
             foreach ($relationFields as $fieldName => $field) {
-                $relationIds = $this->normalizeRelationIds($record->getAttribute($fieldName));
+                $relationId = $record->getAttribute($fieldName);
 
-                if ($relationIds === []) {
+                if (! is_string($relationId) || $relationId === '') {
                     continue;
                 }
 
                 $relationIdsByField[$fieldName] ??= [];
-                $relationIdsByField[$fieldName] = [...$relationIdsByField[$fieldName], ...$relationIds];
+                $relationIdsByField[$fieldName][] = $relationId;
             }
         }
 
@@ -68,19 +71,10 @@ class RecordExpansionService
             $expanded = [];
 
             foreach ($relationFields as $fieldName => $field) {
-                $isSingleRelation = $this->isSingleRelation($field);
-                $relationIds = $this->normalizeRelationIds($record->getAttribute($fieldName));
+                $relationId = $record->getAttribute($fieldName);
                 $resolved = $resolvedByField[$fieldName] ?? [];
 
-                $resolvedValues = collect($relationIds)
-                    ->map(fn (string $relationId): mixed => $resolved[$relationId] ?? null)
-                    ->filter(fn (mixed $resolvedRecord): bool => is_array($resolvedRecord))
-                    ->values()
-                    ->all();
-
-                $expanded[$fieldName] = $isSingleRelation
-                    ? ($resolvedValues[0] ?? null)
-                    : $resolvedValues;
+                $expanded[$fieldName] = is_string($relationId) ? ($resolved[$relationId] ?? null) : null;
             }
 
             $record->expandedRelations = $expanded;
@@ -132,27 +126,6 @@ class RecordExpansionService
         return $relationFields;
     }
 
-    private function normalizeRelationIds(mixed $value): array
-    {
-        if ($value === null) {
-            return [];
-        }
-
-        if (is_string($value)) {
-            return [$value];
-        }
-
-        if (! is_array($value)) {
-            return [];
-        }
-
-        return collect($value)
-            ->map(fn (mixed $relationId): mixed => is_string($relationId) ? trim($relationId) : $relationId)
-            ->filter(fn (mixed $relationId): bool => is_string($relationId) && $relationId !== '')
-            ->values()
-            ->all();
-    }
-
     private function resolveTargetCollection(Field|array $field): ?Collection
     {
         $targetCollectionId = $field['target_collection_id'] ?? null;
@@ -162,10 +135,5 @@ class RecordExpansionService
         }
 
         return Collection::query()->find($targetCollectionId);
-    }
-
-    private function isSingleRelation(Field|array $field): bool
-    {
-        return (int) ($field['max_select'] ?? 0) === 1;
     }
 }

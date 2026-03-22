@@ -3,6 +3,7 @@
 namespace App\Domain\QueryCompiler\Services;
 
 use App\Domain\QueryCompiler\Exceptions\InvalidRuleExpressionException;
+use App\Domain\Records\Services\RelationJoinResolver;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
@@ -10,6 +11,8 @@ use Illuminate\Support\Facades\Auth;
 class QueryFilter
 {
     private Builder $query;
+
+    private ?RelationJoinResolver $relationJoinResolver = null;
 
     private array $tokens = [];
 
@@ -62,6 +65,13 @@ class QueryFilter
     public static function for(Builder $query, array $allowedFields): self
     {
         return new self($query, $allowedFields);
+    }
+
+    public function withRelationJoinResolver(RelationJoinResolver $resolver): self
+    {
+        $this->relationJoinResolver = $resolver;
+
+        return $this;
     }
 
     public function lint(?string $filter = null): void
@@ -237,6 +247,10 @@ class QueryFilter
 
         $field = $fieldToken['value'];
         $op = strtolower($opToken['value']);
+
+        if (str_contains($field, '.') && $this->relationJoinResolver) {
+            $field = $this->relationJoinResolver->resolveField($field);
+        }
 
         switch ($op) {
             case 'is null':
