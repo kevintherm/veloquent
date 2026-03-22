@@ -12,6 +12,15 @@
         - Collections, tables, records
     - Export n imports
         - Collections metadata only
+- feat: Auth collection options
+    - Create auth_otps: multi purpose otp storage
+    - authentication methods
+        - email/password
+        - oauth2
+    - forgot password
+    - verify email
+    - otp email
+        
 - fix: Truncating collection bypasses RelationIntegrityService
 - fix: inconsistent validation and exception messages
 - Unify errors
