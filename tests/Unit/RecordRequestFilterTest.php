@@ -22,8 +22,9 @@ class RecordRequestFilterTest extends TestCase
             ],
         ]);
 
-        $request = new class extends BaseRecordRequest {
-            public function testFilterAutoFillFields(array $data, Collection $collection): array
+        $request = new class extends BaseRecordRequest
+        {
+            public function test_filter_auto_fill_fields(array $data, Collection $collection): array
             {
                 return $this->filterAutoFillFields($data, $collection);
             }
@@ -67,7 +68,8 @@ class RecordRequestFilterTest extends TestCase
             ],
         ]);
 
-        $request = new class extends BaseRecordRequest {
+        $request = new class extends BaseRecordRequest
+        {
             public function testFilterPasswordField(array $data, Collection $collection): array
             {
                 return $this->filterPasswordField($data, $collection);
@@ -103,7 +105,8 @@ class RecordRequestFilterTest extends TestCase
             ],
         ]);
 
-        $request = new class extends BaseRecordRequest {
+        $request = new class extends BaseRecordRequest
+        {
             public function testFilterPasswordField(array $data, Collection $collection): array
             {
                 return $this->filterPasswordField($data, $collection);
@@ -135,8 +138,9 @@ class RecordRequestFilterTest extends TestCase
             ],
         ]);
 
-        $request = new class extends BaseRecordRequest {
-            public function testFilterPasswordField(array $data, Collection $collection): array
+        $request = new class extends BaseRecordRequest
+        {
+            public function test_filter_password_field(array $data, Collection $collection): array
             {
                 return $this->filterPasswordField($data, $collection);
             }
