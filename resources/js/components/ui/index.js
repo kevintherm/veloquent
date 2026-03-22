@@ -44,6 +44,12 @@ export { default as AlertDialogHeader } from "./alert-dialog/AlertDialogHeader.v
 export { default as AlertDialogTitle } from "./alert-dialog/AlertDialogTitle.vue";
 export { default as AlertDialogTrigger } from "./alert-dialog/AlertDialogTrigger.vue";
 
+export { default as DropdownMenu } from "./dropdown-menu/DropdownMenu.vue";
+export { default as DropdownMenuTrigger } from "./dropdown-menu/DropdownMenuTrigger.vue";
+export { default as DropdownMenuContent } from "./dropdown-menu/DropdownMenuContent.vue";
+export { default as DropdownMenuItem } from "./dropdown-menu/DropdownMenuItem.vue";
+export { default as DropdownMenuSeparator } from "./dropdown-menu/DropdownMenuSeparator.vue";
+
 export const sheetVariants = cva(
   "fixed z-50 gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
   {

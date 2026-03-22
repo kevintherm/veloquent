@@ -25,8 +25,13 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
 } from "@/components/ui";
-import { Plus, Trash2, Copy, ArrowDown, ArrowUp, Settings2 } from "lucide-vue-next";
+import { Plus, Trash2, Copy, ArrowDown, ArrowUp, Settings2, MoreHorizontal, FileJson, ChevronUp, Menu, MoreVertical } from "lucide-vue-next";
 import { useDashboardState } from "@/lib/dashboardState";
 import Select from "./ui/select/Select.vue";
 import SelectTrigger from "./ui/select/SelectTrigger.vue";
@@ -195,7 +200,19 @@ const normalizeIndexForForm = (index) => {
   };
 };
 
+const isRelationNeeded = computed(() => {
+  return formState.value.fields.some(f => f.type === 'relation') ||
+    newField.value.type === 'relation';
+});
+
+const isRelationFetched = ref(false);
+
 const fetchCollectionForRelationFields = async () => {
+  if (isRelationFetched.value) {
+    return;
+  }
+
+  isRelationFetched.value = true;
   const loadingToastId = toast.loading("Fetching collections for relation fields...");
   try {
     const response = await axios.get("/api/collections", {
@@ -210,10 +227,17 @@ const fetchCollectionForRelationFields = async () => {
   } catch (error) {
     console.error(error);
     availableCollections.value = [];
+    isRelationFetched.value = false;
   } finally {
     toast.dismiss(loadingToastId);
   }
 };
+
+watch(isRelationNeeded, (val) => {
+  if (val) {
+    fetchCollectionForRelationFields();
+  }
+}, { immediate: true });
 
 const initializeFormState = () => {
   if (fetchedCollection.value) {
@@ -639,6 +663,18 @@ const handleCopy = () => {
   toast.success("Collection copied. Modify the name and save to create a new collection.");
 };
 
+const handleCopyRawJson = () => {
+  try {
+    const payload = buildPayload();
+    const json = JSON.stringify(payload, null, 2);
+    navigator.clipboard.writeText(json);
+    toast.success("Raw JSON copied to clipboard");
+  } catch (error) {
+    console.error(error);
+    toast.error("Failed to copy raw JSON");
+  }
+};
+
 watch(showNewFieldForm, () => {
   void nextTick(() => {
     fieldsListContainer.value?.scrollTo({
@@ -649,7 +685,6 @@ watch(showNewFieldForm, () => {
 });
 
 onMounted(async () => {
-  await fetchCollectionForRelationFields();
   await fetchCollectionInfo();
 });
 </script>
@@ -1077,27 +1112,41 @@ onMounted(async () => {
         </Tabs>
       </div>
 
-      <SheetFooter class="mt-6 border-t bg-background p-6">
-        <div class="flex flex-col gap-3 w-full">
-          <div class="flex gap-2 w-full">
-            <Button variant="outline" class="flex-1" @click="handleClose">Cancel</Button>
-            <Button class="flex-1" :disabled="submitting" @click="handleSave">
-              {{ submitting ? 'Saving...' : (isCreating ? 'Create Collection' : 'Save Changes') }}
-            </Button>
-          </div>
-
+      <SheetFooter class="mt-6 border-t bg-background pt-6">
+        <div class="flex gap-2 w-full">
           <div v-if="!isCreating && !formState.is_system" class="flex gap-2">
-            <Button variant="outline" class="flex-1" @click="handleCopy">
-              <Copy class="h-4 w-4 mr-1" />
-              Copy
-            </Button>
-            <Button variant="destructive" class="flex-1" @click="requestTruncateCollection" :disabled="submitting">
-              Truncate
-            </Button>
-            <Button variant="destructive" class="flex-1" @click="requestDeleteCollection" :disabled="submitting">
-              Delete
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger as-child>
+                <Button variant="outline" class="flex-1">
+                  <MoreVertical class="h-4 w-4" />
+                  <div class="sr-only">Actions</div>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent class="w-56 bg-background" align="start">
+                <DropdownMenuItem @click="requestDeleteCollection" class="text-destructive focus:text-destructive">
+                  <Trash2 class="h-4 w-4 mr-2" />
+                  Delete Collection
+                </DropdownMenuItem>
+                <DropdownMenuItem @click="requestTruncateCollection" class="text-destructive focus:text-destructive">
+                  <Trash2 class="h-4 w-4 mr-2" />
+                  Truncate Collection
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem @click="handleCopy">
+                  <Copy class="h-4 w-4 mr-2" />
+                  Copy Collection
+                </DropdownMenuItem>
+                <DropdownMenuItem @click="handleCopyRawJson">
+                  <FileJson class="h-4 w-4 mr-2" />
+                  Copy Raw JSON
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
+          <Button variant="outline" class="flex-1" @click="handleClose">Cancel</Button>
+          <Button class="flex-1" :disabled="submitting" @click="handleSave">
+            {{ submitting ? 'Saving...' : (isCreating ? 'Create Collection' : 'Save Changes') }}
+          </Button>
         </div>
       </SheetFooter>
 
