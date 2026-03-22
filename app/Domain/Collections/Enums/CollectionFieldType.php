@@ -79,9 +79,12 @@ enum CollectionFieldType: string
         };
     }
 
+    /**
+     * @TODO: Relation indexing is not yet supported and needs implementation.
+     */
     public function isIndexable(): bool
     {
-        return ! in_array($this, [self::Json, self::LongText, self::Url], true);
+        return ! in_array($this, [self::Json, self::LongText, self::Url, self::Relation], true);
     }
 
     public static function commonPropertyNames(): array
