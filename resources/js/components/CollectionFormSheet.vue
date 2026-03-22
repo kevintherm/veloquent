@@ -195,7 +195,8 @@ const normalizeIndexForForm = (index) => {
   };
 };
 
-const fetchAvailableCollections = async () => {
+const fetchCollectionForRelationFields = async () => {
+  const loadingToastId = toast.loading("Fetching collections for relation fields...");
   try {
     const response = await axios.get("/api/collections", {
       params: {
@@ -206,8 +207,11 @@ const fetchAvailableCollections = async () => {
     const rows = Array.isArray(response?.data?.data) ? response.data.data : [];
 
     availableCollections.value = rows;
-  } catch {
+  } catch (error) {
+    console.error(error);
     availableCollections.value = [];
+  } finally {
+    toast.dismiss(loadingToastId);
   }
 };
 
@@ -645,7 +649,7 @@ watch(showNewFieldForm, () => {
 });
 
 onMounted(async () => {
-  await fetchAvailableCollections();
+  await fetchCollectionForRelationFields();
   await fetchCollectionInfo();
 });
 </script>
@@ -689,7 +693,7 @@ onMounted(async () => {
                 <Input id="collectionDescription" v-model="formState.description" placeholder="Optional description"
                   @input="clearValidationError('description')" />
                 <p v-if="firstErrorFor('description')" class="text-xs text-destructive">{{ firstErrorFor('description')
-                  }}</p>
+                }}</p>
               </div>
 
               <div class="grid gap-2">
