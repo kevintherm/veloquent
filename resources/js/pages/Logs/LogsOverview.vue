@@ -40,10 +40,13 @@ const selectedLevel = ref("");
 const searchQuery = ref("");
 const selectedHour = ref(null);
 const logs = ref([]);
+const stats = ref([]);
+const totalResults = ref(0);
 const isLoading = ref(false);
 
 const currentPage = ref(1);
 const itemsPerPage = ref(50);
+const lastPage = ref(1);
 
 const selectedLog = ref(null);
 const isSheetOpen = ref(false);
@@ -57,6 +60,7 @@ const fetchDates = async () => {
         }
     } catch (e) {
         console.error("Failed to fetch log dates", e);
+        toast.error("Failed to fetch log dates");
     }
 };
 
@@ -70,13 +74,21 @@ const fetchLogs = async () => {
             params: {
                 date: selectedDate.value,
                 level: selectedLevel.value || undefined,
+                query: searchQuery.value || undefined,
+                hour: selectedHour.value !== null ? selectedHour.value : undefined,
+                page: currentPage.value,
+                per_page: itemsPerPage.value,
             },
         });
         logs.value = res.data.data;
+        totalResults.value = res.data.meta.total;
+        lastPage.value = res.data.meta.last_page;
+        stats.value = res.data.stats;
         toast.dismiss(toastId)
     } catch (e) {
         console.error("Failed to fetch logs", e);
-        toast.error("Failed to fetch logs", { id: toastId });
+        const errorMsg = e.response?.data?.message || "Failed to fetch logs";
+        toast.error(errorMsg, { id: toastId });
     } finally {
         isLoading.value = false;
     }
@@ -84,89 +96,48 @@ const fetchLogs = async () => {
 
 onMounted(async () => {
     await fetchDates();
-    if (selectedDate.value) {
-        await fetchLogs();
-    }
 });
 
-watch([selectedDate, selectedLevel], () => {
+// Watchers for filters - reset page and fetch
+watch([selectedDate, selectedLevel, selectedHour], () => {
+    currentPage.value = 1;
     fetchLogs();
 });
 
-const filteredLogs = computed(() => {
-    let result = logs.value;
-
-    // Apply level filter
-    if (selectedLevel.value) {
-        result = result.filter(log => String(log.level).toUpperCase() === selectedLevel.value);
-    }
-
-    // Apply search query
-    if (searchQuery.value) {
-        const query = searchQuery.value.toLowerCase();
-        result = result.filter(log => {
-            if (log.message.toLowerCase().includes(query)) return true;
-            if (log.context && JSON.stringify(log.context).toLowerCase().includes(query)) return true;
-            return false;
-        });
-    }
-
-    // Apply hour filter
-    if (selectedHour.value !== null) {
-        result = result.filter(log => {
-            const d = new Date(log.datetime);
-            return !isNaN(d.getTime()) && d.getHours() === selectedHour.value;
-        });
-    }
-
-    return result;
+// Watch page change
+watch(currentPage, () => {
+    fetchLogs();
 });
 
-const totalPages = computed(() => Math.ceil(filteredLogs.value.length / itemsPerPage.value));
-
-const paginatedLogs = computed(() => {
-    const start = (currentPage.value - 1) * itemsPerPage.value;
-    const end = start + itemsPerPage.value;
-    return filteredLogs.value.slice(start, end);
-});
-
-watch([selectedDate, selectedLevel, searchQuery], () => {
-    selectedHour.value = null; // Reset hour filter on main filter changes
-    currentPage.value = 1;
-});
-
-watch([selectedHour], () => {
-    currentPage.value = 1;
+// Debounced search
+let searchTimeout;
+watch(searchQuery, () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        currentPage.value = 1;
+        fetchLogs();
+    }, 400);
 });
 
 const chartData = computed(() => {
-    const hours = Array.from({ length: 24 }, (_, i) => ({
-        hour: i,
-        count: 0,
-        error: 0,
-        warning: 0,
-        info: 0,
-    }));
+    if (!stats.value || Object.keys(stats.value).length === 0) {
+        return Array.from({ length: 24 }, (_, i) => ({
+            hour: i,
+            count: 0,
+            error: 0,
+            warning: 0,
+            info: 0,
+            height: '0%',
+            errorHeight: '0%',
+            warningHeight: '0%'
+        }));
+    }
 
-    // If viewing a specific level, we only have logs of that level
-    filteredLogs.value.forEach((log) => {
-        try {
-            const dateObj = new Date(log.datetime);
-            if (isNaN(dateObj.getTime())) return;
-            const h = dateObj.getHours();
-            hours[h].count++;
+    const maxCount = Math.max(...Object.values(stats.value).map((h) => h.count), 1);
 
-            const lvl = String(log.level).toUpperCase();
-            if (lvl === "ERROR") hours[h].error++;
-            else if (lvl === "WARNING") hours[h].warning++;
-            else hours[h].info++;
-        } catch (e) { }
-    });
-
-    const maxCount = Math.max(...hours.map((h) => h.count), 1);
-
-    return hours.map((h) => ({
+    return Object.entries(stats.value).map(([hour, h]) => ({
         ...h,
+        hour: parseInt(hour),
         height: `${(h.count / maxCount) * 100}%`,
         errorHeight: `${(h.error / maxCount) * 100}%`,
         warningHeight: `${(h.warning / maxCount) * 100}%`,
@@ -244,7 +215,7 @@ const copyToClipboard = async (text) => {
                         <Activity class="h-6 w-6" />
                     </div>
                     <div>
-                        <h3 class="text-3xl font-bold">{{ filteredLogs.length }}</h3>
+                        <h3 class="text-3xl font-bold">{{ totalResults }}</h3>
                         <p class="text-sm text-muted-foreground font-medium">Total Events</p>
                     </div>
                 </Card>
@@ -254,8 +225,7 @@ const copyToClipboard = async (text) => {
                         <AlertCircle class="h-6 w-6" />
                     </div>
                     <div>
-                        <h3 class="text-3xl font-bold">{{filteredLogs.filter(l => l.level.toUpperCase() ===
-                            'ERROR').length}}</h3>
+                        <h3 class="text-3xl font-bold">{{ chartData.reduce((acc, h) => acc + h.error, 0) }}</h3>
                         <p class="text-sm text-muted-foreground font-medium">Errors</p>
                     </div>
                 </Card>
@@ -264,8 +234,7 @@ const copyToClipboard = async (text) => {
                         <AlertTriangle class="h-6 w-6" />
                     </div>
                     <div>
-                        <h3 class="text-3xl font-bold">{{filteredLogs.filter(l => l.level.toUpperCase() ===
-                            'WARNING').length}}</h3>
+                        <h3 class="text-3xl font-bold">{{ chartData.reduce((acc, h) => acc + h.warning, 0) }}</h3>
                         <p class="text-sm text-muted-foreground font-medium">Warnings</p>
                     </div>
                 </Card>
@@ -390,12 +359,12 @@ const copyToClipboard = async (text) => {
                                         </div>
                                     </TableCell>
                                 </TableRow>
-                                <TableRow v-else-if="paginatedLogs.length === 0">
+                                <TableRow v-else-if="logs.length === 0">
                                     <TableCell colspan="4" class="h-32 text-center text-muted-foreground">
                                         No logs found for this filter.
                                     </TableCell>
                                 </TableRow>
-                                <TableRow v-for="(log, idx) in paginatedLogs" :key="idx"
+                                <TableRow v-for="(log, idx) in logs" :key="idx"
                                     class="cursor-pointer hover:bg-muted/50" @click="openLogDetails(log)">
                                     <TableCell class="text-xs whitespace-nowrap text-muted-foreground py-4">
                                         <div class="font-medium text-foreground">{{ formatDate(log.datetime) }}</div>
@@ -433,13 +402,13 @@ const copyToClipboard = async (text) => {
 
                     <!-- Pagination Controls -->
                     <div class="p-4 border-t bg-muted/20 flex flex-col sm:flex-row gap-4 items-center justify-between"
-                        v-if="totalPages > 1">
+                        v-if="lastPage > 1">
                         <p class="text-sm text-muted-foreground">
                             Showing <span class="font-medium">{{ (currentPage - 1) * itemsPerPage + 1 }}</span> to <span
-                                class="font-medium">{{ Math.min(currentPage * itemsPerPage, filteredLogs.length)
-                                }}</span> of <span class="font-medium">{{ filteredLogs.length }}</span> results
+                                class="font-medium">{{ Math.min(currentPage * itemsPerPage, totalResults)
+                                }}</span> of <span class="font-medium">{{ totalResults }}</span> results
                         </p>
-                        <Pagination v-slot="{ page }" :total="filteredLogs.length" :sibling-count="1" show-edges
+                        <Pagination v-slot="{ page }" :total="totalResults" :sibling-count="1" show-edges
                             :default-page="1" v-model:page="currentPage" :items-per-page="itemsPerPage"
                             class="justify-end">
                             <PaginationContent v-slot="{ items }">

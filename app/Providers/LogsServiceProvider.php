@@ -39,7 +39,7 @@ class LogsServiceProvider extends ServiceProvider
             $response = $event->response;
 
             // Only log API requests, and skip the log viewer endpoints themselves
-            if (! $request->is('api/*') || $request->is('api/logs', 'api/logs/*')) {
+            if (!$request->is('api/*') || $request->is('api/logs', 'api/logs/*')) {
                 return;
             }
 
@@ -58,7 +58,7 @@ class LogsServiceProvider extends ServiceProvider
                 'url' => $request->fullUrl(),
                 'status' => $response->getStatusCode(),
                 'ip' => $request->ip(),
-                'user_id' => $request->user() ? $request->user()->id : null,
+                'user' => $request->user(),
                 'payload' => $payload,
                 'duration' => defined('LARAVEL_START') ? floor((microtime(true) - LARAVEL_START) * 1000) : null,
             ]);
