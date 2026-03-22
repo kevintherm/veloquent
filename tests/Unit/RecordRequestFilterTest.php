@@ -39,7 +39,7 @@ class RecordRequestFilterTest extends TestCase
             'other_field' => 'value',
         ];
 
-        $filtered = $request->testFilterAutoFillFields($data, $collection);
+        $filtered = $request->test_filter_auto_fill_fields($data, $collection);
 
         // Should keep non-auto-fill fields and non-null auto-fill fields
         $this->assertArrayHasKey('title', $filtered);
@@ -151,7 +151,7 @@ class RecordRequestFilterTest extends TestCase
             'password' => 'newpassword123',
         ];
 
-        $filtered = $request->testFilterPasswordField($data, $collection);
+        $filtered = $request->test_filter_password_field($data, $collection);
 
         // Should keep all fields including non-null password
         $this->assertArrayHasKey('email', $filtered);

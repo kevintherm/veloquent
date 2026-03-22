@@ -4,6 +4,8 @@ use App\Domain\Auth\Controllers\AuthController;
 use App\Domain\Collections\Controllers\CollectionController;
 use App\Domain\Realtime\Controllers\SubscribeController;
 use App\Domain\Records\Controllers\RecordController;
+use App\Domain\SchemaManagement\Controllers\OrphanTableController;
+use App\Domain\SchemaManagement\Controllers\SchemaRecoveryController;
 use App\Http\Controllers\LogViewerController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Middleware\SuperuserOnly;
@@ -44,6 +46,12 @@ Route::middleware('auth:api')->group(function () {
 });
 
 Route::middleware(['auth:api', SuperuserOnly::class])->group(function () {
+    Route::get('/schema/corrupt', [SchemaRecoveryController::class, 'index'])->name('schema.corrupt.index');
+    Route::post('/collections/{collection}/recover', [SchemaRecoveryController::class, 'recover'])->name('collections.recover');
+    Route::get('/schema/orphans', [OrphanTableController::class, 'index'])->name('schema.orphans.index');
+    Route::delete('/schema/orphans', [OrphanTableController::class, 'destroyAll'])->name('schema.orphans.destroy-all');
+    Route::delete('/schema/orphans/{table_name}', [OrphanTableController::class, 'destroy'])->name('schema.orphans.destroy');
+
     Route::get('/logs/dates', [LogViewerController::class, 'getDates'])->name('logs.dates');
     Route::get('/logs', [LogViewerController::class, 'index'])->name('logs.index');
 });

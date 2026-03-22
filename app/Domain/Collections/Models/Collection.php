@@ -7,16 +7,23 @@ use App\Domain\Collections\Casts\IndexCollectionCast;
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Observers\CollectionObserver;
 use App\Domain\Collections\QueryBuilder\CollectionBuilder;
+use Database\Factories\CollectionFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Attributes\UseEloquentBuilder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 #[ObservedBy(CollectionObserver::class)]
 #[UseEloquentBuilder(CollectionBuilder::class)]
 class Collection extends Model
 {
-    use HasUlids;
+    use HasFactory, HasUlids;
+
+    protected static function newFactory(): CollectionFactory
+    {
+        return CollectionFactory::new();
+    }
 
     protected $fillable = ['type', 'name', 'table_name', 'description', 'fields', 'api_rules', 'indexes', 'is_system', 'schema_updated_at'];
 

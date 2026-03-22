@@ -5,10 +5,10 @@ namespace App\Models;
 use Database\Factories\SuperuserFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class Superuser extends Model
+class Superuser extends Authenticatable
 {
     /** @use HasFactory<SuperuserFactory> */
     use HasFactory, HasUlids, Notifiable;
@@ -45,7 +45,6 @@ class Superuser extends Model
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
     }

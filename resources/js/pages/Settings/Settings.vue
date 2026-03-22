@@ -6,9 +6,10 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui";
-import { FlaskConical } from "lucide-vue-next";
 import RealtimeTest from "@/pages/Settings/RealtimeTest.vue";
 import ApiTest from "@/pages/Settings/ApiTest.vue";
+import SchemaMaintenance from "@/pages/Settings/SchemaMaintenance.vue";
+import { Database, FlaskConical } from "lucide-vue-next";
 </script>
 
 <template>
@@ -25,11 +26,19 @@ import ApiTest from "@/pages/Settings/ApiTest.vue";
             <FlaskConical class="h-4 w-4" />
             Tests
           </TabsTrigger>
+          <TabsTrigger value="maintenance" class="gap-2">
+            <Database class="h-4 w-4" />
+            Schema Maintenance
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="tests" class="space-y-4">
           <ApiTest />
           <RealtimeTest />
+        </TabsContent>
+
+        <TabsContent value="maintenance" class="space-y-4">
+          <SchemaMaintenance />
         </TabsContent>
       </Tabs>
     </div>

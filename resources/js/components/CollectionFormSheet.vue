@@ -31,7 +31,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui";
-import { Plus, Trash2, Copy, ArrowDown, ArrowUp, Settings2, MoreHorizontal, FileJson, ChevronUp, Menu, MoreVertical } from "lucide-vue-next";
+import { Plus, Trash2, Copy, ArrowDown, ArrowUp, Settings2, MoreHorizontal, FileJson, ChevronUp, Menu, MoreVertical, Wrench } from "lucide-vue-next";
 import { useDashboardState } from "@/lib/dashboardState";
 import Select from "./ui/select/Select.vue";
 import SelectTrigger from "./ui/select/SelectTrigger.vue";
@@ -60,6 +60,9 @@ const fetchedCollection = ref(null);
 const validationErrors = ref({});
 const availableCollections = ref([]);
 const { activeCollection, requestCollectionsReload, requestRecordsReload } = useDashboardState();
+
+const schemaCorrupt = ref(null); // { activity: string, collection_id: string }
+const recovering = ref(false);
 
 const defaultApiRules = () => ({
   list: "",
@@ -556,6 +559,15 @@ const handleSave = async () => {
     requestCollectionsReload();
     handleClose();
   } catch (error) {
+    if (error?.response?.status === 409 && error?.response?.data?.error_type === "SCHEMA_CORRUPT") {
+      schemaCorrupt.value = {
+        activity: error.response.data.activity,
+        collection_id: error.response.data.collection_id,
+      };
+      toast.error("Schema is corrupt. Recovery required.");
+      return;
+    }
+
     if (error?.response?.status === 422) {
       const errors = error?.response?.data?.errors;
       setValidationErrors(errors ?? {});
@@ -605,6 +617,26 @@ const handleTruncate = async () => {
     toast.error(error?.response?.data?.message || "Failed to truncate collection");
   } finally {
     submitting.value = false;
+  }
+};
+
+const handleRecover = async () => {
+  if (!schemaCorrupt.value?.collection_id) {
+    return;
+  }
+
+  recovering.value = true;
+
+  try {
+    await axios.post(`/api/collections/${encodeURIComponent(schemaCorrupt.value.collection_id)}/recover`);
+    toast.success("Collection recovered successfully");
+    schemaCorrupt.value = null;
+    await fetchCollectionInfo();
+    requestCollectionsReload();
+  } catch (error) {
+    toast.error(error?.response?.data?.message || "Failed to recover collection");
+  } finally {
+    recovering.value = false;
   }
 };
 
@@ -702,12 +734,37 @@ onMounted(async () => {
   <Sheet :open="internalOpen" @update:open="(isOpen) => { if (!isOpen) handleClose(); }">
     <SheetContent side="right" class="sm:max-w-2xl max-w-full flex h-full flex-col overflow-hidden">
       <SheetHeader>
-        <SheetTitle>{{ isCreating ? 'Create' : 'Manage' }} Collection</SheetTitle>
+        <SheetTitle>{{ isCreating ? 'Create' : 'Edit' }} Collection</SheetTitle>
         <SheetDescription>
-          {{ isCreating ? 'Create a new collection with custom fields and settings.' : `Configure collection
-          fields,indexes, and API rules.` }}
+          {{ isCreating ? 'Define a new collection and its fields.' : 'Modify existing collection settings and fields.'
+          }}
         </SheetDescription>
       </SheetHeader>
+
+      <div v-if="schemaCorrupt" class="p-4 rounded-md bg-destructive/10 border border-destructive/20">
+        <div class="flex items-start gap-3">
+          <Settings2 class="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+          <div class="flex-1">
+            <h4 class="font-semibold text-destructive mb-1">Schema Corruption Detected</h4>
+            <p class="text-sm text-muted-foreground mb-3">
+              A previous database operation for this collection failed partway through, leaving it in an inconsistent
+              state.
+              <span v-if="schemaCorrupt.activity === 'create'">The underlying table might exist but is not
+                linked.</span>
+              <span v-else>The database table structure might not match the metadata. Rebuilding table means any
+                existing data will be permanently deleted.</span>
+            </p>
+            <Button variant="destructive" size="sm" :disabled="recovering" @click="handleRecover">
+              <Wrench v-if="!recovering" class="w-4 h-4 mr-2" />
+              <span v-else
+                class="w-4 h-4 mr-2 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
+              {{ schemaCorrupt.activity === 'create' ? 'Drop Table & Clean Up' : 'Rebuild Table from Metadata' }}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <Separator />
 
       <div v-if="loadingCollection" class="py-8 text-center text-muted-foreground">
         Loading collection...
@@ -737,7 +794,7 @@ onMounted(async () => {
                 <Input id="collectionDescription" v-model="formState.description" placeholder="Optional description"
                   @input="clearValidationError('description')" />
                 <p v-if="firstErrorFor('description')" class="text-xs text-destructive">{{ firstErrorFor('description')
-                }}</p>
+                  }}</p>
               </div>
 
               <div class="grid gap-2">

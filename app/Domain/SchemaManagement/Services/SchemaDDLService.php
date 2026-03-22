@@ -15,7 +15,8 @@ readonly class SchemaDDLService
 {
     public function __construct(
         private SchemaPolicy $namingPolicy
-    ) {}
+    ) {
+    }
 
     /**
      * @throws InvalidArgumentException
@@ -51,7 +52,7 @@ readonly class SchemaDDLService
             throw new InvalidArgumentException('Table already exists');
         }
 
-        if (! Schema::hasTable($from)) {
+        if (!Schema::hasTable($from)) {
             throw new InvalidArgumentException('Table does not exist');
         }
 
@@ -80,7 +81,7 @@ readonly class SchemaDDLService
             CollectionFieldType::Url => $blueprint->text($name),
             CollectionFieldType::Json => $blueprint->json($name),
             CollectionFieldType::Relation => $blueprint->char($name, 26),
-            default => throw new InvalidArgumentException('Unsupported column type: '.$type)
+            default => throw new InvalidArgumentException('Unsupported column type: ' . $type)
         };
 
         if (($column['nullable'] ?? false) === true) {
@@ -176,7 +177,7 @@ readonly class SchemaDDLService
             return 'Schema update failed due to a database error.';
         }
 
-        return 'Schema update failed: '.$message;
+        return 'Schema update failed: ' . $message;
     }
 
     private function formatKnownQueryException(QueryException $exception): ?string

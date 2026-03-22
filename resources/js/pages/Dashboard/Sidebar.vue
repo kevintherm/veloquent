@@ -1,11 +1,11 @@
 <script setup>
 import { computed, ref, watch } from "vue";
+import { openCollectionSheet } from "@/lib/collectionFormSheet";
 import { Search, Plus, Settings, LogOut, ChevronDown, ChevronUp, FileText } from "lucide-vue-next";
 import { Button, Input } from "@/components/ui"
 import Collapsible from "@/components/ui/collapsible/Collapsible.vue";
 import CollapsibleTrigger from "@/components/ui/collapsible/CollapsibleTrigger.vue";
 import CollapsibleContent from "@/components/ui/collapsible/CollapsibleContent.vue";
-import { openCollectionSheet } from "@/lib/collectionFormSheet";
 
 const props = defineProps({
     activeCollection: {
