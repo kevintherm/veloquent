@@ -344,10 +344,10 @@ const handleClose = () => {
   if (internalOpen.value === false) {
     return;
   }
-  
+
   internalOpen.value = false;
   validationErrors.value = {};
-  
+
   setTimeout(() => {
     emit("close");
     isCollectionModified.value = false;
@@ -1149,7 +1149,7 @@ onMounted(async () => {
                   </div>
                   <Button variant="ghost" size="sm"
                     class="h-8 px-2 text-xs gap-1.5 hover:bg-primary/5 transition-colors"
-                    @click="formState.api_rules[rule.key] = formState.api_rules[rule.key] === null ? '' : null">
+                    @click="formState.api_rules[rule.key] = formState.api_rules[rule.key] === null ? '' : null; isCollectionModified = true">
                     <template v-if="formState.api_rules[rule.key] === null">
                       <Unlock class="w-3.5 h-3.5" />
                       Unlock

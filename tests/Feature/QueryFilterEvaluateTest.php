@@ -47,3 +47,36 @@ it('evaluates field equals system reference on the right-hand side', function ()
 
     expect($result)->toBeTrue();
 });
+
+it('evaluates @-prefixed variable on the left-hand side', function () {
+    $filter = QueryFilter::for(Collection::query(), []);
+
+    $result = $filter->evaluate(
+        '@request.body.id = @request.auth.id',
+        [
+            'request' => [
+                'body' => ['id' => 5],
+                'auth' => ['id' => 5],
+            ],
+        ]
+    );
+
+    expect($result)->toBeTrue();
+});
+
+it('returns false without unexpected token error when AND short-circuits', function () {
+    $filter = QueryFilter::for(Collection::query(), []);
+
+    $result = $filter->evaluate(
+        'user = @request.auth.id && @request.body.user = @request.auth.id',
+        [
+            'user' => 99,
+            'request' => [
+                'body' => ['user' => 99],
+                'auth' => ['id' => 1],
+            ],
+        ]
+    );
+
+    expect($result)->toBeFalse();
+});

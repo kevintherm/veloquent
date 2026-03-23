@@ -4,8 +4,11 @@ namespace App\Domain\Records\Actions;
 
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
+use App\Domain\QueryCompiler\Services\QueryFilter;
 use App\Domain\Records\Models\Record;
 use App\Domain\Records\Services\RelationIntegrityService;
+use App\Domain\Records\Services\UpdateRuleContextBuilder;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
@@ -25,13 +28,29 @@ class UpdateRecordAction
         $authenticatedUser = Auth::user();
         $bypassApiRules = $authenticatedUser instanceof Record && $authenticatedUser->isSuperuser();
 
-        $query = Record::of($collection)->newQuery();
+        $record = Record::of($collection)->findOrFail($recordId);
 
         if (! $bypassApiRules) {
-            $query->applyRule('update');
-        }
+            $rule = $collection->api_rules['update'] ?? null;
 
-        $record = $query->findOrFail($recordId);
+            if ($rule === null) {
+                throw new AuthorizationException;
+            }
+
+            $rule = trim($rule);
+
+            if ($rule !== '') {
+                $context = app(UpdateRuleContextBuilder::class)
+                    ->build($collection, $record, $data, $authenticatedUser, request());
+
+                $isAllowed = QueryFilter::for($record->newQuery(), array_keys($context))
+                    ->evaluate($rule, $context);
+
+                if (! $isAllowed) {
+                    throw new AuthorizationException;
+                }
+            }
+        }
 
         if ($isAuthCollection
             && ! $bypassApiRules

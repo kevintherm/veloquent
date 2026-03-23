@@ -31,27 +31,55 @@ class QueryFilter
     private const VALUE_KEYWORDS = ['true', 'false', 'null'];
 
     private const OPERATORS = [
-        'is not null', 'not like', 'not in', '!=', '>=', '<=', 'is null', 'like', 'in', '>', '<', '=',
+        'is not null',
+        'not like',
+        'not in',
+        '!=',
+        '>=',
+        '<=',
+        'is null',
+        'like',
+        'in',
+        '>',
+        '<',
+        '=',
     ];
 
     // Simple no-arg date functions
     private const DATE_FUNCTIONS_SIMPLE = [
-        'now', 'today', 'yesterday', 'tomorrow',
-        'thisweek', 'lastweek', 'nextweek',
-        'thismonth', 'lastmonth', 'nextmonth',
-        'thisyear', 'lastyear', 'nextyear',
-        'startofday', 'endofday',
-        'startofweek', 'endofweek',
-        'startofmonth', 'endofmonth',
-        'startofyear', 'endofyear',
+        'now',
+        'today',
+        'yesterday',
+        'tomorrow',
+        'thisweek',
+        'lastweek',
+        'nextweek',
+        'thismonth',
+        'lastmonth',
+        'nextmonth',
+        'thisyear',
+        'lastyear',
+        'nextyear',
+        'startofday',
+        'endofday',
+        'startofweek',
+        'endofweek',
+        'startofmonth',
+        'endofmonth',
+        'startofyear',
+        'endofyear',
     ];
 
     // Parameterized date functions (take a single integer argument)
     private const DATE_FUNCTIONS_PARAM = [
-        'daysago', 'daysfromnow',
-        'weeksago', 'weeksfromnow',
-        'monthsago', 'monthsfromnow',
-        'yearsago', 'yearsfromnow',
+        'daysago',
+        'daysfromnow',
+        'weeksago',
+        'weeksfromnow',
+        'monthsago',
+        'monthsfromnow',
+        'yearsago',
+        'yearsfromnow',
     ];
 
     // -------------------------------------------------------------------------
@@ -74,7 +102,7 @@ class QueryFilter
         return $this;
     }
 
-    public function lint(?string $filter = null): void
+    public function lint(?string $filter = null, bool $inMemory = false): void
     {
         $filter = trim($filter ?? '');
         if ($filter === '') {
@@ -84,7 +112,18 @@ class QueryFilter
         $this->tokens = $this->tokenize($filter);
         $this->pos = 0;
 
-        $this->applyExpr($this->query, false);
+        if ($inMemory) {
+            $this->isEvaluating = true;
+            $this->allowUnknownFields = true;
+            try {
+                $this->evaluateExpr();
+            } finally {
+                $this->isEvaluating = false;
+                $this->allowUnknownFields = false;
+            }
+        } else {
+            $this->applyExpr($this->query, false);
+        }
     }
 
     public function run(string $filter, array $context = []): Builder
@@ -170,7 +209,8 @@ class QueryFilter
 
         while ($this->peek('OR')) {
             $this->consume();
-            $result = $result || $this->evaluateAnd();
+            $right = $this->evaluateAnd();
+            $result = $result || $right;
         }
 
         return $result;
@@ -192,7 +232,8 @@ class QueryFilter
 
         while ($this->peek('AND')) {
             $this->consume();
-            $result = $result && $this->evaluatePrimary();
+            $right = $this->evaluatePrimary();
+            $result = $result && $right;
         }
 
         return $result;
@@ -319,10 +360,6 @@ class QueryFilter
         $fieldToken = $this->consume();
         if ($fieldToken['type'] !== 'FIELD') {
             $this->invalid("Expected field name, got '{$fieldToken['value']}'");
-        }
-
-        if ($this->isSystemReference($fieldToken['value'])) {
-            $this->invalid('Invalid rule expression: expected FIELD OP VALUE and field cannot be @-prefixed.');
         }
 
         $opToken = $this->consume();
@@ -609,7 +646,7 @@ class QueryFilter
                 continue;
             }
             if (substr($src, $i, 2) === '||') {
-                $tokens[] = ['type' => 'OR',  'value' => '||'];
+                $tokens[] = ['type' => 'OR', 'value' => '||'];
                 $i += 2;
 
                 continue;
