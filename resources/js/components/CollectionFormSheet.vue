@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, ref, watch, watchEffect } from "vue";
 import axios from "axios";
 import { toast } from "vue-sonner";
 import {
@@ -166,6 +166,8 @@ const editingFieldIndex = ref(null);
 const fieldsListContainer = ref(null);
 const showDeleteCollectionDialog = ref(false);
 const showTruncateCollectionDialog = ref(false);
+const showCloseConfirmationDialog = ref(false);
+const isCollectionModified = ref(false);
 
 const normalizeCollectionPayload = (payload) => {
   if (payload?.data && !Array.isArray(payload.data)) {
@@ -206,9 +208,6 @@ const normalizeIndexForForm = (index) => {
   };
 };
 
-/**
- * @TODO: Relation indexing is not yet supported and needs implementation.
- */
 const isFieldIndexable = (type) => {
   return !["json", "longtext", "url"].includes(type);
 };
@@ -324,13 +323,26 @@ const fetchCollectionInfo = async () => {
   }
 };
 
+const requestClose = () => {
+  if (isCollectionModified.value) {
+    showCloseConfirmationDialog.value = true;
+    return;
+  }
+
+  handleClose();
+}
+
 const handleClose = () => {
   internalOpen.value = false;
   validationErrors.value = {};
   emit("close");
+
+  isCollectionModified.value = false;
 };
 
 const clearValidationError = (key) => {
+  isCollectionModified.value = true;
+
   if (!validationErrors.value[key]) {
     return;
   }
@@ -594,9 +606,7 @@ const handleDelete = async () => {
     emit("delete", fetchedCollection.value.id);
     requestCollectionsReload();
     handleClose();
-  } catch (error) {
-    toast.error(error?.response?.data?.message || "Failed to delete collection");
-  } finally {
+  } catch { } finally {
     submitting.value = false;
   }
 };
@@ -633,9 +643,7 @@ const handleRecover = async () => {
     schemaCorrupt.value = null;
     await fetchCollectionInfo();
     requestCollectionsReload();
-  } catch (error) {
-    toast.error(error?.response?.data?.message || "Failed to recover collection");
-  } finally {
+  } catch { } finally {
     recovering.value = false;
   }
 };
@@ -731,7 +739,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <Sheet :open="internalOpen" @update:open="(isOpen) => { if (!isOpen) handleClose(); }">
+  <Sheet :open="internalOpen" @update:open="(isOpen) => { if (!isOpen) requestClose(); }">
     <SheetContent side="right" class="sm:max-w-2xl max-w-full flex h-full flex-col overflow-hidden">
       <SheetHeader>
         <SheetTitle>{{ isCreating ? 'Create' : 'Edit' }} Collection</SheetTitle>
@@ -794,7 +802,7 @@ onMounted(async () => {
                 <Input id="collectionDescription" v-model="formState.description" placeholder="Optional description"
                   @input="clearValidationError('description')" />
                 <p v-if="firstErrorFor('description')" class="text-xs text-destructive">{{ firstErrorFor('description')
-                  }}</p>
+                }}</p>
               </div>
 
               <div class="grid gap-2">
@@ -1187,7 +1195,7 @@ onMounted(async () => {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-          <Button variant="outline" class="flex-1" @click="handleClose">Cancel</Button>
+          <Button variant="outline" class="flex-1" @click="requestClose">Cancel</Button>
           <Button class="flex-1" :disabled="submitting" @click="handleSave">
             {{ submitting ? 'Saving...' : (isCreating ? 'Create Collection' : 'Save Changes') }}
           </Button>
@@ -1221,6 +1229,22 @@ onMounted(async () => {
           <AlertDialogFooter>
             <AlertDialogCancel :disabled="submitting">Cancel</AlertDialogCancel>
             <AlertDialogAction :disabled="submitting" @click="handleDelete">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog :open="showCloseConfirmationDialog"
+        @update:open="(value) => { showCloseConfirmationDialog = value; }">
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Close sheet?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Unsaved changes will be gone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction @click="handleClose">Close</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
