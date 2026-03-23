@@ -37,11 +37,20 @@ class CreateCollectionAction
             $this->validateApiRules($data['api_rules'], Arr::pluck($mergedFields, 'name'));
         }
 
+        $options = $data['options'] ?? [];
+        if ($isAuthCollection) {
+            $options = array_merge([
+                'auth_methods' => ['email_password'],
+                'require_email_verification' => false,
+            ], $options);
+        }
+
         return Collection::create([
             ...$data,
             'table_name' => SchemaChangePlan::generateTableName($data['name'], $data['is_system'] ?? false),
             'fields' => $mergedFields,
             'indexes' => $indexes,
+            'options' => $options ?: null,
         ]);
     }
 
