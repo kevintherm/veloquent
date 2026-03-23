@@ -151,7 +151,7 @@ watch(
 
 watch(
     () => activeCollection.value?.id,
-    (newId, oldId) => {
+    (newId) => {
         if (newId) {
             ensureCollectionPath();
         }

@@ -6,6 +6,13 @@
         "/home/kevin/Projects/laravel/velo-revamp/artisan",
         "boost:mcp"
       ]
+    },
+    "shadcnVue": {
+      "command": "npx",
+      "args": [
+        "shadcn-vue@latest",
+        "mcp"
+      ]
     }
   }
 }

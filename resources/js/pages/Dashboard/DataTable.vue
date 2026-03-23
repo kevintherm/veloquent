@@ -234,7 +234,7 @@ const copyRecordId = async (recordId) => {
                             </TableCell>
                             <TableCell v-for="column in columns" :key="`${record.id}-${column}`" :class="[
                                 'align-top',
-                                isFixedWidthColumn(column) ? 'w-45 min-w-45 whitespace-nowrap' : 'w-64 min-w-64 max-w-64',
+                                isFixedWidthColumn(column) ? 'w-45 min-w-45 whitespace-nowrap' : 'w-16 min-w-16 max-w-16',
                             ]">
                                 <div v-if="isDatetimeColumn(column, columnTypes)"
                                     class="leading-tight whitespace-nowrap">

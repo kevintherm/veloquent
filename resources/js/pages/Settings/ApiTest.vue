@@ -36,7 +36,7 @@ const sendRequest = async () => {
         if (["POST", "PUT"].includes(selectedMethod.value) && requestBody.value.trim()) {
             try {
                 payload = JSON.parse(requestBody.value);
-            } catch (e) {
+            } catch {
                 loading.value = false;
                 responseStatus.value = "Invalid JSON";
                 responseData.value = { error: "Could not parse request body as JSON." };

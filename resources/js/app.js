@@ -26,8 +26,13 @@ axios.interceptors.response.use(
 		const currentPath = router.currentRoute.value.path;
 
 		if (!publicPaths.includes(currentPath)) {
-			const initialized = await isOnboardingInitialized();
-			await router.replace(initialized ? '/login' : '/register');
+			try {
+				const initialized = await isOnboardingInitialized();
+				await router.replace(initialized ? '/login' : '/register');
+			} catch (e) {
+				console.error('Failed to check onboarding status:', e);
+				// Don't redirect if the check itself fails, to avoid infinite loops
+			}
 		}
 
 		return Promise.reject(error);

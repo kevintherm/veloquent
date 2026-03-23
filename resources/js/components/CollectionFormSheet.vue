@@ -31,7 +31,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui";
-import { Plus, Trash2, Copy, ArrowDown, ArrowUp, Settings2, MoreHorizontal, FileJson, ChevronUp, Menu, MoreVertical, Wrench } from "lucide-vue-next";
+import { Plus, Trash2, Copy, ArrowDown, ArrowUp, Settings2, FileJson, MoreVertical, Wrench } from "lucide-vue-next";
 import { useDashboardState } from "@/lib/dashboardState";
 import Select from "./ui/select/Select.vue";
 import SelectTrigger from "./ui/select/SelectTrigger.vue";
@@ -1033,7 +1033,7 @@ onMounted(async () => {
 
           <!-- Indexes Tab -->
           <TabsContent value="indexes" class="space-y-4 mt-4 flex-1 min-h-0 overflow-y-auto pr-2 pb-6">
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between pt-1">
               <h3 class="text-sm font-semibold">Database Indexes</h3>
               <Button variant="outline" size="sm" @click="showNewIndexForm = true">
                 <Plus class="h-4 w-4 mr-1" />

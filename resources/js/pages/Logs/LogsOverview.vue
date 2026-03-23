@@ -31,7 +31,7 @@ import {
     PaginationNext,
     PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Copy, AlertCircle, Info, AlertTriangle, Search, Activity, Clock, Server, RefreshCw, Timer } from "lucide-vue-next";
+import { Copy, AlertCircle, Info, AlertTriangle, Search, Clock, Server, RefreshCw, Timer, ChevronLeft, ChevronsLeft, ChevronsLeftIcon, ChevronFirst, ChevronsLeftRightEllipsis, LucideChevronsLeft } from "lucide-vue-next";
 import { toast } from "vue-sonner";
 
 const dates = ref([]);
@@ -45,7 +45,7 @@ const totalResults = ref(0);
 const isLoading = ref(false);
 
 const currentPage = ref(1);
-const itemsPerPage = ref(50);
+const itemsPerPage = ref(10);
 const lastPage = ref(1);
 
 const selectedLog = ref(null);
@@ -67,7 +67,7 @@ const fetchDates = async () => {
 const fetchLogs = async () => {
     if (!selectedDate.value) return;
     isLoading.value = true;
-    const toastId = toast.loading("Fetching logs for " + selectedDate.value + "...");
+    const toastId = toast.loading("Fetching logs...");
 
     try {
         const res = await axios.get("/api/logs", {
@@ -180,7 +180,7 @@ const getUrlPath = (url) => {
         return urlObj.pathname + urlObj.search;
     } catch {
         // Fallback for relative URLs or invalid ones
-        const match = url.match(/^https?:\/\/[^\/]+(\/.*)/);
+        const match = url.match(/^https?:\/\/[^/]+(\/.*)/);
         return match ? match[1] : url;
     }
 };
@@ -206,38 +206,6 @@ const copyToClipboard = async (text) => {
                     <RefreshCw :class="['h-4 w-4 mr-2', { 'animate-spin': isLoading }]" />
                     Refresh
                 </Button>
-            </div>
-
-            <!-- Stats Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card class="flex items-center gap-4 p-6 shadow-sm">
-                    <div class="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                        <Activity class="h-6 w-6" />
-                    </div>
-                    <div>
-                        <h3 class="text-3xl font-bold">{{ totalResults }}</h3>
-                        <p class="text-sm text-muted-foreground font-medium">Total Events</p>
-                    </div>
-                </Card>
-                <Card class="flex items-center gap-4 p-6 shadow-sm">
-                    <div
-                        class="h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center text-destructive">
-                        <AlertCircle class="h-6 w-6" />
-                    </div>
-                    <div>
-                        <h3 class="text-3xl font-bold">{{ chartData.reduce((acc, h) => acc + h.error, 0) }}</h3>
-                        <p class="text-sm text-muted-foreground font-medium">Errors</p>
-                    </div>
-                </Card>
-                <Card class="flex items-center gap-4 p-6 shadow-sm">
-                    <div class="h-12 w-12 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500">
-                        <AlertTriangle class="h-6 w-6" />
-                    </div>
-                    <div>
-                        <h3 class="text-3xl font-bold">{{ chartData.reduce((acc, h) => acc + h.warning, 0) }}</h3>
-                        <p class="text-sm text-muted-foreground font-medium">Warnings</p>
-                    </div>
-                </Card>
             </div>
 
             <!-- Filters & Chart -->
@@ -274,9 +242,9 @@ const copyToClipboard = async (text) => {
 
                 <Card class="lg:col-span-3 shadow-sm relative">
                     <CardHeader class="pb-2">
-                        <div class="flex items-start justify-between">
+                        <div class="flex items-start justify-between gap-4">
                             <div>
-                                <CardTitle class="text-lg font-semibold">Activity Chart ({{ selectedDate || 'Today' }})
+                                <CardTitle class="text-lg font-semibold">Activity Chart
                                 </CardTitle>
                                 <p class="text-sm text-muted-foreground">Click any bar to filter events by hour.</p>
                             </div>
@@ -349,23 +317,13 @@ const copyToClipboard = async (text) => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                <TableRow v-if="isLoading">
-                                    <TableCell colspan="4" class="h-32 text-center text-muted-foreground">
-                                        <div class="flex flex-col items-center justify-center gap-2">
-                                            <div
-                                                class="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin">
-                                            </div>
-                                            <p>Loading logs...</p>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                                <TableRow v-else-if="logs.length === 0">
+                                <TableRow v-if="logs.length === 0">
                                     <TableCell colspan="4" class="h-32 text-center text-muted-foreground">
                                         No logs found for this filter.
                                     </TableCell>
                                 </TableRow>
-                                <TableRow v-for="(log, idx) in logs" :key="idx"
-                                    class="cursor-pointer hover:bg-muted/50" @click="openLogDetails(log)">
+                                <TableRow v-for="(log, idx) in logs" :key="idx" class="cursor-pointer hover:bg-muted/50"
+                                    @click="openLogDetails(log)">
                                     <TableCell class="text-xs whitespace-nowrap text-muted-foreground py-4">
                                         <div class="font-medium text-foreground">{{ formatDate(log.datetime) }}</div>
                                         <div v-if="log.context?.duration || log.context?.time"
@@ -410,21 +368,25 @@ const copyToClipboard = async (text) => {
                         </p>
                         <Pagination v-slot="{ page }" :total="totalResults" :sibling-count="1" show-edges
                             :default-page="1" v-model:page="currentPage" :items-per-page="itemsPerPage"
-                            class="justify-end">
+                            class="justify-center md:justify-end">
                             <PaginationContent v-slot="{ items }">
                                 <PaginationFirst />
                                 <PaginationPrevious />
 
                                 <template v-for="(item, index) in items">
-                                    <PaginationItem v-if="item.type === 'page'" :key="index" :value="item.value"
-                                        as-child>
+                                    <PaginationItem class="hidden md:flex" v-if="item.type === 'page'" :key="index"
+                                        :value="item.value" as-child>
                                         <Button class="w-9 h-9 p-0"
-                                            :variant="item.value === page ? 'default' : 'outline'">
+                                            :variant="item.value === currentPage ? 'default' : 'outline'">
                                             {{ item.value }}
                                         </Button>
                                     </PaginationItem>
-                                    <PaginationEllipsis v-else :key="item.type" :index="index" />
+                                    <PaginationEllipsis class="hidden md:flex" v-else :key="item.type" :index="index" />
                                 </template>
+
+                                <Button class="w-9 h-9 p-0 md:hidden" variant="default" inert="true">
+                                    {{ currentPage }}
+                                </Button>
 
                                 <PaginationNext />
                                 <PaginationLast />
