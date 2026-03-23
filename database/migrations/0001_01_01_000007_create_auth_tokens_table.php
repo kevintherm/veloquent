@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('auth_tokens', function (Blueprint $table) {
-            $table->id();
+            $table->ulid('id')->primary();
             $table->string('collection_name');
             $table->ulid('collection_id');
             $table->ulid('record_id');

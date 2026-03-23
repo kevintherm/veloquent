@@ -58,7 +58,7 @@ class LogsServiceProvider extends ServiceProvider
                 'url' => $request->fullUrl(),
                 'status' => $response->getStatusCode(),
                 'ip' => $request->ip(),
-                'user' => $request->user()->toArray(),
+                'user' => $request->user()?->toArray(),
                 'payload' => $payload,
                 'duration' => defined('LARAVEL_START') ? floor((microtime(true) - LARAVEL_START) * 1000) : null,
             ]);

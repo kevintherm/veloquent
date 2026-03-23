@@ -1,5 +1,8 @@
 <?php
 
+use App\Domain\Collections\Enums\CollectionFieldType;
+use App\Domain\Collections\Enums\CollectionType;
+use App\Domain\Collections\Models\Collection;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -12,10 +15,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('realtime_subscriptions', function (Blueprint $table) {
-            $table->char('id', 26)->primary();
-            $table->char('collection_id', 26);
+            $table->ulid('id')->primary();
+            $table->ulid('collection_id');
             $table->string('auth_collection');
-            $table->char('subscriber_id', 26);
+            $table->ulid('subscriber_id');
             $table->string('channel');
             $table->text('filter')->nullable();
             $table->timestamp('expired_at');
@@ -29,6 +32,62 @@ return new class extends Migration
                 'rt_subs_collection_auth_sub_uq'
             );
         });
+
+        Collection::createQuietly([
+            'name' => 'realtimeSubscriptions',
+            'is_system' => true,
+            'type' => CollectionType::Base,
+            'description' => 'Stores realtime subscriptions for the system.',
+            'table_name' => 'realtime_subscriptions',
+            'fields' => [
+                [
+                    'name' => 'id',
+                    'type' => CollectionFieldType::Text,
+                    'nullable' => false,
+                    'unique' => true,
+                ],
+                [
+                    'name' => 'collection_name',
+                    'type' => CollectionFieldType::Text,
+                    'nullable' => false,
+                ],
+                [
+                    'name' => 'auth_collection',
+                    'type' => CollectionFieldType::Text,
+                    'nullable' => false,
+                ],
+                [
+                    'name' => 'subscriber_id',
+                    'type' => CollectionFieldType::Text,
+                    'nullable' => false,
+                ],
+                [
+                    'name' => 'channel',
+                    'type' => CollectionFieldType::Text,
+                    'nullable' => false,
+                ],
+                [
+                    'name' => 'filter',
+                    'type' => CollectionFieldType::Text,
+                    'nullable' => true,
+                ],
+                [
+                    'name' => 'expires_at',
+                    'type' => CollectionFieldType::Datetime,
+                    'nullable' => false,
+                ],
+                [
+                    'name' => 'created_at',
+                    'type' => CollectionFieldType::Datetime,
+                    'nullable' => true,
+                ],
+                [
+                    'name' => 'updated_at',
+                    'type' => CollectionFieldType::Datetime,
+                    'nullable' => true,
+                ],
+            ],
+        ]);
     }
 
     /**
@@ -37,5 +96,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('realtime_subscriptions');
+
+        Collection::where('name', 'realtimeSubscriptions')->deleteQuietly();
     }
 };
