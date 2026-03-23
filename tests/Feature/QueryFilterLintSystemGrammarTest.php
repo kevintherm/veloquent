@@ -17,3 +17,10 @@ it('rejects @-prefixed system grammar in field position during lint', function (
     expect(fn () => QueryFilter::for($query, ['id'])->lint('@request.auth.id = 1'))
         ->toThrow(InvalidRuleExpressionException::class);
 });
+
+it('allows @-prefixed system grammar in field position during in-memory lint', function () {
+    $query = Collection::query();
+
+    expect(fn () => QueryFilter::for($query, ['id'])->lint('@request.auth.id = 1', true))
+        ->not->toThrow(InvalidRuleExpressionException::class);
+});

@@ -1,7 +1,5 @@
 ## TODO
 
-- feat: api_rules handle static and sql evaluations
-    - e.g: body = @request.auth.id && @request.body.user = @request.auth.id
 - Setup system variables
     - Rate limit
     - Trust proxies

@@ -166,7 +166,8 @@ class UpdateCollectionAction
 
         foreach ($expectedKeys as $rule) {
             $query = app(Collection::class)->newQuery();
-            QueryFilter::for($query, $fields)->lint($apiRules[$rule]);
+            $inMemory = in_array($rule, ['create', 'update'], true);
+            QueryFilter::for($query, $fields)->lint($apiRules[$rule], $inMemory);
         }
     }
 }
