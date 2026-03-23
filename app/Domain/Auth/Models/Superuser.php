@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models;
+namespace App\Domain\Auth\Models;
 
 use Database\Factories\SuperuserFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
