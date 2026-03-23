@@ -1,5 +1,6 @@
 <?php
 
+use App\Domain\Collections\Enums\CollectionFieldType;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -19,12 +20,72 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        Schema::create('password_reset_tokens', function (Blueprint $table) {
-            $table->string('email')->primary();
-            $table->string('token');
-            $table->timestamp('created_at')->nullable();
-        });
-
+        DB::table('collections')->insert([
+            'id' => Str::ulid(),
+            'type' => 'auth',
+            'is_system' => true,
+            'name' => 'superusers',
+            'table_name' => 'superusers',
+            'description' => 'Superusers collection',
+            'fields' => json_encode([
+                [
+                    'id' => bin2hex(random_bytes(4)),
+                    'name' => 'id',
+                    'type' => CollectionFieldType::Text->value,
+                    'nullable' => false,
+                    'unique' => true,
+                    'length' => 26,
+                ],
+                [
+                    'id' => bin2hex(random_bytes(4)),
+                    'name' => 'name',
+                    'type' => CollectionFieldType::Text->value,
+                    'nullable' => false,
+                    'unique' => false,
+                    'length' => 255,
+                ],
+                [
+                    'id' => bin2hex(random_bytes(4)),
+                    'name' => 'email',
+                    'type' => CollectionFieldType::Email->value,
+                    'nullable' => false,
+                    'unique' => true,
+                    'length' => 255,
+                ],
+                [
+                    'id' => bin2hex(random_bytes(4)),
+                    'name' => 'password',
+                    'type' => CollectionFieldType::Text->value,
+                    'nullable' => false,
+                    'unique' => false,
+                    'length' => 255,
+                ],
+                [
+                    'id' => bin2hex(random_bytes(4)),
+                    'name' => 'created_at',
+                    'type' => CollectionFieldType::Datetime->value,
+                    'nullable' => false,
+                    'unique' => false,
+                ],
+                [
+                    'id' => bin2hex(random_bytes(4)),
+                    'name' => 'updated_at',
+                    'type' => CollectionFieldType::Datetime->value,
+                    'nullable' => false,
+                    'unique' => false,
+                ],
+            ]),
+            'api_rules' => json_encode([
+                'list' => null,
+                'view' => null,
+                'create' => null,
+                'update' => null,
+                'delete' => null,
+            ]),
+            'schema_updated_at' => now(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 
     /**
@@ -33,6 +94,6 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('superusers');
-        Schema::dropIfExists('password_reset_tokens');
+        DB::table('collections')->where('name', 'superusers')->where('is_system', true)->delete();
     }
 };

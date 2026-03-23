@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\RealtimeSubscription;
+use App\Domain\Realtime\Models\RealtimeSubscription;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 

@@ -2,15 +2,19 @@
 
 namespace Database\Factories;
 
-use App\Models\Superuser;
+use App\Domain\Auth\Models\Superuser;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 
-/**
- * @extends Factory<Superuser>
- */
 class SuperuserFactory extends Factory
 {
+    /**
+     * The name of the factory's corresponding model.
+     *
+     * @var string
+     */
+    protected $model = Superuser::class;
+
     /**
      * The current password being used by the factory.
      */

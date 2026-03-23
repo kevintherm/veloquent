@@ -2,7 +2,7 @@
 
 namespace App\Domain\Realtime\Commands;
 
-use App\Models\RealtimeSubscription;
+use App\Domain\Realtime\Models\RealtimeSubscription;
 use Illuminate\Console\Command;
 
 class PruneExpiredRealtimeSubscriptions extends Command

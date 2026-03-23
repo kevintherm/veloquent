@@ -4,9 +4,9 @@ namespace App\Domain\Realtime\Controllers;
 
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Realtime\Contracts\RealtimeBusDriver;
+use App\Domain\Realtime\Models\RealtimeSubscription;
 use App\Domain\Records\Models\Record;
 use App\Infrastructure\Http\Controllers\ApiController;
-use App\Models\RealtimeSubscription;
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;

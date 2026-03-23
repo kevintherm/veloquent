@@ -1,7 +1,7 @@
 <?php
 
+use App\Domain\Auth\Models\Superuser;
 use App\Http\Middleware\TokenAuthMiddleware;
-use App\Models\Superuser;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Tests\TestCase;

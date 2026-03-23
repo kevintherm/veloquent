@@ -1,12 +1,12 @@
 <?php
 
+use App\Domain\Auth\Models\AuthToken;
 use App\Domain\Auth\Services\TokenAuthService;
 use App\Domain\Collections\Actions\CreateCollectionAction;
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
+use App\Domain\Realtime\Models\RealtimeSubscription;
 use App\Domain\Records\Models\Record;
-use App\Models\AuthToken;
-use App\Models\RealtimeSubscription;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 
