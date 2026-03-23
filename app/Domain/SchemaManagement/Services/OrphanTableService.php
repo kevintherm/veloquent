@@ -44,10 +44,10 @@ class OrphanTableService
         ];
 
         return collect($allTables)
-            ->map(fn(string $table) => str_contains($table, '.') ? Str::afterLast($table, '.') : $table)
-            ->filter(fn(string $table) => Str::startsWith($table, $prefix))
-            ->reject(fn(string $table) => in_array($table, $systemTables))
-            ->reject(fn(string $table) => in_array($table, $collectionTables))
+            ->map(fn (string $table) => str_contains($table, '.') ? Str::afterLast($table, '.') : $table)
+            ->filter(fn (string $table) => Str::startsWith($table, $prefix))
+            ->reject(fn (string $table) => in_array($table, $systemTables))
+            ->reject(fn (string $table) => in_array($table, $collectionTables))
             ->values()
             ->all();
     }
@@ -57,7 +57,7 @@ class OrphanTableService
      */
     public function dropTable(string $tableName): bool
     {
-        if (!$this->isOrphan($tableName)) {
+        if (! $this->isOrphan($tableName)) {
             return false;
         }
 
@@ -70,13 +70,13 @@ class OrphanTableService
     {
         $tableName = str_contains($tableName, '.') ? Str::afterLast($tableName, '.') : $tableName;
 
-        if (!str_starts_with($tableName, $this->prefix)) {
+        if (! str_starts_with($tableName, $this->prefix)) {
             return false;
         }
 
         $allTables = Collection::pluck('table_name')->filter()->toArray();
 
-        return !in_array($tableName, $allTables);
+        return ! in_array($tableName, $allTables);
     }
 
     /**

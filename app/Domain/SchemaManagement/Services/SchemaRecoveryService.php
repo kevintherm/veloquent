@@ -14,8 +14,7 @@ class SchemaRecoveryService
     public function __construct(
         private readonly SchemaDDLService $ddlService,
         private readonly IndexSyncService $indexSyncService,
-    ) {
-    }
+    ) {}
 
     /**
      * Recover a collection from a corrupt schema state.
@@ -24,7 +23,7 @@ class SchemaRecoveryService
     {
         $job = SchemaJob::where('collection_id', $collection->id)->first();
 
-        if (!$job) {
+        if (! $job) {
             return;
         }
 
@@ -81,7 +80,7 @@ class SchemaRecoveryService
     {
         if (is_array($indexes)) {
             return collect($indexes)
-                ->map(fn(mixed $index) => Index::fromArray((array) $index))
+                ->map(fn (mixed $index) => Index::fromArray((array) $index))
                 ->values()
                 ->all();
         }

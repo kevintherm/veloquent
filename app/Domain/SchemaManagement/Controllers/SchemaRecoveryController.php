@@ -13,8 +13,7 @@ class SchemaRecoveryController extends ApiController
 {
     public function __construct(
         private readonly SchemaRecoveryService $recoveryService
-    ) {
-    }
+    ) {}
 
     public function index(): JsonResponse
     {

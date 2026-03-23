@@ -23,8 +23,7 @@ readonly class CollectionObserver
         private IndexSyncService $indexSyncService,
         private RelationIntegrityService $relationIntegrityService,
         private SchemaCorruptGuard $corruptGuard,
-    ) {
-    }
+    ) {}
 
     /**
      * @throws InvalidArgumentException
@@ -125,13 +124,12 @@ readonly class CollectionObserver
      * Handle job failure by ending the job and re-throwing the exception.
      * Specifically for MySql driver, it would not rollback the DDL statement,
      * inconsistent metadata state would need a manual cleanup.
-     * @param Collection $collection
-     * @param \Throwable $e
+     *
      * @return never
      */
     private function handleJobFailure(Collection $collection, \Throwable $e): void
     {
-        if (!$this->isMySQL()) {
+        if (! $this->isMySQL()) {
             $this->endJob($collection);
         }
 
@@ -163,7 +161,7 @@ readonly class CollectionObserver
         $fieldsWereDirty = $collection->isDirty('fields');
         $indexesWereDirty = $collection->isDirty('indexes');
 
-        if (!$fieldsWereDirty && !$indexesWereDirty) {
+        if (! $fieldsWereDirty && ! $indexesWereDirty) {
             $collection->schema_updated_at = now();
 
             return;
@@ -182,7 +180,7 @@ readonly class CollectionObserver
 
             $desiredIndexes = $this->updateIndexesForFieldChanges($originalFields, $newFields, $desiredIndexes);
             $collection->indexes = array_map(
-                fn(Index $index): array => $index->toArray(),
+                fn (Index $index): array => $index->toArray(),
                 $desiredIndexes
             );
 
@@ -226,8 +224,8 @@ readonly class CollectionObserver
         $validKeys = ['list', 'view', 'create', 'update', 'delete'];
         $invalidKeys = array_diff(array_keys($collection->api_rules ?? []), $validKeys);
 
-        if (!empty($invalidKeys)) {
-            throw new \InvalidArgumentException('Invalid api rules keys: ' . implode(', ', $invalidKeys));
+        if (! empty($invalidKeys)) {
+            throw new \InvalidArgumentException('Invalid api rules keys: '.implode(', ', $invalidKeys));
         }
     }
 
@@ -285,12 +283,12 @@ readonly class CollectionObserver
         if (is_string($indexes) && $indexes !== '') {
             $decoded = json_decode($indexes, true);
 
-            if (!is_array($decoded)) {
+            if (! is_array($decoded)) {
                 return [];
             }
 
             return collect($decoded)
-                ->map(fn(mixed $index): Index => Index::fromArray((array) $index))
+                ->map(fn (mixed $index): Index => Index::fromArray((array) $index))
                 ->values()
                 ->all();
         }
@@ -307,17 +305,17 @@ readonly class CollectionObserver
     private function updateIndexesForFieldChanges(array $beforeFields, array $afterFields, array $indexes): array
     {
         $beforeById = collect($beforeFields)
-            ->filter(fn(array $field): bool => isset($field['id']))
+            ->filter(fn (array $field): bool => isset($field['id']))
             ->keyBy('id');
 
         $afterById = collect($afterFields)
-            ->filter(fn(array $field): bool => isset($field['id']))
+            ->filter(fn (array $field): bool => isset($field['id']))
             ->keyBy('id');
 
         $renames = [];
 
         foreach ($beforeById as $id => $beforeField) {
-            if (!$afterById->has($id)) {
+            if (! $afterById->has($id)) {
                 continue;
             }
 
@@ -329,9 +327,9 @@ readonly class CollectionObserver
         }
 
         $droppedNames = $beforeById
-            ->reject(fn(array $field, string|int $id): bool => $afterById->has($id))
+            ->reject(fn (array $field, string|int $id): bool => $afterById->has($id))
             ->pluck('name')
-            ->filter(fn(mixed $name): bool => is_string($name) && $name !== '')
+            ->filter(fn (mixed $name): bool => is_string($name) && $name !== '')
             ->values()
             ->all();
 
@@ -357,8 +355,8 @@ readonly class CollectionObserver
 
                 return new Index(columns: $columns, type: $index->type);
             })
-            ->reject(fn(Index $index): bool => $index->columns === [])
-            ->unique(fn(Index $index): string => $index->identityKey())
+            ->reject(fn (Index $index): bool => $index->columns === [])
+            ->unique(fn (Index $index): string => $index->identityKey())
             ->values()
             ->all();
 
@@ -373,17 +371,17 @@ readonly class CollectionObserver
     private function protectedUniqueIndexNames(string $table, array $fields, array $indexes): array
     {
         $indexManagedUniqueFieldNames = collect($indexes)
-            ->filter(fn(Index $index): bool => $index->type === 'unique' && count($index->columns) === 1)
-            ->map(fn(Index $index): string => (string) $index->columns[0])
+            ->filter(fn (Index $index): bool => $index->type === 'unique' && count($index->columns) === 1)
+            ->map(fn (Index $index): string => (string) $index->columns[0])
             ->values()
             ->all();
 
         return collect($fields)
-            ->filter(fn(array $field): bool => ($field['unique'] ?? false) === true)
+            ->filter(fn (array $field): bool => ($field['unique'] ?? false) === true)
             ->pluck('name')
-            ->reject(fn(mixed $name): bool => is_string($name) && in_array($name, $indexManagedUniqueFieldNames, true))
-            ->filter(fn(mixed $name): bool => is_string($name) && $name !== '' && $name !== 'id')
-            ->map(fn(string $name): string => Index::generateIndexName($table, [$name], 'unique'))
+            ->reject(fn (mixed $name): bool => is_string($name) && in_array($name, $indexManagedUniqueFieldNames, true))
+            ->filter(fn (mixed $name): bool => is_string($name) && $name !== '' && $name !== 'id')
+            ->map(fn (string $name): string => Index::generateIndexName($table, [$name], 'unique'))
             ->values()
             ->all();
     }
@@ -398,8 +396,8 @@ readonly class CollectionObserver
         $reservedNames = SchemaChangePlan::getAllReservedFields(false);
 
         $uniqueFieldNames = collect($indexes)
-            ->filter(fn(Index $index): bool => $index->type === 'unique' && count($index->columns) === 1)
-            ->map(fn(Index $index): string => (string) $index->columns[0])
+            ->filter(fn (Index $index): bool => $index->type === 'unique' && count($index->columns) === 1)
+            ->map(fn (Index $index): string => (string) $index->columns[0])
             ->values()
             ->all();
 
@@ -413,7 +411,7 @@ readonly class CollectionObserver
                     return $field;
                 }
 
-                if (!is_string($fieldName) || in_array($fieldName, $reservedNames, true)) {
+                if (! is_string($fieldName) || in_array($fieldName, $reservedNames, true)) {
                     return $field;
                 }
 
@@ -433,17 +431,17 @@ readonly class CollectionObserver
     private function fieldNamesAffectedByUpdate(array $beforeFields, array $afterFields): array
     {
         $beforeById = collect($beforeFields)
-            ->filter(fn(array $field): bool => isset($field['id']))
+            ->filter(fn (array $field): bool => isset($field['id']))
             ->keyBy('id');
 
         $afterById = collect($afterFields)
-            ->filter(fn(array $field): bool => isset($field['id']))
+            ->filter(fn (array $field): bool => isset($field['id']))
             ->keyBy('id');
 
         $renamedFrom = [];
 
         foreach ($beforeById as $id => $beforeField) {
-            if (!$afterById->has($id)) {
+            if (! $afterById->has($id)) {
                 continue;
             }
 
@@ -455,9 +453,9 @@ readonly class CollectionObserver
         }
 
         $dropped = $beforeById
-            ->reject(fn(array $field, string|int $id): bool => $afterById->has($id))
+            ->reject(fn (array $field, string|int $id): bool => $afterById->has($id))
             ->pluck('name')
-            ->filter(fn(mixed $name): bool => is_string($name) && $name !== '')
+            ->filter(fn (mixed $name): bool => is_string($name) && $name !== '')
             ->values()
             ->all();
 
