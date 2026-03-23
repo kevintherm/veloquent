@@ -6,6 +6,7 @@ use App\Domain\Realtime\Controllers\SubscribeController;
 use App\Domain\Records\Controllers\RecordController;
 use App\Domain\SchemaManagement\Controllers\OrphanTableController;
 use App\Domain\SchemaManagement\Controllers\SchemaRecoveryController;
+use App\Http\Controllers\EmailTemplateController;
 use App\Http\Controllers\LogViewerController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Middleware\SuperuserOnly;
@@ -31,9 +32,18 @@ Route::prefix('collections/{collection}/records')->group(function () {
 
 Route::prefix('collections/{collection}/auth')->name('collections.auth.')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->name('authenticate');
-    Route::delete('/logout', [AuthController::class, 'logout'])->name('logout');
-    Route::delete('/logout-all', [AuthController::class, 'logoutAll'])->name('logout-all');
-    Route::get('/me', [AuthController::class, 'me'])->name('me');
+
+    Route::post('/password-reset/request', [AuthController::class, 'requestPasswordReset'])->name('password-reset.request');
+    Route::post('/password-reset/confirm', [AuthController::class, 'confirmPasswordReset'])->name('password-reset.confirm');
+
+    Route::middleware('auth:api')->group(function () {
+        Route::delete('/logout', [AuthController::class, 'logout'])->name('logout');
+        Route::delete('/logout-all', [AuthController::class, 'logoutAll'])->name('logout-all');
+        Route::get('/me', [AuthController::class, 'me'])->name('me');
+
+        Route::post('/email-verification/request', [AuthController::class, 'requestEmailVerification'])->name('email-verification.request');
+        Route::post('/email-verification/confirm', [AuthController::class, 'confirmEmailVerification'])->name('email-verification.confirm');
+    });
 });
 
 Route::post('/onboarding/initialized', [OnboardingController::class, 'initialized'])->name('onboarding.initialized.check');
@@ -54,4 +64,7 @@ Route::middleware(['auth:api', SuperuserOnly::class])->group(function () {
 
     Route::get('/logs/dates', [LogViewerController::class, 'getDates'])->name('logs.dates');
     Route::get('/logs', [LogViewerController::class, 'index'])->name('logs.index');
+
+    Route::get('/collections/{collection}/email-templates/{action}', [EmailTemplateController::class, 'show'])->name('email-templates.show');
+    Route::put('/collections/{collection}/email-templates/{action}', [EmailTemplateController::class, 'update'])->name('email-templates.update');
 });

@@ -32,6 +32,15 @@
         "vue-eslint-parser": "^10.4.0"
     },
     "dependencies": {
+        "@tiptap/extension-color": "^3.20.4",
+        "@tiptap/extension-highlight": "^3.20.4",
+        "@tiptap/extension-link": "^3.20.4",
+        "@tiptap/extension-placeholder": "^3.20.4",
+        "@tiptap/extension-text-align": "^3.20.4",
+        "@tiptap/extension-text-style": "^3.20.4",
+        "@tiptap/extension-underline": "^3.20.4",
+        "@tiptap/starter-kit": "^3.20.4",
+        "@tiptap/vue-3": "^3.20.4",
         "@vitejs/plugin-vue": "^6.0.4",
         "@vueuse/core": "^14.2.1",
         "class-variance-authority": "^0.7.1",

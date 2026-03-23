@@ -36,6 +36,17 @@ return [
     */
     'default_auth_collection' => env('VELO_DEFAULT_AUTH_COLLECTION', 'users'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | OTP Configuration
+    |--------------------------------------------------------------------------
+    */
+    'otp' => [
+        'length' => (int) env('VELO_OTP_LENGTH', 6),
+        'ttl' => (int) env('VELO_OTP_TTL', 15),
+        'cleanup_grace' => (int) env('VELO_OTP_CLEANUP_GRACE', 60),
+    ],
+
     'realtime' => [
         'bus' => env('VELO_REALTIME_BUS', 'redis'),
         'mode' => env('VELO_REALTIME_MODE', 'persistent'),

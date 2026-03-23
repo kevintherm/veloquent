@@ -25,7 +25,7 @@ class Collection extends Model
         return CollectionFactory::new();
     }
 
-    protected $fillable = ['type', 'name', 'table_name', 'description', 'fields', 'api_rules', 'indexes', 'is_system', 'schema_updated_at'];
+    protected $fillable = ['type', 'name', 'table_name', 'description', 'fields', 'api_rules', 'indexes', 'options', 'is_system', 'schema_updated_at'];
 
     protected function casts(): array
     {
@@ -34,6 +34,7 @@ class Collection extends Model
             'fields' => FieldCollectionCast::class,
             'indexes' => IndexCollectionCast::class,
             'api_rules' => 'array',
+            'options' => 'array',
             'is_system' => 'boolean',
             'schema_updated_at' => 'datetime',
         ];

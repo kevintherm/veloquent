@@ -31,7 +31,8 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui";
-import { Plus, Trash2, Copy, ArrowDown, ArrowUp, Settings2, FileJson, MoreVertical, Wrench, Lock, Unlock, List, Eye, Pencil, CirclePlus, RotateCcw } from "lucide-vue-next";
+import { Plus, Trash2, Copy, ArrowDown, ArrowUp, Settings2, FileJson, MoreVertical, Wrench, Lock, Unlock, List, Eye, Pencil, CirclePlus, RotateCcw, Mail, ShieldCheck, Save } from "lucide-vue-next";
+import TiptapEditor from "./TiptapEditor.vue";
 import { useDashboardState } from "@/lib/dashboardState";
 import Select from "./ui/select/Select.vue";
 import SelectTrigger from "./ui/select/SelectTrigger.vue";
@@ -146,8 +147,64 @@ const formState = ref({
   fields: [],
   indexes: [],
   api_rules: defaultApiRules(),
+  options: {
+    auth_methods: ["email_password"],
+    require_email_verification: false,
+  },
   is_system: false,
 });
+
+const templates = ref({
+  password_reset: { content: "", loading: false, saving: false },
+  email_verification: { content: "", loading: false, saving: false },
+});
+
+const fetchTemplate = async (action) => {
+  const collectionId = fetchedCollection.value?.id;
+  if (!collectionId) {
+    return;
+  }
+  templates.value[action].loading = true;
+  try {
+    const response = await axios.get(`/api/collections/${collectionId}/email-templates/${action}`);
+    templates.value[action].content = response?.data?.data?.content ?? "";
+  } catch (error) {
+    console.error(error);
+  } finally {
+    templates.value[action].loading = false;
+  }
+};
+
+const saveTemplate = async (action, id = null, quiet = false) => {
+  const collectionId = id ?? fetchedCollection.value?.id;
+  if (!collectionId) {
+    return;
+  }
+  templates.value[action].saving = true;
+  try {
+    await axios.put(`/api/collections/${collectionId}/email-templates/${action}`, {
+      content: templates.value[action].content,
+    });
+    if (!quiet) {
+      toast.success(`${action.replace('_', ' ')} template saved successfully`);
+    }
+  } catch (error) {
+    console.error(error);
+    if (!quiet) {
+      toast.error(`Failed to save ${action.replace('_', ' ')} template`);
+    }
+    throw error; // Re-throw so handleSave can catch it
+  } finally {
+    templates.value[action].saving = false;
+  }
+};
+
+const TEMPLATE_PLACEHOLDERS = [
+  { code: "otp_code", label: "OTP Code (6 digits)" },
+  { code: "action_label", label: "Action (e.g. Password Reset)" },
+  { code: "collection_name", label: "Collection Name" },
+  { code: "app_name", label: "App Name" },
+];
 
 const newField = ref({
   name: "",
@@ -176,6 +233,7 @@ const showDeleteCollectionDialog = ref(false);
 const showTruncateCollectionDialog = ref(false);
 const showCloseConfirmationDialog = ref(false);
 const isCollectionModified = ref(false);
+const activeTab = ref('fields');
 
 const normalizeCollectionPayload = (payload) => {
   if (payload?.data && !Array.isArray(payload.data)) {
@@ -259,6 +317,13 @@ watch(isRelationNeeded, (val) => {
   }
 }, { immediate: true });
 
+watch(activeTab, (tab) => {
+  if (tab === 'options' && fetchedCollection.value?.id) {
+    void fetchTemplate('password_reset');
+    void fetchTemplate('email_verification');
+  }
+});
+
 const initializeFormState = () => {
   if (fetchedCollection.value) {
     isCreateMode.value = false;
@@ -287,6 +352,10 @@ const initializeFormState = () => {
       fields,
       indexes,
       api_rules: normalizeApiRules(fetchedCollection.value.api_rules),
+      options: {
+        auth_methods: fetchedCollection.value.options?.auth_methods ?? ["email_password"],
+        require_email_verification: fetchedCollection.value.options?.require_email_verification ?? false,
+      },
       is_system: fetchedCollection.value.is_system || false,
     };
   } else {
@@ -299,6 +368,10 @@ const initializeFormState = () => {
       fields: [],
       indexes: [],
       api_rules: defaultApiRules(),
+      options: {
+        auth_methods: ["email_password"],
+        require_email_verification: false,
+      },
       is_system: false,
     };
   }
@@ -347,6 +420,7 @@ const handleClose = () => {
 
   internalOpen.value = false;
   validationErrors.value = {};
+  activeTab.value = 'fields';
 
   setTimeout(() => {
     emit("close");
@@ -548,6 +622,7 @@ const buildPayload = () => {
     fields: cleanedFields,
     indexes: cleanedIndexes,
     api_rules: normalizeApiRules(formState.value.api_rules),
+    options: formState.value.type === 'auth' ? formState.value.options : null,
   };
 };
 
@@ -585,6 +660,14 @@ const handleSave = async () => {
       const identifier = fetchedCollection.value?.id ?? collectionIdentifier.value;
       response = await axios.put(`/api/collections/${encodeURIComponent(identifier)}`, payload);
       toast.success("Collection updated successfully");
+
+      // Sync templates for existing auth collection
+      if (formState.value.type === 'auth' && identifier) {
+        await Promise.all([
+          saveTemplate('password_reset', identifier, true),
+          saveTemplate('email_verification', identifier, true)
+        ]);
+      }
 
       if (activeCollection.value?.id === response?.data?.data?.id) {
         activeCollection.value = response?.data?.data;
@@ -804,11 +887,12 @@ onMounted(async () => {
       </div>
 
       <div v-else class="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden">
-        <Tabs defaultValue="fields" class="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <TabsList class="w-full grid grid-cols-3">
+        <Tabs v-model="activeTab" default-value="fields" class="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <TabsList :class="['w-full grid', formState.type === 'auth' ? 'grid-cols-4' : 'grid-cols-3']">
             <TabsTrigger value="fields">Fields</TabsTrigger>
             <TabsTrigger value="indexes">Indexes</TabsTrigger>
             <TabsTrigger value="api">API Rules</TabsTrigger>
+            <TabsTrigger v-if="formState.type === 'auth'" value="options">Options</TabsTrigger>
           </TabsList>
 
           <!-- Fields Tab -->
@@ -847,7 +931,7 @@ onMounted(async () => {
 
             <!-- Fields List - Scrollable -->
             <div ref="fieldsListContainer" class="flex-1 min-h-0 space-y-3 overflow-y-auto pr-2 pb-6">
-              <div class="flex items-center justify-between sticky top-0 bg-background py-2 z-10">
+              <div class="flex items-center justify-between sticky top-0 bg-background py-2 z-30">
                 <h3 class="text-sm font-semibold">Schema Fields</h3>
                 <Button variant="outline" size="sm" @click="showNewFieldForm = true">
                   <Plus class="h-4 w-4 mr-1" />
@@ -1183,6 +1267,94 @@ onMounted(async () => {
                 <p v-if="firstErrorFor(`api_rules.${rule.key}`)" class="text-xs text-destructive font-medium mt-1">
                   {{ firstErrorFor(`api_rules.${rule.key}`) }}
                 </p>
+              </div>
+            </div>
+          </TabsContent>
+
+          <!-- Options Tab -->
+          <TabsContent v-if="formState.type === 'auth'" value="options"
+            class="space-y-6 mt-4 flex-1 min-h-0 overflow-y-auto pr-2 pb-6">
+            <div class="space-y-6">
+              <!-- Authentication Methods -->
+              <div
+                class="grid gap-3 p-4 border rounded-lg bg-background/50 shadow-sm transition-all duration-200 hover:border-primary/30">
+                <div class="flex items-center gap-2">
+                  <Lock class="w-4 h-4 text-muted-foreground mr-1" />
+                  <Label class="text-sm font-semibold">Authentication Methods</Label>
+                </div>
+                <div class="grid gap-4 mt-2">
+                  <div class="flex items-center justify-between p-3 border rounded-md bg-background">
+                    <div class="flex flex-col gap-0.5">
+                      <span class="text-sm font-medium">Email / Password</span>
+                      <span class="text-xs text-muted-foreground">Standard authentication using email and
+                        password.</span>
+                    </div>
+                    <Checkbox :model-value="true" :disabled="true" />
+                  </div>
+                  <div
+                    class="flex items-center justify-between p-3 border rounded-md bg-background opacity-50 grayscale cursor-not-allowed">
+                    <div class="flex flex-col gap-0.5">
+                      <div class="flex items-center gap-2">
+                        <span class="text-sm font-medium">OAuth2</span>
+                        <span
+                          class="px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">Coming
+                          Soon</span>
+                      </div>
+                      <span class="text-xs text-muted-foreground">Authenticate using third-party providers.</span>
+                    </div>
+                    <Checkbox :model-value="false" :disabled="true" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- OTP Email Templates -->
+              <div class="grid gap-4">
+                <div class="flex items-center gap-2 px-1">
+                  <Mail class="w-4 h-4 text-muted-foreground mr-1" />
+                  <Label class="text-sm font-semibold">OTP Email Templates</Label>
+                </div>
+
+                <div v-for="action in ['password_reset', 'email_verification']" :key="action"
+                  class="border rounded-lg overflow-hidden bg-background">
+                  <div class="p-4 border-b flex items-center justify-between bg-muted/20">
+                    <div class="flex flex-col gap-0.5">
+                      <span class="text-sm font-medium capitalize">{{ action.replace('_', ' ') }}</span>
+                      <p class="text-[10px] text-muted-foreground flex flex-wrap items-center gap-x-1.5 gap-y-1 mt-0.5">
+                        Placeholders:
+                        <code v-for="ph in TEMPLATE_PLACEHOLDERS" :key="ph.code"
+                          :title="ph.label"
+                          class="bg-muted px-1 rounded font-mono cursor-default">&#123;&#123; {{ ph.code }} &#125;&#125;</code>
+                      </p>
+                    </div>
+                    <Button v-if="!isCreating" type="button" variant="outline" size="sm"
+                      :disabled="templates[action].saving || templates[action].loading"
+                      @click.prevent="saveTemplate(action)">
+                      <Save v-if="!templates[action].saving" class="h-3.5 w-3.5 mr-1.5" />
+                      <span v-else
+                        class="w-3.5 h-3.5 mr-1.5 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
+                      Save
+                    </Button>
+                  </div>
+                  <div class="p-0 bg-background min-h-[250px] relative">
+                    <div v-if="templates[action].loading"
+                      class="absolute inset-0 flex items-center justify-center bg-background/50 z-10 backdrop-blur-[1px]">
+                      <span
+                        class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></span>
+                    </div>
+                    <div v-if="isCreating" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-muted/5 z-10">
+                      <Mail class="h-10 w-10 text-muted-foreground/30 mb-2" />
+                      <p class="text-xs text-muted-foreground max-w-[250px]">
+                        Email templates can be customized after the collection is created. System defaults will be used initially.
+                      </p>
+                    </div>
+                    <TiptapEditor
+                      v-if="!isCreating && activeTab === 'options' && !templates[action].loading"
+                      v-model="templates[action].content"
+                      :placeholders="TEMPLATE_PLACEHOLDERS"
+                      placeholder="Write your email template content here..."
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </TabsContent>
