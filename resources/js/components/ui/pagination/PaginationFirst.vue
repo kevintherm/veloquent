@@ -1,6 +1,6 @@
 <script setup>
 import { reactiveOmit } from "@vueuse/core";
-import { ChevronLeftIcon } from "lucide-vue-next";
+import { ChevronLeftIcon, ChevronsLeft } from "lucide-vue-next";
 import { PaginationFirst, useForwardProps } from "reka-ui";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from '@/components/ui/button';
@@ -21,20 +21,14 @@ const forwarded = useForwardProps(delegatedProps);
 </script>
 
 <template>
-  <PaginationFirst
-    data-slot="pagination-first"
-    :class="
-      cn(
-        buttonVariants({ variant: 'ghost', size }),
-        'gap-1 px-2.5 sm:pr-2.5',
-        props.class,
-      )
-    "
-    v-bind="forwarded"
-  >
+  <PaginationFirst data-slot="pagination-first" :class="cn(
+    buttonVariants({ variant: 'ghost', size }),
+    'gap-1 px-2.5 sm:pr-2.5',
+    props.class,
+  )
+    " v-bind="forwarded">
     <slot>
-      <ChevronLeftIcon />
-      <span class="hidden sm:block">First</span>
+      <ChevronsLeft />
     </slot>
   </PaginationFirst>
 </template>

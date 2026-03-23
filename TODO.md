@@ -1,19 +1,24 @@
 ## TODO
 
-- Deleting existing fields improvements:
+- feat: api_rules handle static and sql evaluations
+    - e.g: body = @request.auth.id && @request.body.user = @request.auth.id
+- fix: Set api_rules null or empty string on CollectionFormSheet
+- feat: Deleting existing fields improvements:
     - Mark field as deleted, when sending the payload strip the field from the payload
-    - Field mark as deleted so user can revert the changes, before actually sending the request
+    - Field mark as deleted so the user can revert the changes before actually sending the request
+- feat: prevent accidentally closing the sheet
+  - show a confirmation dialog before closing the sheet
 - Setup system variables
     - Rate limit
     - Trust proxies
     - Mail settings (encrypted)
     - Storage settings
-    - Backups
+    - Backups****
         - Collections, tables, records
     - Export n imports
         - Collections metadata only
 - feat: Auth collection options
-    - Create auth_otps: multi purpose otp storage
+    - Create auth_otps: multipurpose otp storage
     - authentication methods
         - email/password
         - oauth2
@@ -39,6 +44,6 @@
 - Hooks system
 - Optimize Record model
     - cache collections
-- Add manage_rule to allow updating password field for auth collections
+- Add manage_rule to allow updating the password field for auth collections
 - Testing
 - Documentation

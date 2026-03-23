@@ -22,7 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui";
-import { MoreHorizontal, Copy, Plus, Search, Trash2, X, Menu, MoreVertical } from "lucide-vue-next";
+import { Copy, Plus, Search, Trash2, X, MoreVertical } from "lucide-vue-next";
 import { resolveCollectionFieldTypeIcon } from "@/lib/collectionFieldTypeIcons";
 import { openRecordForm } from "@/lib/recordFormSheet";
 import { useDashboardState } from "@/lib/dashboardState";
@@ -175,8 +175,6 @@ const defaultFieldValue = (field) => {
   if (field.type === "boolean") {
     return false;
   }
-
-  return "";
 
   return "";
 };

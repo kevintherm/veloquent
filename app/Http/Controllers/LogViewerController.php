@@ -38,7 +38,7 @@ class LogViewerController extends Controller
         $query = $validated['query'] ?? null;
         $hour = isset($validated['hour']) ? (int) $validated['hour'] : null;
         $page = (int) ($validated['page'] ?? 1);
-        $perPage = (int) ($validated['per_page'] ?? 50);
+        $perPage = (int) ($validated['per_page'] ?? 20);
 
         $logFile = storage_path("logs/laravel-{$date}.log");
         if (!File::exists($logFile)) {
