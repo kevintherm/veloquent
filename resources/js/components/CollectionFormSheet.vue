@@ -31,7 +31,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui";
-import { Plus, Trash2, Copy, ArrowDown, ArrowUp, Settings2, FileJson, MoreVertical, Wrench } from "lucide-vue-next";
+import { Plus, Trash2, Copy, ArrowDown, ArrowUp, Settings2, FileJson, MoreVertical, Wrench, Lock, Unlock, ShieldCheck, List, Eye, Pencil, CirclePlus } from "lucide-vue-next";
 import { useDashboardState } from "@/lib/dashboardState";
 import Select from "./ui/select/Select.vue";
 import SelectTrigger from "./ui/select/SelectTrigger.vue";
@@ -65,11 +65,11 @@ const schemaCorrupt = ref(null); // { activity: string, collection_id: string }
 const recovering = ref(false);
 
 const defaultApiRules = () => ({
-  list: "",
-  view: "",
-  create: "",
-  update: "",
-  delete: "",
+  list: null,
+  view: null,
+  create: null,
+  update: null,
+  delete: null,
 });
 
 const normalizeApiRules = (apiRules = {}) => ({
@@ -95,6 +95,14 @@ const fieldTypes = [
 const collectionTypes = [
   { value: "base", label: "Base Collection" },
   { value: "auth", label: "Auth Collection" },
+];
+
+const apiRuleDefinitions = [
+  { key: 'list', label: 'List Rule', icon: List, placeholder: "e.g. status = 'published'", description: "Use `field op value` expressions. Example: `status = \"published\" && views > 10`." },
+  { key: 'view', label: 'View Rule', icon: Eye, placeholder: "e.g. status = 'published'", description: "Rule evaluated when viewing a single record." },
+  { key: 'create', label: 'Create Rule', icon: CirclePlus, placeholder: "e.g. status = 'published'", description: "Main record fields represents the values that are going to be inserted to the database." },
+  { key: 'update', label: 'Update Rule', icon: Pencil, placeholder: "e.g. status = 'published' || @request.body.status = 'draft'", description: "Main record fields represents the existing value, to target the values that are going to be inserted to the database use @request.body.*" },
+  { key: 'delete', label: 'Delete Rule', icon: Trash2, placeholder: "e.g. status = 'published'", description: "Rule evaluated when deleting records." },
 ];
 
 const isCreateMode = ref(!props.collection);
@@ -802,7 +810,7 @@ onMounted(async () => {
                 <Input id="collectionDescription" v-model="formState.description" placeholder="Optional description"
                   @input="clearValidationError('description')" />
                 <p v-if="firstErrorFor('description')" class="text-xs text-destructive">{{ firstErrorFor('description')
-                }}</p>
+                  }}</p>
               </div>
 
               <div class="grid gap-2">
@@ -1108,56 +1116,52 @@ onMounted(async () => {
 
           <!-- API Rules Tab -->
           <TabsContent value="api" class="space-y-4 mt-4 flex-1 min-h-0 overflow-y-auto pr-2 pb-6">
-            <div class="space-y-4">
-              <div class="grid gap-2">
-                <Label>List Rule</Label>
-                <textarea v-model="formState.api_rules.list"
-                  class="min-h-24 rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
-                  placeholder="e.g. status = 'published'" @input="clearValidationError('api_rules.list')"></textarea>
-                <p class="text-xs text-muted-foreground">Use `field op value` expressions. Example: `status =
-                  "published" && views > 10`.</p>
-                <p v-if="firstErrorFor('api_rules.list')" class="text-xs text-destructive">{{
-                  firstErrorFor('api_rules.list') }}</p>
-              </div>
+            <div class="space-y-6">
+              <div v-for="rule in apiRuleDefinitions" :key="rule.key"
+                class="grid gap-3 p-4 border rounded-lg bg-background/50 shadow-sm relative overflow-hidden group transition-all duration-200 hover:border-primary/30">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <Label class="text-sm font-semibold flex items-center gap-2">
+                      <component :is="rule.icon" class="w-4 h-4 text-muted-foreground mr-1" />
+                      {{ rule.label }}
+                    </Label>
+                  </div>
+                  <Button variant="ghost" size="sm"
+                    class="h-8 px-2 text-xs gap-1.5 hover:bg-primary/5 transition-colors"
+                    @click="formState.api_rules[rule.key] = formState.api_rules[rule.key] === null ? '' : null">
+                    <template v-if="formState.api_rules[rule.key] === null">
+                      <Unlock class="w-3.5 h-3.5" />
+                      Unlock
+                    </template>
+                    <template v-else>
+                      <Lock class="w-3.5 h-3.5" />
+                      Lock
+                    </template>
+                  </Button>
+                </div>
 
-              <div class="grid gap-2">
-                <Label>View Rule</Label>
-                <textarea v-model="formState.api_rules.view"
-                  class="min-h-24 rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
-                  placeholder="e.g. auth()" @input="clearValidationError('api_rules.view')"></textarea>
-                <p class="text-xs text-muted-foreground">Rule evaluated when viewing a single record.</p>
-                <p v-if="firstErrorFor('api_rules.view')" class="text-xs text-destructive">{{
-                  firstErrorFor('api_rules.view') }}</p>
-              </div>
+                <div class="relative group/input">
+                  <textarea v-model="formState.api_rules[rule.key]"
+                    class="w-full min-h-24 rounded-md border border-input bg-background px-3 py-2 text-sm font-mono focus-visible:ring-1 transition-opacity duration-200"
+                    :class="{ 'opacity-10 pointer-events-none select-none': formState.api_rules[rule.key] === null }"
+                    :placeholder="rule.placeholder" @input="clearValidationError(`api_rules.${rule.key}`)"></textarea>
 
-              <div class="grid gap-2">
-                <Label>Create Rule</Label>
-                <textarea v-model="formState.api_rules.create"
-                  class="min-h-24 rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
-                  placeholder="e.g. auth()" @input="clearValidationError('api_rules.create')"></textarea>
-                <p class="text-xs text-muted-foreground">Rule evaluated when creating records. Return true to allow.</p>
-                <p v-if="firstErrorFor('api_rules.create')" class="text-xs text-destructive">{{
-                  firstErrorFor('api_rules.create') }}</p>
-              </div>
+                  <div v-if="formState.api_rules[rule.key] === null"
+                    class="absolute inset-0 flex flex-col items-center justify-center bg-background/20 backdrop-blur-[1px] cursor-pointer rounded-md border border-dashed border-primary/20 hover:bg-primary/5 transition-colors group/overlay"
+                    @click="formState.api_rules[rule.key] = ''">
+                    <Lock class="w-6 h-6 text-primary/40 mb-2 group-hover/overlay:text-primary transition-colors" />
+                    <p class="text-sm font-semibold text-primary/60 group-hover/overlay:text-primary transition-colors">
+                      Superusers Only</p>
+                    <p class="text-[10px] text-muted-foreground mt-1 px-6 text-center">Click here or the unlock button
+                      to
+                      define custom access rules</p>
+                  </div>
+                </div>
 
-              <div class="grid gap-2">
-                <Label>Update Rule</Label>
-                <textarea v-model="formState.api_rules.update"
-                  class="min-h-24 rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
-                  placeholder="e.g. auth()" @input="clearValidationError('api_rules.update')"></textarea>
-                <p class="text-xs text-muted-foreground">Rule evaluated when updating records.</p>
-                <p v-if="firstErrorFor('api_rules.update')" class="text-xs text-destructive">{{
-                  firstErrorFor('api_rules.update') }}</p>
-              </div>
-
-              <div class="grid gap-2">
-                <Label>Delete Rule</Label>
-                <textarea v-model="formState.api_rules.delete"
-                  class="min-h-24 rounded-md border border-input bg-background px-3 py-2 text-sm font-mono"
-                  placeholder="e.g. auth()" @input="clearValidationError('api_rules.delete')"></textarea>
-                <p class="text-xs text-muted-foreground">Rule evaluated when deleting records.</p>
-                <p v-if="firstErrorFor('api_rules.delete')" class="text-xs text-destructive">{{
-                  firstErrorFor('api_rules.delete') }}</p>
+                <p class="text-[11px] text-muted-foreground leading-relaxed">{{ rule.description }}</p>
+                <p v-if="firstErrorFor(`api_rules.${rule.key}`)" class="text-xs text-destructive font-medium mt-1">
+                  {{ firstErrorFor(`api_rules.${rule.key}`) }}
+                </p>
               </div>
             </div>
           </TabsContent>
