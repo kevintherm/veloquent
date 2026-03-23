@@ -32,7 +32,7 @@
     - clarify in code/docs: `SchemaChangePlan::getAllReservedFields(false)` in unique sync intentionally means base reserved fields only
     - reason: auth reserved fields (for example `email`) must still sync `unique` from single-column unique indexes
 - Store cached target_collection_name for field type relation
-- Hooks system
+- Hooks systemff
 - Optimize Record model
     - cache collections
 - Add manage_rule to allow updating the password field for auth collections

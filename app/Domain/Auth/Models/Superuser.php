@@ -13,6 +13,11 @@ class Superuser extends Authenticatable
     /** @use HasFactory<SuperuserFactory> */
     use HasFactory, HasUlids, Notifiable;
 
+    protected static function newFactory(): SuperuserFactory
+    {
+        return SuperuserFactory::new();
+    }
+
     protected $table = 'superusers';
 
     /**

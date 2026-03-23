@@ -1,5 +1,6 @@
 <?php
 
+use App\Domain\Auth\Models\Superuser;
 use App\Domain\Auth\Services\TokenAuthService;
 use App\Domain\Collections\Actions\CreateCollectionAction;
 use App\Domain\Collections\Enums\CollectionFieldType;
@@ -8,7 +9,6 @@ use App\Domain\Collections\Models\Collection;
 use App\Domain\Records\Models\Record;
 use App\Domain\SchemaManagement\Enums\SchemaOperation;
 use App\Domain\SchemaManagement\Models\SchemaJob;
-use App\Models\Superuser;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 

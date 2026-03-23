@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
-use App\Models\Superuser;
+use App\Domain\Auth\Models\Superuser;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 

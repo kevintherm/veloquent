@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Superuser;
+use App\Domain\Auth\Models\Superuser;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 use function Pest\Laravel\postJson;

@@ -2,6 +2,7 @@
 
 namespace App\Domain\Collections\Controllers;
 
+use App\Domain\Auth\Models\AuthToken;
 use App\Domain\Collections\Actions\CreateCollectionAction;
 use App\Domain\Collections\Actions\UpdateCollectionAction;
 use App\Domain\Collections\Enums\CollectionType;
@@ -10,7 +11,6 @@ use App\Domain\Collections\Requests\StoreCollectionRequest;
 use App\Domain\Collections\Requests\UpdateCollectionRequest;
 use App\Domain\Records\Models\Record;
 use App\Infrastructure\Http\Controllers\ApiController;
-use App\Models\AuthToken;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;

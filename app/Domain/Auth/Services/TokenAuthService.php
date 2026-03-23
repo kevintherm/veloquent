@@ -2,10 +2,10 @@
 
 namespace App\Domain\Auth\Services;
 
+use App\Domain\Auth\Models\AuthToken;
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Records\Models\Record;
-use App\Models\AuthToken;
 use Illuminate\Http\Request;
 
 class TokenAuthService
