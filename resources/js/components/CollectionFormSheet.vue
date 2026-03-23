@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onMounted, ref, watch, watchEffect } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import axios from "axios";
 import { toast } from "vue-sonner";
 import {
@@ -31,7 +31,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui";
-import { Plus, Trash2, Copy, ArrowDown, ArrowUp, Settings2, FileJson, MoreVertical, Wrench, Lock, Unlock, ShieldCheck, List, Eye, Pencil, CirclePlus, RotateCcw } from "lucide-vue-next";
+import { Plus, Trash2, Copy, ArrowDown, ArrowUp, Settings2, FileJson, MoreVertical, Wrench, Lock, Unlock, List, Eye, Pencil, CirclePlus, RotateCcw } from "lucide-vue-next";
 import { useDashboardState } from "@/lib/dashboardState";
 import Select from "./ui/select/Select.vue";
 import SelectTrigger from "./ui/select/SelectTrigger.vue";
@@ -631,7 +631,7 @@ const handleDelete = async () => {
     emit("delete", fetchedCollection.value.id);
     requestCollectionsReload();
     handleClose();
-  } catch { } finally {
+  } finally {
     submitting.value = false;
   }
 };
@@ -668,7 +668,7 @@ const handleRecover = async () => {
     schemaCorrupt.value = null;
     await fetchCollectionInfo();
     requestCollectionsReload();
-  } catch { } finally {
+  } finally {
     recovering.value = false;
   }
 };

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\LogViewerRequest;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 
 class LogViewerController extends Controller
@@ -11,7 +10,7 @@ class LogViewerController extends Controller
     public function getDates()
     {
         $logPath = storage_path('logs');
-        if (!File::isDirectory($logPath)) {
+        if (! File::isDirectory($logPath)) {
             return response()->json([]);
         }
 
@@ -41,7 +40,7 @@ class LogViewerController extends Controller
         $perPage = (int) ($validated['per_page'] ?? 20);
 
         $logFile = storage_path("logs/laravel-{$date}.log");
-        if (!File::exists($logFile)) {
+        if (! File::exists($logFile)) {
             return response()->json([
                 'data' => [],
                 'meta' => [
@@ -101,7 +100,7 @@ class LogViewerController extends Controller
                 $q = strtolower($query);
                 $inMessage = str_contains(strtolower($message), $q);
                 $inContext = $context && str_contains(strtolower(json_encode($context)), $q);
-                if (!$inMessage && !$inContext) {
+                if (! $inMessage && ! $inContext) {
                     return;
                 }
             }
@@ -116,7 +115,7 @@ class LogViewerController extends Controller
         };
 
         $currentEntry = null;
-        while (!$file->eof()) {
+        while (! $file->eof()) {
             $line = $file->fgets();
             if ($line === false || $line === '') {
                 continue;
@@ -141,7 +140,6 @@ class LogViewerController extends Controller
         if ($currentEntry) {
             $processEntry($currentEntry);
         }
-
 
         // Reverse to show newest first
         $logs = array_reverse($logs);

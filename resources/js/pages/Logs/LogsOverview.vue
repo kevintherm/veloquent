@@ -31,7 +31,7 @@ import {
     PaginationNext,
     PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Copy, AlertCircle, Info, AlertTriangle, Search, Clock, Server, RefreshCw, Timer, ChevronLeft, ChevronsLeft, ChevronsLeftIcon, ChevronFirst, ChevronsLeftRightEllipsis, LucideChevronsLeft } from "lucide-vue-next";
+import { Copy, AlertCircle, Info, AlertTriangle, Search, Clock, Server, RefreshCw, Timer } from "lucide-vue-next";
 import { toast } from "vue-sonner";
 
 const dates = ref([]);
@@ -345,7 +345,7 @@ const copyToClipboard = async (text) => {
                                         <div v-if="log.message === 'HTTP_REQUEST' && log.context?.method"
                                             class="text-[10px] text-muted-foreground mt-0.5 flex gap-1 items-center">
                                             <span class="font-bold text-primary uppercase">{{ log.context.method
-                                            }}</span>
+                                                }}</span>
                                             <span class="truncate">{{ getUrlPath(log.context.url) }}</span>
                                         </div>
                                     </TableCell>
@@ -366,8 +366,8 @@ const copyToClipboard = async (text) => {
                                 class="font-medium">{{ Math.min(currentPage * itemsPerPage, totalResults)
                                 }}</span> of <span class="font-medium">{{ totalResults }}</span> results
                         </p>
-                        <Pagination v-slot="{ page }" :total="totalResults" :sibling-count="1" show-edges
-                            :default-page="1" v-model:page="currentPage" :items-per-page="itemsPerPage"
+                        <Pagination :total="totalResults" :sibling-count="1" show-edges :default-page="1"
+                            v-model:page="currentPage" :items-per-page="itemsPerPage"
                             class="justify-center md:justify-end">
                             <PaginationContent v-slot="{ items }">
                                 <PaginationFirst />

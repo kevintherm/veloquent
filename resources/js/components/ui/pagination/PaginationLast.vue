@@ -1,6 +1,6 @@
 <script setup>
 import { reactiveOmit } from "@vueuse/core";
-import { ChevronRightIcon, ChevronsRight } from "lucide-vue-next";
+import { ChevronsRight } from "lucide-vue-next";
 import { PaginationLast, useForwardProps } from "reka-ui";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from '@/components/ui/button';
