@@ -31,7 +31,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui";
-import { Plus, Trash2, Copy, ArrowDown, ArrowUp, Settings2, FileJson, MoreVertical, Wrench, Lock, Unlock, ShieldCheck, List, Eye, Pencil, CirclePlus } from "lucide-vue-next";
+import { Plus, Trash2, Copy, ArrowDown, ArrowUp, Settings2, FileJson, MoreVertical, Wrench, Lock, Unlock, ShieldCheck, List, Eye, Pencil, CirclePlus, RotateCcw } from "lucide-vue-next";
 import { useDashboardState } from "@/lib/dashboardState";
 import Select from "./ui/select/Select.vue";
 import SelectTrigger from "./ui/select/SelectTrigger.vue";
@@ -418,8 +418,14 @@ const addField = () => {
 };
 
 const removeField = (index) => {
-  formState.value.fields.splice(index, 1);
-  reorderFields();
+  const field = formState.value.fields[index];
+  if (field && field.id) {
+    field._deleted = !field._deleted;
+    isCollectionModified.value = true;
+  } else {
+    formState.value.fields.splice(index, 1);
+    reorderFields();
+  }
 };
 
 const moveField = (index, direction) => {
@@ -435,8 +441,11 @@ const moveField = (index, direction) => {
 };
 
 const reorderFields = () => {
-  formState.value.fields.forEach((field, idx) => {
-    field.order = idx;
+  let activeIdx = 0;
+  formState.value.fields.forEach((field) => {
+    if (!field._deleted) {
+      field.order = activeIdx++;
+    }
   });
 };
 
@@ -497,27 +506,29 @@ const toggleColumnInIndex = (columnName) => {
 };
 
 const buildPayload = () => {
-  // Clean up fields - ensure id is either a valid string or not present
-  const cleanedFields = formState.value.fields.map(field => {
-    const cleaned = { ...field };
-    // Only include id if it's a non-empty string
-    if (cleaned.id === undefined || cleaned.id === null || cleaned.id === '') {
-      delete cleaned.id;
-    } else if (typeof cleaned.id !== 'string') {
-      cleaned.id = String(cleaned.id);
-    }
-    if (cleaned.type !== "relation") {
-      delete cleaned.target_collection_id;
-      delete cleaned.cascade_on_delete;
-      delete cleaned.collection;
-    } else {
-      cleaned.target_collection_id = cleaned.target_collection_id ?? cleaned.collection ?? null;
-      cleaned.cascade_on_delete = Boolean(cleaned.cascade_on_delete ?? false);
-      delete cleaned.collection;
-    }
+  // Clean up fields - exclude deleted fields
+  const cleanedFields = formState.value.fields
+    .filter(field => !field._deleted)
+    .map(field => {
+      const cleaned = { ...field };
+      // Only include id if it's a non-empty string
+      if (cleaned.id === undefined || cleaned.id === null || cleaned.id === '') {
+        delete cleaned.id;
+      } else if (typeof cleaned.id !== 'string') {
+        cleaned.id = String(cleaned.id);
+      }
+      if (cleaned.type !== "relation") {
+        delete cleaned.target_collection_id;
+        delete cleaned.cascade_on_delete;
+        delete cleaned.collection;
+      } else {
+        cleaned.target_collection_id = cleaned.target_collection_id ?? cleaned.collection ?? null;
+        cleaned.cascade_on_delete = Boolean(cleaned.cascade_on_delete ?? false);
+        delete cleaned.collection;
+      }
 
-    return cleaned;
-  });
+      return cleaned;
+    });
 
   const cleanedIndexes = formState.value.indexes.map((index) => ({
     columns: Array.isArray(index.columns) ? [...index.columns] : [],
@@ -915,9 +926,11 @@ onMounted(async () => {
 
               <!-- Fields List -->
               <div v-for="(field, index) in orderedFields" :key="index"
-                class="flex flex-col gap-2 p-3 border rounded-lg bg-background">
+                class="flex flex-col gap-2 p-3 border rounded-lg bg-background transition-all duration-200"
+                :class="{ 'opacity-50 bg-destructive/5 border-destructive/20 relative overflow-hidden': field._deleted }">
+
                 <!-- Summary Row -->
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 relative z-20">
                   <div class="flex-1 grid grid-cols-4 gap-2 text-sm">
                     <div class="font-medium truncate">{{ field.name }}</div>
                     <div class="text-muted-foreground truncate">{{ field.type }}</div>
@@ -932,21 +945,23 @@ onMounted(async () => {
                   </div>
                   <div class="flex items-center gap-1">
                     <Button variant="ghost" size="icon" class="h-8 w-8" @click="moveField(index, 'up')"
-                      :disabled="index === 0" title="Move Up">
+                      :disabled="index === 0 || field._deleted" title="Move Up">
                       <ArrowUp class="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="icon" class="h-8 w-8" @click="moveField(index, 'down')"
-                      :disabled="index === orderedFields.length - 1" title="Move Down">
+                      :disabled="index === orderedFields.length - 1 || field._deleted" title="Move Down">
                       <ArrowDown class="h-4 w-4" />
                     </Button>
-                    <Button variant="secondary" size="icon" class="h-8 w-8"
+                    <Button variant="secondary" size="icon" class="h-8 w-8" :disabled="field._deleted"
                       @click="editingFieldIndex = editingFieldIndex === index ? null : index"
                       :class="{ 'bg-primary/20': editingFieldIndex === index }" title="Field Settings">
                       <Settings2 class="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="icon" class="h-8 w-8 text-destructive" @click="removeField(index)"
-                      :disabled="['id', 'created_at', 'updated_at'].includes(field.name)" title="Delete Field">
-                      <Trash2 class="h-4 w-4" />
+                      :disabled="['id', 'created_at', 'updated_at'].includes(field.name)"
+                      :title="field._deleted ? 'Revert deletion' : 'Delete Field'">
+                      <RotateCcw v-if="field._deleted" class="h-4 w-4 text-primary" />
+                      <Trash2 v-else class="h-4 w-4" />
                     </Button>
                   </div>
                 </div>

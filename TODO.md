@@ -3,9 +3,6 @@
 - fix: Sheets (CollectionFormSheet, RecordFormSheet) doesn't have an animation on close
 - feat: api_rules handle static and sql evaluations
     - e.g: body = @request.auth.id && @request.body.user = @request.auth.id
-- feat: Deleting existing fields improvements:
-    - Mark field as deleted, when sending the payload strip the field from the payload
-    - Field mark as deleted so the user can revert the changes before actually sending the request
 - Setup system variables
     - Rate limit
     - Trust proxies
