@@ -341,11 +341,17 @@ const requestClose = () => {
 }
 
 const handleClose = () => {
+  if (internalOpen.value === false) {
+    return;
+  }
+  
   internalOpen.value = false;
   validationErrors.value = {};
-  emit("close");
-
-  isCollectionModified.value = false;
+  
+  setTimeout(() => {
+    emit("close");
+    isCollectionModified.value = false;
+  }, 300);
 };
 
 const clearValidationError = (key) => {

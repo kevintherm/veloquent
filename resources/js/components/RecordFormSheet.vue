@@ -443,8 +443,14 @@ const requestClose = () => {
 }
 
 const handleClose = () => {
+  if (internalOpen.value === false) {
+    return;
+  }
+  
   internalOpen.value = false;
-  emit("close");
+  setTimeout(() => {
+    emit("close");
+  }, 300);
 };
 
 const displayFieldName = (fieldName) => {
