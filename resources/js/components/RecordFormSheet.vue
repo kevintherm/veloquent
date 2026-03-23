@@ -63,6 +63,8 @@ const relationDialogState = ref({
 const recordActionsMenuOpen = ref(false);
 const showDeleteRecordDialog = ref(false);
 const availableCollections = ref([]);
+const isRecordModified = ref(false);
+const showCloseConfirmationDialog = ref(false);
 const { requestRecordsReload } = useDashboardState();
 
 const localRecordId = ref(props.record?.id);
@@ -427,6 +429,19 @@ const fetchCollectionInfo = async () => {
   }
 };
 
+const modifyRecord = () => {
+  isRecordModified.value = true;
+}
+
+const requestClose = () => {
+  if (isRecordModified.value == true) {
+    showCloseConfirmationDialog.value = true;
+    return;
+  }
+
+  handleClose();
+}
+
 const handleClose = () => {
   internalOpen.value = false;
   emit("close");
@@ -736,7 +751,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <Sheet :open="internalOpen" @update:open="(isOpen) => { if (!isOpen) handleClose(); }">
+  <Sheet :open="internalOpen" @update:open="(isOpen) => { if (!isOpen) requestClose(); }">
     <SheetContent side="right" class="sm:max-w-md overflow-hidden">
       <SheetHeader>
         <SheetTitle>{{ isUpdating ? 'Edit' : 'Add' }} {{ fetchedCollection?.name ?? 'Collection' }} Record</SheetTitle>
@@ -765,11 +780,12 @@ onMounted(async () => {
               v-model="formState[field.name]"
               class="min-h-24 rounded-md border border-input bg-background px-3 py-2 text-sm"
               :class="isDisabledField(field) ? 'cursor-not-allowed bg-muted' : ''" :disabled="isDisabledField(field)"
-              :placeholder="`Enter ${displayFieldName(field.name)}...`"></textarea>
+              :placeholder="`Enter ${displayFieldName(field.name)}...`" @input="modifyRecord"></textarea>
 
             <Input v-else-if="field.type !== 'boolean' && field.type !== 'relation'"
               :id="`field-${sheetId}-${field.name}`" v-model="formState[field.name]" :type="resolveInputType(field)"
-              :disabled="isDisabledField(field)" :placeholder="`Enter ${displayFieldName(field.name)}...`" />
+              :disabled="isDisabledField(field)" :placeholder="`Enter ${displayFieldName(field.name)}...`"
+              @input="modifyRecord" />
 
             <div v-else-if="field.type === 'boolean'" class="flex items-center gap-2 pt-1">
               <Switch :model-value="Boolean(formState[field.name])"
@@ -783,7 +799,7 @@ onMounted(async () => {
               </Button>
               <p v-if="relationLoading[field.name]" class="text-xs text-muted-foreground">Loading related records...</p>
               <p v-else-if="relationErrors[field.name]" class="text-xs text-destructive">{{ relationErrors[field.name]
-                }}</p>
+              }}</p>
               <p v-else-if="relationSelectionLabels(field).length" class="text-xs text-muted-foreground">
                 Selected: {{ relationSelectionLabels(field).join(", ") }}
               </p>
@@ -898,7 +914,7 @@ onMounted(async () => {
             </div>
           </div>
 
-          <Button variant="outline" class="flex-1" @click="handleClose">Cancel</Button>
+          <Button variant="outline" class="flex-1" @click="requestClose">Cancel</Button>
           <Button class="flex-1" :disabled="submitting || loadingCollection" @click="handleSave">
             {{ submitting ? 'Saving...' : 'Save Record' }}
           </Button>
@@ -916,6 +932,22 @@ onMounted(async () => {
           <AlertDialogFooter>
             <AlertDialogCancel :disabled="submitting">Cancel</AlertDialogCancel>
             <AlertDialogAction :disabled="submitting" @click="handleDeleteRecord">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog :open="showCloseConfirmationDialog"
+        @update:open="(value) => { showCloseConfirmationDialog = value; }">
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Close sheet?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Unsaved changes will be gone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction @click="handleClose">Close</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
