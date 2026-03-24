@@ -1,6 +1,5 @@
 ## TODO
 
-- Refactor OTP n Email services shit code
 - Setup system variables
     - Rate limit
     - Trust proxies
@@ -12,6 +11,7 @@
         - Collections metadata only
 - fix: Truncating collection bypasses RelationIntegrityService
 - fix: inconsistent validation and exception messages
+- feat: Request change email for auth collection
 - Unify errors
     - Creating/Updating uses ValidationException
     - Other errors use regular exception

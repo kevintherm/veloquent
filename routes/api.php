@@ -33,7 +33,7 @@ Route::prefix('collections/{collection}/records')->group(function () {
 Route::prefix('collections/{collection}/auth')->name('collections.auth.')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->name('authenticate');
 
-    Route::post('/password-reset/request', [AuthController::class, 'requestPasswordReset'])->name('password-reset.request');
+    Route::post('/password-reset/request', [AuthController::class, 'requestPasswordReset'])->middleware('throttle:otp')->name('password-reset.request');
     Route::post('/password-reset/confirm', [AuthController::class, 'confirmPasswordReset'])->name('password-reset.confirm');
 
     Route::middleware('auth:api')->group(function () {
@@ -41,7 +41,7 @@ Route::prefix('collections/{collection}/auth')->name('collections.auth.')->group
         Route::delete('/logout-all', [AuthController::class, 'logoutAll'])->name('logout-all');
         Route::get('/me', [AuthController::class, 'me'])->name('me');
 
-        Route::post('/email-verification/request', [AuthController::class, 'requestEmailVerification'])->name('email-verification.request');
+        Route::post('/email-verification/request', [AuthController::class, 'requestEmailVerification'])->middleware('throttle:otp')->name('email-verification.request');
         Route::post('/email-verification/confirm', [AuthController::class, 'confirmEmailVerification'])->name('email-verification.confirm');
     });
 });

@@ -22,6 +22,8 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['record_id', 'action']);
+            $table->index(['collection_id', 'record_id', 'action', 'expires_at']);
+            $table->index(['expires_at', 'used_at']);
         });
     }
 

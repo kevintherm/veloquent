@@ -20,7 +20,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\UnauthorizedException;
 use Symfony\Component\HttpFoundation\Response;
 
 class AuthController extends ApiController
@@ -107,6 +106,10 @@ class AuthController extends ApiController
 
     public function me(Collection $collection): JsonResponse
     {
+        if ($collection->type !== CollectionType::Auth) {
+            return $this->errorResponse('This collection does not support authentication.', Response::HTTP_FORBIDDEN);
+        }
+
         /** @var Record|null $user */
         $user = Auth::user();
 
@@ -126,7 +129,7 @@ class AuthController extends ApiController
         $user = Record::of($collection)->where('email', $request->input('email'))->first();
 
         if ($user) {
-            $this->otpService->issue($user, OtpAction::PasswordReset, $collection->id);
+            $this->otpService->issue($user, OtpAction::PasswordReset, $collection);
         }
 
         return $this->successResponse([], 'If the email exists, a reset code has been sent.');
@@ -141,14 +144,14 @@ class AuthController extends ApiController
         $user = Record::of($collection)->where('email', $request->input('email'))->first();
 
         if (! $user) {
-            throw new UnauthorizedException('Invalid credentials.');
+            return $this->errorResponse('Invalid credentials.', Response::HTTP_UNAUTHORIZED);
         }
 
         return DB::transaction(function () use ($request, $collection, $user) {
             $this->otpService->consume(
                 $request->input('token'),
                 OtpAction::PasswordReset,
-                $collection->id,
+                $collection,
                 (string) $user->id,
             );
 
@@ -162,7 +165,7 @@ class AuthController extends ApiController
         });
     }
 
-    public function requestEmailVerification(Request $request, Collection $collection): JsonResponse
+    public function requestEmailVerification(Collection $collection): JsonResponse
     {
         if ($collection->type !== CollectionType::Auth) {
             return $this->errorResponse('This collection does not support authentication.', Response::HTTP_FORBIDDEN);
@@ -175,7 +178,11 @@ class AuthController extends ApiController
             return $this->errorResponse('User not authenticated.', Response::HTTP_UNAUTHORIZED);
         }
 
-        $this->otpService->issue($user, OtpAction::EmailVerification, $collection->id);
+        if ($user->hasAttribute('verified') && $user->getAttribute('verified') == true) {
+            return $this->errorResponse('User email is already verified.', Response::HTTP_BAD_REQUEST);
+        }
+
+        $this->otpService->issue($user, OtpAction::EmailVerification, $collection);
 
         return $this->successResponse([], 'Verification code has been sent.');
     }
@@ -196,7 +203,7 @@ class AuthController extends ApiController
         $this->otpService->consume(
             $request->input('token'),
             OtpAction::EmailVerification,
-            $collection->id,
+            $collection,
             (string) $user->id,
         );
 

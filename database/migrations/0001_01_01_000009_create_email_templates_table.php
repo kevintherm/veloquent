@@ -10,9 +10,12 @@ return new class extends Migration
     {
         Schema::create('email_templates', function (Blueprint $table) {
             $table->id();
-            $table->string('action')->unique();
+            $table->char('collection_id', 26);
+            $table->string('action');
             $table->longText('content');
             $table->timestamps();
+
+            $table->unique(['collection_id', 'action']);
         });
     }
 
