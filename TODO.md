@@ -12,6 +12,10 @@
 - fix: Truncating collection bypasses RelationIntegrityService
 - fix: inconsistent validation and exception messages
 - feat: Request change email for auth collection
+- Oauth2
+    - bring in socialite for providers management
+    - use abstraction to support more providers in the future that socialite did not support
+    - handle http and authentication
 - Unify errors
     - Creating/Updating uses ValidationException
     - Other errors use regular exception

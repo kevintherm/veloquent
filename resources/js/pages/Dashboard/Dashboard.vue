@@ -345,7 +345,19 @@ watch(recordColumns, (columns) => {
     const visible = new Set(visibleColumns.value);
     const nextVisible = columns.filter((column) => visible.has(column));
 
-    visibleColumns.value = nextVisible.length ? nextVisible : [...columns];
+    if (nextVisible.length) {
+        visibleColumns.value = nextVisible;
+        return;
+    }
+
+    if (activeCollection.value?.type === "auth") {
+        visibleColumns.value = columns.filter(
+            (col) => !["password", "visibility"].includes(col)
+        );
+        return;
+    }
+
+    visibleColumns.value = [...columns];
 });
 
 watch(

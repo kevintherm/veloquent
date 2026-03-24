@@ -118,7 +118,7 @@ const mobileHeaderTitle = computed(() => {
     if (route.path === "/settings") {
         return "Settings";
     }
-    
+
     if (route.path === "/logs") {
         return "System Logs";
     }
@@ -181,13 +181,8 @@ const handleLogout = async () => {
     <div class="flex h-screen bg-background overflow-hidden">
         <!-- Desktop Sidebar -->
         <div class="hidden lg:block">
-            <Sidebar
-                v-model:activeCollection="activeCollection"
-                v-model:collectionSearchQuery="collectionSearchQuery"
-                :filteredCollections="filteredCollections"
-                :handleLogout="handleLogout"
-                :state="state"
-            />
+            <Sidebar v-model:activeCollection="activeCollection" v-model:collectionSearchQuery="collectionSearchQuery"
+                :filteredCollections="filteredCollections" :handleLogout="handleLogout" :state="state" />
         </div>
 
         <!-- Main Content -->
@@ -200,14 +195,10 @@ const handleLogout = async () => {
                         </Button>
                     </SheetTrigger>
                     <SheetContent side="left" class="p-0">
-                        <Sidebar class="h-full w-full border-r-0"
-                            v-model:activeCollection="activeCollection"
+                        <Sidebar class="h-full w-full border-r-0" v-model:activeCollection="activeCollection"
                             v-model:collectionSearchQuery="collectionSearchQuery"
-                            :filteredCollections="filteredCollections"
-                            :handleLogout="handleLogout"
-                            :state="state"
-                            :onNavigate="closeMobileSidebar"
-                        />
+                            :filteredCollections="filteredCollections" :handleLogout="handleLogout" :state="state"
+                            :onNavigate="closeMobileSidebar" />
                     </SheetContent>
                 </Sheet>
 
@@ -222,7 +213,7 @@ const handleLogout = async () => {
 
             <!-- Content Area -->
             <div class="flex-1 overflow-auto p-8">
-                <div class="max-w-7xl mx-auto space-y-6 pb-20">
+                <div class="max-w-full space-y-6 pb-20">
                     <slot :active-collection="activeCollection"></slot>
                 </div>
             </div>
