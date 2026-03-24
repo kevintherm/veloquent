@@ -1,11 +1,11 @@
 ## TODO
 
 - Setup system variables
-    - Rate limit
-    - Trust proxies
-    - Mail settings (encrypted)
-    - Storage settings
-    - Backups****
+    - Rate limit (defer)
+    - Trust proxies (defer)
+    - Mail settings (encrypted) (defer)
+    - Storage settings (defer)
+    - Backups
         - Collections, tables, records
     - Export n imports
         - Collections metadata only
