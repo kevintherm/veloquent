@@ -8,6 +8,9 @@ use App\Domain\Collections\Validators\CollectionFieldValidator;
 use App\Domain\QueryCompiler\Services\QueryFilter;
 use App\Domain\SchemaManagement\Services\SchemaChangePlan;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class CreateCollectionAction
 {
@@ -37,12 +40,8 @@ class CreateCollectionAction
             $this->validateApiRules($data['api_rules'], Arr::pluck($mergedFields, 'name'));
         }
 
-        $options = $data['options'] ?? [];
-        if ($isAuthCollection) {
-            $options = array_merge([
-                'auth_methods' => ['email_password'],
-                'require_email_verification' => false,
-            ], $options);
+        if (isset($data['options']) || $isAuthCollection) {
+            $data['options'] = $this->validateAuthOptions($data['options'] ?? [], Arr::pluck($mergedFields, 'name'), $isAuthCollection);
         }
 
         return Collection::create([
@@ -50,7 +49,6 @@ class CreateCollectionAction
             'table_name' => SchemaChangePlan::generateTableName($data['name'], $data['is_system'] ?? false),
             'fields' => $mergedFields,
             'indexes' => $indexes,
-            'options' => $options ?: null,
         ]);
     }
 
@@ -68,5 +66,47 @@ class CreateCollectionAction
             $inMemory = in_array($rule, ['create', 'update'], true);
             QueryFilter::for($query, $fields)->lint($apiRules[$rule], $inMemory);
         }
+    }
+
+    public function validateAuthOptions(array $options, array $fields, bool $isAuthCollection): array
+    {
+        if (! $isAuthCollection) {
+            return $options;
+        }
+
+        // Default structure for auth collections
+        $options['auth_methods'] ??= [];
+        $options['auth_methods']['standard'] ??= [];
+        $options['auth_methods']['standard']['enabled'] ??= true;
+        $options['auth_methods']['standard']['identity_fields'] ??= ['email'];
+
+        $options['auth_methods']['oauth'] ??= [];
+        $options['auth_methods']['oauth']['enabled'] ??= false;
+        $options['auth_methods']['oauth']['providers'] ??= [];
+
+        $validator = Validator::make($options, [
+            'auth_methods' => 'required|array',
+
+            'auth_methods.standard' => 'required|array',
+            'auth_methods.standard.enabled' => 'required|boolean',
+            'auth_methods.standard.identity_fields' => 'required|array|min:1',
+            'auth_methods.standard.identity_fields.*' => ['string', Rule::in($fields)],
+
+            'auth_methods.oauth' => 'required|array',
+            'auth_methods.oauth.enabled' => 'required|boolean',
+            'auth_methods.oauth.providers' => 'array',
+            'auth_methods.oauth.providers.*.client_id' => 'required|string',
+            'auth_methods.oauth.providers.*.client_secret' => 'required|string',
+            'auth_methods.oauth.providers.*.redirect_uri' => 'required|url',
+            'auth_methods.oauth.providers.*.scopes' => 'array',
+
+            'require_email_verification' => 'nullable|boolean',
+        ]);
+
+        if ($validator->fails()) {
+            throw new ValidationException($validator);
+        }
+
+        return $validator->validated();
     }
 }

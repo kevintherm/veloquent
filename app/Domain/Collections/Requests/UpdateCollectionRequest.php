@@ -55,9 +55,6 @@ class UpdateCollectionRequest extends FormRequest
             'indexes.*.type' => ['required', new Enum(IndexType::class)],
 
             'options' => 'nullable|array',
-            'options.auth_methods' => 'sometimes|array',
-            'options.auth_methods.*' => 'string|in:email_password,oauth2',
-            'options.require_email_verification' => 'sometimes|boolean',
         ];
 
         foreach ($this->input('fields', []) as $index => $field) {

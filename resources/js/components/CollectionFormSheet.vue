@@ -149,7 +149,10 @@ const formState = ref({
   indexes: [],
   api_rules: defaultApiRules(),
   options: {
-    auth_methods: ["email_password"],
+    auth_methods: {
+      standard: { enabled: true, identity_fields: ["email"] },
+      oauth: { enabled: false, providers: [] },
+    },
     require_email_verification: false,
   },
   is_system: false,
@@ -354,7 +357,16 @@ const initializeFormState = () => {
       indexes,
       api_rules: normalizeApiRules(fetchedCollection.value.api_rules),
       options: {
-        auth_methods: fetchedCollection.value.options?.auth_methods ?? ["email_password"],
+        auth_methods: {
+          standard: {
+            enabled: fetchedCollection.value.options?.auth_methods?.standard?.enabled ?? true,
+            identity_fields: fetchedCollection.value.options?.auth_methods?.standard?.identity_fields ?? ["email"],
+          },
+          oauth: {
+            enabled: fetchedCollection.value.options?.auth_methods?.oauth?.enabled ?? false,
+            providers: fetchedCollection.value.options?.auth_methods?.oauth?.providers ?? [],
+          },
+        },
         require_email_verification: fetchedCollection.value.options?.require_email_verification ?? false,
       },
       is_system: fetchedCollection.value.is_system || false,
@@ -370,7 +382,10 @@ const initializeFormState = () => {
       indexes: [],
       api_rules: defaultApiRules(),
       options: {
-        auth_methods: ["email_password"],
+        auth_methods: {
+          standard: { enabled: true, identity_fields: ["email"] },
+          oauth: { enabled: false, providers: [] },
+        },
         require_email_verification: false,
       },
       is_system: false,
@@ -1284,14 +1299,52 @@ onMounted(async () => {
                   <Label class="text-sm font-semibold">Authentication Methods</Label>
                 </div>
                 <div class="grid gap-4 mt-2">
-                  <div class="flex items-center justify-between p-3 border rounded-md bg-background">
-                    <div class="flex flex-col gap-0.5">
-                      <span class="text-sm font-medium">Email / Password</span>
-                      <span class="text-xs text-muted-foreground">Standard authentication using email and
-                        password.</span>
+                  <div class="flex flex-col gap-3 p-3 border rounded-md bg-background">
+                    <div class="flex items-center justify-between">
+                      <div class="flex flex-col gap-0.5">
+                        <span class="text-sm font-medium">Standard</span>
+                        <span class="text-xs text-muted-foreground">Standard authentication using identity and
+                          password.</span>
+                      </div>
+                      <Switch :model-value="formState.options.auth_methods.standard.enabled"
+                        @update:model-value="(val) => { formState.options.auth_methods.standard.enabled = val; isCollectionModified = true; }" />
                     </div>
-                    <Switch :checked="true" :disabled="true" />
+
+                    <div v-if="formState.options.auth_methods.standard.enabled" class="pt-2 border-t space-y-2">
+                      <Label class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Identity
+                        Fields</Label>
+                      <div class="flex flex-wrap gap-2">
+                        <template v-for="field in formState.fields" :key="`auth-identity-${field.name}`">
+                          <button v-if="!field._deleted && !['password', 'email_visibility', 'verified'].includes(field.name)" type="button"
+                            @click="() => {
+                              const idx = formState.options.auth_methods.standard.identity_fields.indexOf(field.name);
+                              if (idx > -1) {
+                                if (formState.options.auth_methods.standard.identity_fields.length > 1) {
+                                  formState.options.auth_methods.standard.identity_fields.splice(idx, 1);
+                                } else {
+                                  toast.error('At least one identity field is required');
+                                }
+                              } else {
+                                formState.options.auth_methods.standard.identity_fields.push(field.name);
+                              }
+                              isCollectionModified = true;
+                              clearValidationError('options.auth_methods.standard.identity_fields');
+                            }" class="px-2 py-1 text-xs rounded-md border transition-colors"
+                            :class="formState.options.auth_methods.standard.identity_fields.includes(field.name) ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted/30 text-muted-foreground border-transparent hover:bg-muted'">
+                            {{ field.name }}
+                          </button>
+                        </template>
+                      </div>
+                      <p v-if="firstErrorFor('options.auth_methods.standard.identity_fields')"
+                        class="text-[10px] text-destructive font-medium">
+                        {{ firstErrorFor('options.auth_methods.standard.identity_fields') }}
+                      </p>
+                      <p class="text-[10px] text-muted-foreground leading-tight">
+                        Selected fields will be used as the "identity" during login. Usually "email" or "username".
+                      </p>
+                    </div>
                   </div>
+
                   <div
                     class="flex items-center justify-between p-3 border rounded-md bg-background opacity-50 grayscale cursor-not-allowed">
                     <div class="flex flex-col gap-0.5">
@@ -1335,7 +1388,7 @@ onMounted(async () => {
                       Save
                     </Button>
                   </div>
-                  <div class="p-0 bg-background min-h-[250px] relative">
+                  <div class="p-0 bg-background min-h-62.5 relative">
                     <div v-if="templates[action].loading"
                       class="absolute inset-0 flex items-center justify-center bg-background/50 z-10 backdrop-blur-[1px]">
                       <span
@@ -1344,7 +1397,7 @@ onMounted(async () => {
                     <div v-if="isCreating"
                       class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-muted/5 z-10">
                       <Mail class="h-10 w-10 text-muted-foreground/30 mb-2" />
-                      <p class="text-xs text-muted-foreground max-w-[250px]">
+                      <p class="text-xs text-muted-foreground max-w-62.5">
                         Email templates can be customized after the collection is created. System defaults will be used
                         initially.
                       </p>
