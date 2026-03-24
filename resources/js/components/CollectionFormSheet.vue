@@ -31,7 +31,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui";
-import { Plus, Trash2, Copy, ArrowDown, ArrowUp, Settings2, FileJson, MoreVertical, Wrench, Lock, Unlock, List, Eye, Pencil, CirclePlus, RotateCcw, Mail, ShieldCheck, Save } from "lucide-vue-next";
+import { Plus, Trash2, Copy, ArrowDown, ArrowUp, Settings2, FileJson, MoreVertical, Wrench, Lock, Unlock, List, Eye, Pencil, CirclePlus, RotateCcw, Mail, Save } from "lucide-vue-next";
 import TiptapEditor from "./TiptapEditor.vue";
 import { useDashboardState } from "@/lib/dashboardState";
 import Select from "./ui/select/Select.vue";
@@ -911,7 +911,7 @@ onMounted(async () => {
                 <Input id="collectionDescription" v-model="formState.description" placeholder="Optional description"
                   @input="clearValidationError('description')" />
                 <p v-if="firstErrorFor('description')" class="text-xs text-destructive">{{ firstErrorFor('description')
-                  }}</p>
+                }}</p>
               </div>
 
               <div class="grid gap-2">
@@ -1321,8 +1321,7 @@ onMounted(async () => {
                       <span class="text-sm font-medium capitalize">{{ action.replace('_', ' ') }}</span>
                       <p class="text-[10px] text-muted-foreground flex flex-wrap items-center gap-x-1.5 gap-y-1 mt-0.5">
                         Placeholders:
-                        <code v-for="ph in TEMPLATE_PLACEHOLDERS" :key="ph.code"
-                          :title="ph.label"
+                        <code v-for="ph in TEMPLATE_PLACEHOLDERS" :key="ph.code" :title="ph.label"
                           class="bg-muted px-1 rounded font-mono cursor-default">&#123;&#123; {{ ph.code }} &#125;&#125;</code>
                       </p>
                     </div>
@@ -1341,18 +1340,17 @@ onMounted(async () => {
                       <span
                         class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></span>
                     </div>
-                    <div v-if="isCreating" class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-muted/5 z-10">
+                    <div v-if="isCreating"
+                      class="absolute inset-0 flex flex-col items-center justify-center p-6 text-center bg-muted/5 z-10">
                       <Mail class="h-10 w-10 text-muted-foreground/30 mb-2" />
                       <p class="text-xs text-muted-foreground max-w-[250px]">
-                        Email templates can be customized after the collection is created. System defaults will be used initially.
+                        Email templates can be customized after the collection is created. System defaults will be used
+                        initially.
                       </p>
                     </div>
-                    <TiptapEditor
-                      v-if="!isCreating && activeTab === 'options' && !templates[action].loading"
-                      v-model="templates[action].content"
-                      :placeholders="TEMPLATE_PLACEHOLDERS"
-                      placeholder="Write your email template content here..."
-                    />
+                    <TiptapEditor v-if="!isCreating && activeTab === 'options' && !templates[action].loading"
+                      v-model="templates[action].content" :placeholders="TEMPLATE_PLACEHOLDERS"
+                      placeholder="Write your email template content here..." />
                   </div>
                 </div>
               </div>
