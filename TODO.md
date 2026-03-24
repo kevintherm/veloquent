@@ -20,6 +20,10 @@
     - Creating/Updating uses ValidationException
     - Other errors use regular exception
 - improv: refactor redundant extractIndexes() methods
+- feat: impersonate button for auth collections
+- fix: normalize custom validator on actions
+- fix?: what happens if you pass a field with your own id thats not in the old data when updating a collection?
+- drop store and update collection requests, define the rule and validator on actions
 - RecordExpansionService revise
     - resolveTargetCollection N+1 on collection lookup
     - No expand field count limit

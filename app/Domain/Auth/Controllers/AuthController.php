@@ -36,11 +36,21 @@ class AuthController extends ApiController
             return $this->errorResponse('This collection does not support authentication.', Response::HTTP_FORBIDDEN);
         }
 
-        $credentials = $request->only('email', 'password');
+        if (data_get($collection->options, 'auth_methods.standard.enabled') !== true) {
+            return $this->errorResponse('Standard authentication is not enabled for this collection.', Response::HTTP_FORBIDDEN);
+        }
 
-        $user = Record::of($collection)->where('email', $credentials['email'])->first();
+        $identityFields = data_get($collection->options, 'auth_methods.standard.identity_fields', ['email']);
+        $identityValue = $request->input('identity');
+        $password = $request->input('password');
 
-        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
+        $user = Record::of($collection)->where(function ($query) use ($identityFields, $identityValue) {
+            foreach ($identityFields as $field) {
+                $query->orWhere($field, $identityValue);
+            }
+        })->first();
+
+        if (! $user || ! Hash::check($password, $user->password)) {
             return $this->errorResponse('Invalid credentials.', Response::HTTP_UNAUTHORIZED);
         }
 
