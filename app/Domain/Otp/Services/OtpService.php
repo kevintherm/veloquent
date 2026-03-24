@@ -7,6 +7,7 @@ use App\Domain\Otp\Enums\OtpAction;
 use App\Domain\Otp\Jobs\SendOtpJob;
 use App\Domain\Otp\Models\OtpToken;
 use App\Domain\Records\Models\Record;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class OtpService
@@ -15,33 +16,32 @@ class OtpService
      * Invalidate any existing unused token for that user+action, create a new one,
      * and dispatch a queued job to send the OTP email.
      */
-    public function issue(Record $user, OtpAction $action, string $collectionId): void
+    public function issue(Record $user, OtpAction $action, Collection $collection): void
     {
-        OtpToken::query()
-            ->forRecord($collectionId, $user->id)
-            ->where('action', $action->value)
-            ->unused()
-            ->delete();
+        DB::transaction(function () use ($user, $action, $collection) {
+            OtpToken::query()
+                ->forRecord($collection->id, $user->id)
+                ->where('action', $action->value)
+                ->unused()
+                ->delete();
 
-        $code = $this->generateCode();
+            $code = $this->generateCode();
 
-        OtpToken::create([
-            'collection_id' => $collectionId,
-            'record_id' => (string) $user->id,
-            'token_hash' => $this->hashCode($code),
-            'action' => $action->value,
-            'expires_at' => now()->addMinutes($this->ttlMinutes()),
-        ]);
+            OtpToken::create([
+                'collection_id' => $collection->id,
+                'record_id' => (string) $user->id,
+                'token_hash' => $this->hashCode($code),
+                'action' => $action->value,
+                'expires_at' => now()->addMinutes($this->ttlMinutes()),
+            ]);
 
-        $collection = Collection::query()->find($collectionId);
-
-        SendOtpJob::dispatch(
-            $user->email,
-            $code,
-            $action,
-            $collectionId,
-            $collection?->name ?? 'unknown',
-        );
+            SendOtpJob::dispatch(
+                $user->email,
+                $code,
+                $action,
+                $collection,
+            );
+        });
     }
 
     /**
@@ -49,27 +49,28 @@ class OtpService
      *
      * @throws ValidationException
      */
-    public function consume(string $rawCode, OtpAction $action, string $collectionId, string $recordId): Record
+    public function consume(string $rawCode, OtpAction $action, Collection $collection, string $recordId): Record
     {
-        $token = OtpToken::query()
-            ->forRecord($collectionId, $recordId)
-            ->where('action', $action->value)
-            ->where('token_hash', $this->hashCode($rawCode))
-            ->unused()
-            ->active()
-            ->first();
+        return DB::transaction(function () use ($rawCode, $action, $collection, $recordId) {
+            $token = OtpToken::query()
+                ->forRecord($collection->id, $recordId)
+                ->where('action', $action)
+                ->where('token_hash', $this->hashCode($rawCode))
+                ->unused()
+                ->active()
+                ->lockForUpdate()
+                ->first();
 
-        if (! $token) {
-            throw ValidationException::withMessages([
-                'token' => 'The OTP code is invalid or has expired.',
-            ]);
-        }
+            if (! $token) {
+                throw ValidationException::withMessages([
+                    'token' => 'The OTP code is invalid or has expired.',
+                ]);
+            }
 
-        $token->update(['used_at' => now()]);
+            $token->update(['used_at' => now()]);
 
-        $collection = Collection::query()->findOrFail($collectionId);
-
-        return Record::of($collection)->findOrFail($recordId);
+            return Record::of($collection)->findOrFail($recordId);
+        });
     }
 
     /**
@@ -93,10 +94,16 @@ class OtpService
     private function generateCode(): string
     {
         $length = (int) config('velo.otp.length', 6);
-        $max = (int) str_repeat('9', $length);
-        $min = (int) ('1'.str_repeat('0', $length - 1));
+        $numeric = (bool) config('velo.otp.numeric', false);
 
-        return (string) random_int($min, $max);
+        $alphabet = $numeric
+            ? '0123456789'
+            : 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no ambiguous chars
+
+        return implode('', array_map(
+            fn () => $alphabet[random_int(0, strlen($alphabet) - 1)],
+            range(1, $length)
+        ));
     }
 
     private function hashCode(string $code): string

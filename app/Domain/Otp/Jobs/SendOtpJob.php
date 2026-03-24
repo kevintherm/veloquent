@@ -2,11 +2,11 @@
 
 namespace App\Domain\Otp\Jobs;
 
+use App\Domain\Collections\Models\Collection;
+use App\Domain\Emails\Services\EmailService;
 use App\Domain\Otp\Enums\OtpAction;
-use App\Domain\Otp\Mail\SendOtpMail;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Facades\Mail;
 
 class SendOtpJob implements ShouldQueue
 {
@@ -16,14 +16,19 @@ class SendOtpJob implements ShouldQueue
         public string $email,
         public string $otpCode,
         public OtpAction $action,
-        public string $collectionId,
-        public string $collectionName,
+        public Collection $collection,
     ) {}
 
-    public function handle(): void
+    public function handle(EmailService $emailService): void
     {
-        Mail::to($this->email)->send(
-            new SendOtpMail($this->otpCode, $this->action, $this->collectionId, $this->collectionName),
+        $emailService->send(
+            $this->email,
+            $this->action->value,
+            $this->collection,
+            [
+                'otp_code' => $this->otpCode,
+                'action_label' => $this->action->label(),
+            ]
         );
     }
 }

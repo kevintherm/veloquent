@@ -43,6 +43,7 @@ return [
     */
     'otp' => [
         'length' => (int) env('VELO_OTP_LENGTH', 6),
+        'numeric' => (bool) false,
         'ttl' => (int) env('VELO_OTP_TTL', 15),
         'cleanup_grace' => (int) env('VELO_OTP_CLEANUP_GRACE', 60),
     ],

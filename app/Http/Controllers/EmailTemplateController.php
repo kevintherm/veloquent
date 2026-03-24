@@ -4,8 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
+use App\Domain\Emails\Services\EmailService;
 use App\Domain\Otp\Enums\OtpAction;
-use App\EmailTemplate;
+use App\Domain\Emails\Models\EmailTemplate;
 use App\Infrastructure\Http\Controllers\ApiController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,6 +14,10 @@ use Symfony\Component\HttpFoundation\Response;
 
 class EmailTemplateController extends ApiController
 {
+    public function __construct(
+        private EmailService $emailService
+    ) {}
+
     public function show(Collection $collection, string $action): JsonResponse
     {
         if ($collection->type !== CollectionType::Auth) {
@@ -27,7 +32,7 @@ class EmailTemplateController extends ApiController
 
         $template = EmailTemplate::firstOrCreate(
             ['collection_id' => $collection->id, 'action' => $otpAction->value],
-            ['content' => $otpAction->defaultTemplate()],
+            ['content' => $this->emailService->getDefaultTemplate($otpAction->value)],
         );
 
         return $this->successResponse([
@@ -53,8 +58,8 @@ class EmailTemplateController extends ApiController
             'content' => ['required', 'string'],
         ]);
 
-        $content = trim(strip_tags($request->input('content'))) === ''
-            ? $otpAction->defaultTemplate()
+        $content = trim(strip_tags($request->input('content', ''))) === ''
+            ? $this->emailService->getDefaultTemplate($otpAction->value)
             : $request->input('content');
 
         EmailTemplate::updateOrCreate(

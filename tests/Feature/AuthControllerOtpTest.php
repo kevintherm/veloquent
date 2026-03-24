@@ -49,7 +49,7 @@ it('requests a password reset and pushes a job', function () {
         'action' => OtpAction::PasswordReset->value,
     ]);
 
-    Queue::assertPushed(SendOtpJob::class);
+    Queue::assertPushed(fn (SendOtpJob $job) => $job->collection->id === $this->collection->id);
 });
 
 it('confirms password reset with valid OTP', function () {

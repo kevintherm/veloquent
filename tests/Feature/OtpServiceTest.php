@@ -37,7 +37,7 @@ beforeEach(function () {
 it('issues an OTP token and stores hashed code', function () {
     Queue::fake();
 
-    $this->otpService->issue($this->user, OtpAction::PasswordReset, $this->collection->id);
+    $this->otpService->issue($this->user, OtpAction::PasswordReset, $this->collection);
 
     $this->assertDatabaseHas('otp_tokens', [
         'collection_id' => $this->collection->id,
@@ -49,14 +49,14 @@ it('issues an OTP token and stores hashed code', function () {
     expect($token->token_hash)->not->toBe('123456'); // Should be hashed
     expect($token->used_at)->toBeNull();
 
-    Queue::assertPushed(SendOtpJob::class);
+    Queue::assertPushed(fn (SendOtpJob $job) => $job->collection->id === $this->collection->id);
 });
 
 it('invalidates previous unused tokens on re-issue', function () {
-    $this->otpService->issue($this->user, OtpAction::PasswordReset, $this->collection->id);
+    $this->otpService->issue($this->user, OtpAction::PasswordReset, $this->collection);
     expect(OtpToken::count())->toBe(1);
 
-    $this->otpService->issue($this->user, OtpAction::PasswordReset, $this->collection->id);
+    $this->otpService->issue($this->user, OtpAction::PasswordReset, $this->collection);
     expect(OtpToken::count())->toBe(1); // Old one deleted
 });
 
@@ -74,7 +74,7 @@ it('consumes a valid OTP token', function () {
         'expires_at' => now()->addMinutes(15),
     ]);
 
-    $user = $this->otpService->consume($code, OtpAction::PasswordReset, $this->collection->id, (string) $this->user->id);
+    $user = $this->otpService->consume($code, OtpAction::PasswordReset, $this->collection, (string) $this->user->id);
 
     expect($user->id)->toBe($this->user->id);
     expect(OtpToken::where('record_id', (string) $this->user->id)->first()->used_at)->not->toBeNull();
@@ -90,7 +90,7 @@ it('rejects expired OTP tokens', function () {
         'expires_at' => now()->subMinutes(1),
     ]);
 
-    $this->otpService->consume($code, OtpAction::PasswordReset, $this->collection->id, (string) $this->user->id);
+    $this->otpService->consume($code, OtpAction::PasswordReset, $this->collection, (string) $this->user->id);
 })->throws(ValidationException::class);
 
 it('rejects already-used OTP tokens', function () {
@@ -104,7 +104,7 @@ it('rejects already-used OTP tokens', function () {
         'used_at' => now(),
     ]);
 
-    $this->otpService->consume($code, OtpAction::PasswordReset, $this->collection->id, (string) $this->user->id);
+    $this->otpService->consume($code, OtpAction::PasswordReset, $this->collection, (string) $this->user->id);
 })->throws(ValidationException::class);
 
 it('cleans up expired and used tokens', function () {
