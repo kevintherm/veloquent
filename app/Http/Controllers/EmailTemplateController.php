@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
+use App\Domain\Emails\Models\EmailTemplate;
 use App\Domain\Emails\Services\EmailService;
 use App\Domain\Otp\Enums\OtpAction;
-use App\Domain\Emails\Models\EmailTemplate;
 use App\Infrastructure\Http\Controllers\ApiController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -55,7 +55,7 @@ class EmailTemplateController extends ApiController
         }
 
         $request->validate([
-            'content' => ['required', 'string'],
+            'content' => ['nullable', 'string'],
         ]);
 
         $content = trim(strip_tags($request->input('content', ''))) === ''

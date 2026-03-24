@@ -45,7 +45,7 @@ const totalResults = ref(0);
 const isLoading = ref(false);
 
 const currentPage = ref(1);
-const itemsPerPage = ref(10);
+const itemsPerPage = ref(50);
 const lastPage = ref(1);
 
 const selectedLog = ref(null);
@@ -440,8 +440,7 @@ const copyToClipboard = async (text) => {
                                     <Copy class="h-3 w-3" />
                                 </Button>
                             </div>
-                            <div
-                                class="bg-card border p-4 rounded-md overflow-x-auto text-sm font-mono shadow-inner max-h-[400px]">
+                            <div class="bg-card border p-4 rounded-md overflow-x-auto text-sm font-mono shadow-inner">
                                 <pre>{{ JSON.stringify(selectedLog.context, null, 2) }}</pre>
                             </div>
                         </div>

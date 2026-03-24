@@ -71,7 +71,7 @@ HTML;
     public function getDefaultTemplate(string $action): string
     {
         $actionLabel = str($action)->replace('_', ' ')->title();
-        
+
         $bodyText = match ($action) {
             'password_reset' => 'Use the code below to reset your password.',
             'email_verification' => 'Use the code below to verify your email address.',

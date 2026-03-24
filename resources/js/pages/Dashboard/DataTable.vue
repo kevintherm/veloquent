@@ -169,10 +169,29 @@ const resolveColumnIcon = (column, columnTypes) => {
     return resolveCollectionFieldTypeIcon(columnTypes?.[column]);
 };
 
-const fixedWidthColumns = new Set(["id", "created_at", "updated_at"]);
+const resolveColumnWidthClass = (column, columnTypes) => {
+    if (column === "id") {
+        return "w-48 min-w-48 whitespace-nowrap";
+    }
 
-const isFixedWidthColumn = (column) => {
-    return fixedWidthColumns.has(column);
+    const type = columnTypes?.[column];
+
+    switch (type) {
+        case "boolean":
+        case "number":
+            return "w-32 min-w-32";
+        case "timestamp":
+        case "datetime":
+        case "date":
+            return "w-40 min-w-40 whitespace-nowrap";
+        case "json":
+        case "longtext":
+            return "w-80 min-w-80";
+        case "relation":
+            return "w-48 min-w-48";
+        default:
+            return "w-48 min-w-48";
+    }
 };
 
 const columnLabel = (name) => {
@@ -212,7 +231,7 @@ const copyRecordId = async (recordId) => {
                                 @update:model-value="(val) => $emit('toggle-all', val)" />
                         </TableHead>
                         <TableHead v-for="column in columns" :key="column"
-                            :class="isFixedWidthColumn(column) ? 'w-45 min-w-45 whitespace-nowrap' : 'w-64 min-w-64'">
+                            :class="resolveColumnWidthClass(column, columnTypes)">
                             <button type="button" class="inline-flex items-center gap-2" @click="$emit('sort', column)">
                                 <component :is="resolveColumnIcon(column, columnTypes)"
                                     class="h-3.5 w-3.5 text-muted-foreground" />
@@ -232,10 +251,7 @@ const copyRecordId = async (recordId) => {
                                 <Checkbox :model-value="selectedRecords.includes(record.id)"
                                     @update:model-value="$emit('toggle-record', record.id)" />
                             </TableCell>
-                            <TableCell v-for="column in columns" :key="`${record.id}-${column}`" :class="[
-                                'align-top',
-                                isFixedWidthColumn(column) ? 'w-45 min-w-45 whitespace-nowrap' : 'w-16 min-w-16 max-w-16',
-                            ]">
+                            <TableCell v-for="column in columns" :key="`${record.id}-${column}`" :class="['align-top']">
                                 <div v-if="isDatetimeColumn(column, columnTypes)"
                                     class="leading-tight whitespace-nowrap">
                                     <p class="text-sm font-medium">
@@ -273,9 +289,8 @@ const copyRecordId = async (recordId) => {
                             <TableCell>
                                 <Skeleton class="h-8 w-4 rounded-sm" />
                             </TableCell>
-                            <TableCell v-for="column in columns" :key="`skeleton-${rowIndex}-${column}`" :class="[
-                                isFixedWidthColumn(column) ? 'w-45 min-w-45 whitespace-nowrap' : 'w-64 min-w-64 max-w-64',
-                            ]">
+                            <TableCell v-for="column in columns" :key="`skeleton-${rowIndex}-${column}`"
+                                :class="resolveColumnWidthClass(column, columnTypes)">
                                 <Skeleton class="h-8 w-full" />
                             </TableCell>
                         </TableRow>
