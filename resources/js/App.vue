@@ -7,5 +7,4 @@ import CollectionFormSheetHost from "@/components/CollectionFormSheetHost.vue";
 <template>
   <router-view />
   <Toaster :close-button="true" close-button-position="top-right" rich-colors position="bottom-center" />
-  <CollectionFormSheetHost />
 </template>

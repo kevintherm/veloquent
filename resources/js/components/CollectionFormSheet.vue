@@ -40,6 +40,7 @@ import SelectValue from "./ui/select/SelectValue.vue";
 import SelectContent from "./ui/select/SelectContent.vue";
 import SelectItem from "./ui/select/SelectItem.vue";
 import Checkbox from "./ui/Checkbox.vue";
+import Switch from "./ui/Switch.vue";
 
 const props = defineProps({
   sheetId: {
@@ -1289,7 +1290,7 @@ onMounted(async () => {
                       <span class="text-xs text-muted-foreground">Standard authentication using email and
                         password.</span>
                     </div>
-                    <Checkbox :model-value="true" :disabled="true" />
+                    <Switch :checked="true" :disabled="true" />
                   </div>
                   <div
                     class="flex items-center justify-between p-3 border rounded-md bg-background opacity-50 grayscale cursor-not-allowed">

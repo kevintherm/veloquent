@@ -13,6 +13,7 @@ import Sidebar from "@/pages/Dashboard/Sidebar.vue";
 import DashboardHeader from "@/pages/Dashboard/DashboardHeader.vue";
 import RecordFormSheetHost from "@/components/RecordFormSheetHost.vue";
 import { useDashboardState } from "@/lib/dashboardState";
+import CollectionFormSheetHost from "@/components/CollectionFormSheetHost.vue";
 
 const { state, logout } = useAuth();
 const router = useRouter();
@@ -207,7 +208,7 @@ const handleLogout = async () => {
             </div>
 
             <!-- Top Bar -->
-            <div v-if="$route.path !== '/settings' && $route.path !== '/logs'" class="hidden lg:block">
+            <div v-if="$route.path !== '/settings' && $route.path !== '/logs'">
                 <DashboardHeader :active-collection="activeCollection" />
             </div>
 
@@ -220,5 +221,6 @@ const handleLogout = async () => {
         </main>
 
         <RecordFormSheetHost />
+        <CollectionFormSheetHost />
     </div>
 </template>
