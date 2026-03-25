@@ -1,5 +1,9 @@
 ## TODO
 
+- Oauth2
+    - bring in socialite for providers management
+    - use abstraction to support more providers in the future that socialite did not support
+    - handle http and authentication
 - Setup system variables
     - Rate limit (defer)
     - Trust proxies (defer)
@@ -12,10 +16,6 @@
 - fix: Truncating collection bypasses RelationIntegrityService
 - fix: inconsistent validation and exception messages
 - feat: Request change email for auth collection
-- Oauth2
-    - bring in socialite for providers management
-    - use abstraction to support more providers in the future that socialite did not support
-    - handle http and authentication
 - Unify errors
     - Creating/Updating uses ValidationException
     - Other errors use regular exception
@@ -39,3 +39,4 @@
 - Add manage_rule to allow updating the password field for auth collections
 - Testing
 - Documentation
+- Ship it into a package
