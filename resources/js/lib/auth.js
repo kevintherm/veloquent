@@ -30,10 +30,10 @@ export const useAuth = () => {
     return AUTH_COLLECTION;
   };
 
-  const login = async ({ email, password }) => {
+  const login = async ({ identity, password }) => {
     const collection = resolveCollection();
     const response = await axios.post(`/api/collections/${collection}/auth/login`, {
-      email,
+      identity,
       password,
     });
 

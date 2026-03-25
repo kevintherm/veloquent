@@ -36,7 +36,7 @@ class AuthController extends ApiController
             return $this->errorResponse('This collection does not support authentication.', Response::HTTP_FORBIDDEN);
         }
 
-        if (data_get($collection->options, 'auth_methods.standard.enabled') !== true) {
+        if ($collection->is_system === false && data_get($collection->options, 'auth_methods.standard.enabled') !== true) {
             return $this->errorResponse('Standard authentication is not enabled for this collection.', Response::HTTP_FORBIDDEN);
         }
 

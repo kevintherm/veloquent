@@ -922,6 +922,13 @@ const handleCopy = () => {
     fields: JSON.parse(JSON.stringify(copiedFields)),
     indexes: JSON.parse(JSON.stringify(copiedIndexes)),
     api_rules: normalizeApiRules(JSON.parse(JSON.stringify(fetchedCollection.value.api_rules || {}))),
+    options: JSON.parse(JSON.stringify(fetchedCollection.value.options || {
+      auth_methods: {
+        standard: { enabled: true, identity_fields: ["email"] },
+        oauth: { enabled: false },
+      },
+      require_email_verification: false,
+    })),
   };
 
   formState.value = copyData;
@@ -956,7 +963,15 @@ onMounted(async () => {
 
 <template>
   <Sheet :open="internalOpen" @update:open="(isOpen) => { if (!isOpen) requestClose(); }">
-    <SheetContent side="right" class="sm:max-w-2xl max-w-full flex h-full flex-col overflow-hidden">
+    <SheetContent
+      side="right"
+      class="sm:max-w-2xl max-w-full flex h-full flex-col overflow-hidden"
+      @pointer-down-outside="(event) => {
+        if (event.target?.closest?.('[data-sonner-toast]')) {
+          event.preventDefault();
+        }
+      }"
+    >
       <SheetHeader>
         <SheetTitle>{{ isCreating ? 'Create' : 'Edit' }} Collection</SheetTitle>
         <SheetDescription>

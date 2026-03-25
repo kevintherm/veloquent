@@ -98,6 +98,8 @@ readonly class SchemaDDLService
         if ($after) {
             $col->after($after);
         }
+
+        $col->nullable();
     }
 
     /**

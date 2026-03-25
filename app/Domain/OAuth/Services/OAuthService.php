@@ -153,7 +153,7 @@ class OAuthService
             $record->forceFill([
                 'email' => $email ?? "{$provider}_{$socialiteUser->getId()}@oauth.local",
                 'password' => Hash::make(Str::random(16)),
-                'email_visibility' => false,
+                'email_visibility' => true,
                 'verified' => (bool) $email,
                 ...($hasNameField ? [$hasNameField['name'] => $socialiteUser->getName() ?? $socialiteUser->getNickname() ?? ''] : []),
             ]);
