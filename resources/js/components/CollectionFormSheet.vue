@@ -839,8 +839,6 @@ const handleTruncate = async () => {
     await axios.delete(`/api/collections/${encodeURIComponent(fetchedCollection.value.id)}/truncate`);
     toast.success("Collection truncated successfully");
     requestRecordsReload();
-  } catch (error) {
-    toast.error(error?.response?.data?.message || "Failed to truncate collection");
   } finally {
     submitting.value = false;
   }
@@ -963,15 +961,12 @@ onMounted(async () => {
 
 <template>
   <Sheet :open="internalOpen" @update:open="(isOpen) => { if (!isOpen) requestClose(); }">
-    <SheetContent
-      side="right"
-      class="sm:max-w-2xl max-w-full flex h-full flex-col overflow-hidden"
+    <SheetContent side="right" class="sm:max-w-2xl max-w-full flex h-full flex-col overflow-hidden"
       @pointer-down-outside="(event) => {
         if (event.target?.closest?.('[data-sonner-toast]')) {
           event.preventDefault();
         }
-      }"
-    >
+      }">
       <SheetHeader>
         <SheetTitle>{{ isCreating ? 'Create' : 'Edit' }} Collection</SheetTitle>
         <SheetDescription>
@@ -1034,7 +1029,7 @@ onMounted(async () => {
                 <Input id="collectionDescription" v-model="formState.description" placeholder="Optional description"
                   @input="clearValidationError('description')" />
                 <p v-if="firstErrorFor('description')" class="text-xs text-destructive">{{ firstErrorFor('description')
-                  }}</p>
+                }}</p>
               </div>
 
               <div class="grid gap-2">

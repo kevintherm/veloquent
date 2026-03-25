@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Domain\Collections\Events\CollectionTruncated;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Emails\Models\EmailTemplate;
 use App\Domain\QueryCompiler\Exceptions\InvalidRuleExpressionException;
@@ -60,6 +61,15 @@ class LogsServiceProvider extends ServiceProvider
                 'user' => request()->user()?->id,
             ]);
         });
+
+        Event::listen(CollectionTruncated::class, function (CollectionTruncated $event) {
+            Log::info('COLLECTION_TRUNCATED', [
+                'id' => $event->collection->id,
+                'name' => $event->collection->name,
+                'deleted_count' => $event->deletedCount,
+                'user' => request()->user()?->id,
+            ]);
+        });
     }
 
     protected function logApiRuleExceptions(): void
@@ -115,7 +125,7 @@ class LogsServiceProvider extends ServiceProvider
 
     protected function logSlowQueries(): void
     {
-        DB::whenQueryingForLongerThan(1000, function ($connection, $event) {
+        DB::whenQueryingForLongerThan(config('velo.logs.slow_query_threshold'), function ($connection, $event) {
             Log::warning('SLOW_QUERY', [
                 'sql' => $event->sql,
                 'bindings' => $event->bindings,

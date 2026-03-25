@@ -63,4 +63,13 @@ return [
         'cron_ttl' => env('VELO_REALTIME_TTL', 55),
         'subscription_ttl' => env('VELO_REALTIME_SUBSCRIPTION_TTL', 120),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Log Configuration
+    |--------------------------------------------------------------------------
+    */
+    'logs' => [
+        'slow_query_threshold' => (int) env('VELO_LOGS_SLOW_QUERY_THRESHOLD', 1000),
+    ],
 ];
