@@ -2,14 +2,13 @@
 
 namespace App\Domain\Collections\Controllers;
 
-use App\Domain\Auth\Models\AuthToken;
 use App\Domain\Collections\Actions\CreateCollectionAction;
+use App\Domain\Collections\Actions\DeleteCollectionAction;
+use App\Domain\Collections\Actions\TruncateCollectionAction;
 use App\Domain\Collections\Actions\UpdateCollectionAction;
-use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Collections\Requests\StoreCollectionRequest;
 use App\Domain\Collections\Requests\UpdateCollectionRequest;
-use App\Domain\Records\Models\Record;
 use App\Infrastructure\Http\Controllers\ApiController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,6 +19,8 @@ class CollectionController extends ApiController
     public function __construct(
         private CreateCollectionAction $createCollectionAction,
         private UpdateCollectionAction $updateCollectionAction,
+        private DeleteCollectionAction $deleteCollectionAction,
+        private TruncateCollectionAction $truncateCollectionAction,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -80,7 +81,7 @@ class CollectionController extends ApiController
             return $this->errorResponse('Cannot delete default auth collection', 400);
         }
 
-        $collection->delete();
+        $this->deleteCollectionAction->execute($collection);
 
         return $this->successResponse([], 'Collection deleted successfully.');
     }
@@ -94,15 +95,7 @@ class CollectionController extends ApiController
             return $this->errorResponse('Cannot truncate default auth collection', 400);
         }
 
-        $recordQuery = Record::of($collection)->newQuery();
-        $deletedCount = $recordQuery->count();
-        $recordQuery->delete();
-
-        if ($collection->type === CollectionType::Auth) {
-            AuthToken::query()
-                ->where('collection_id', $collection->id)
-                ->delete();
-        }
+        $deletedCount = $this->truncateCollectionAction->execute($collection);
 
         return $this->successResponse([
             'deleted' => $deletedCount,

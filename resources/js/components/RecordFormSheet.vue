@@ -446,7 +446,7 @@ const handleClose = () => {
   if (internalOpen.value === false) {
     return;
   }
-  
+
   internalOpen.value = false;
   setTimeout(() => {
     emit("close");
@@ -733,8 +733,6 @@ const handleDeleteRecord = async () => {
     toast.success("Record deleted.");
     requestRecordsReload();
     handleClose();
-  } catch {
-    toast.error("Failed to delete record.");
   } finally {
     submitting.value = false;
   }
@@ -805,7 +803,7 @@ onMounted(async () => {
               </Button>
               <p v-if="relationLoading[field.name]" class="text-xs text-muted-foreground">Loading related records...</p>
               <p v-else-if="relationErrors[field.name]" class="text-xs text-destructive">{{ relationErrors[field.name]
-              }}</p>
+                }}</p>
               <p v-else-if="relationSelectionLabels(field).length" class="text-xs text-muted-foreground">
                 Selected: {{ relationSelectionLabels(field).join(", ") }}
               </p>

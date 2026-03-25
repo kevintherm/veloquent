@@ -8,6 +8,7 @@ use App\Domain\Collections\ValueObjects\Field;
 use App\Domain\Records\Models\Record;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
 class RelationIntegrityService
 {
@@ -88,9 +89,7 @@ class RelationIntegrityService
             }
 
             if (! $cascadeOnDelete) {
-                throw ValidationException::withMessages([
-                    'id' => ["Cannot delete this record because it is referenced by collection '{$referencingCollection->name}' (field '{$fieldName}')."],
-                ]);
+                throw new BadRequestHttpException("Cannot delete this record because it is referenced by collection '{$referencingCollection->name}' (field '{$fieldName}').");
             }
 
             // @TODO: This should be checked recursively to ensure no circular dependencies (infinite recursion prevention)

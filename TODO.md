@@ -1,5 +1,6 @@
 ## TODO
 
+- feat: cascade_on_delete option on collectionformsheet
 - Setup system variables
     - Rate limit (defer)
     - Trust proxies (defer)
@@ -9,7 +10,6 @@
         - Collections, tables, records
     - Export n imports
         - Collections metadata only
-- fix: Truncating collection bypasses RelationIntegrityService
 - fix: inconsistent validation and exception messages
 - feat: Request change email for auth collection
 - Unify errors
@@ -20,7 +20,7 @@
 - fix: normalize custom validator on actions
 - fix?: what happens if you pass a field with your own id thats not in the old data when updating a collection?
 - drop store and update collection requests, define the rule and validator on actions
-- feat: normalized tokenData value object
+- feat: normalize tokenData value object
 - RecordExpansionService revise
     - resolveTargetCollection N+1 on collection lookup
     - No expand field count limit
@@ -30,7 +30,7 @@
     - clarify in code/docs: `SchemaChangePlan::getAllReservedFields(false)` in unique sync intentionally means base reserved fields only
     - reason: auth reserved fields (for example `email`) must still sync `unique` from single-column unique indexes
 - Store cached target_collection_name for field type relation
-- Hooks systemff
+- Hooks system
 - Optimize Record model
     - cache collections
 - Add manage_rule to allow updating the password field for auth collections
