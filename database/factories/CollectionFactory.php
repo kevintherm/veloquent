@@ -34,4 +34,11 @@ class CollectionFactory extends Factory
             'is_system' => false,
         ];
     }
+
+    public function auth(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'type' => CollectionType::Auth,
+        ]);
+    }
 }

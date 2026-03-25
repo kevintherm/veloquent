@@ -4,6 +4,13 @@
     - bring in socialite for providers management
     - use abstraction to support more providers in the future that socialite did not support
     - handle http and authentication
+    - security:
+        - store metadata on cache
+        - check server side metadata
+- fix: cannot copy collection (auth)
+- fix: set all underlying columns to nullable
+- fix: auth collection not showing email
+- feat: add refresh button to datatable
 - Setup system variables
     - Rate limit (defer)
     - Trust proxies (defer)
@@ -24,6 +31,7 @@
 - fix: normalize custom validator on actions
 - fix?: what happens if you pass a field with your own id thats not in the old data when updating a collection?
 - drop store and update collection requests, define the rule and validator on actions
+- feat: normalized tokenData value object
 - RecordExpansionService revise
     - resolveTargetCollection N+1 on collection lookup
     - No expand field count limit

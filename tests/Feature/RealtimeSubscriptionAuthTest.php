@@ -45,7 +45,7 @@ function createRealtimeAuthRecordFor(Collection $collection, string $email, stri
 function loginRealtimeToken(Collection $authCollection, string $email, string $password): string
 {
     $response = postJson("/api/collections/{$authCollection->name}/auth/login", [
-        'email' => $email,
+        'identity' => $email,
         'password' => $password,
     ])->assertSuccessful();
 

@@ -58,7 +58,7 @@ it('returns opaque login payload keys and omits refresh fields', function () {
     $user = createAuthRecord($collection, 'alice@example.test', 'password123');
 
     $response = postJson("/api/collections/{$collection->name}/auth/login", [
-        'email' => $user->email,
+        'identity' => $user->email,
         'password' => 'password123',
     ]);
 
@@ -82,7 +82,7 @@ it('authenticates me endpoint with a valid opaque token', function () {
     $user = createAuthRecord($collection, 'bob@example.test', 'password123');
 
     $login = postJson("/api/collections/{$collection->name}/auth/login", [
-        'email' => $user->email,
+        'identity' => $user->email,
         'password' => 'password123',
     ]);
 
@@ -101,7 +101,7 @@ it('rejects cross-collection me authentication with a token from another collect
     createAuthRecord($collectionB, 'dave@example.test', 'password123');
 
     $loginA = postJson("/api/collections/{$collectionA->name}/auth/login", [
-        'email' => $userA->email,
+        'identity' => $userA->email,
         'password' => 'password123',
     ]);
 
@@ -116,12 +116,12 @@ it('revokes all active tokens on logout-all', function () {
     $user = createAuthRecord($collection, 'eve@example.test', 'password123');
 
     $firstLogin = postJson("/api/collections/{$collection->name}/auth/login", [
-        'email' => $user->email,
+        'identity' => $user->email,
         'password' => 'password123',
     ]);
 
     $secondLogin = postJson("/api/collections/{$collection->name}/auth/login", [
-        'email' => $user->email,
+        'identity' => $user->email,
         'password' => 'password123',
     ]);
 
@@ -180,12 +180,12 @@ it('enforces max active tokens when set to one', function () {
     $user = createAuthRecord($collection, 'henry@example.test', 'password123');
 
     $firstLogin = postJson("/api/collections/{$collection->name}/auth/login", [
-        'email' => $user->email,
+        'identity' => $user->email,
         'password' => 'password123',
     ])->assertSuccessful();
 
     $secondLogin = postJson("/api/collections/{$collection->name}/auth/login", [
-        'email' => $user->email,
+        'identity' => $user->email,
         'password' => 'password123',
     ])->assertSuccessful();
 

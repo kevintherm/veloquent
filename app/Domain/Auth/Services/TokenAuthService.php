@@ -40,6 +40,7 @@ class TokenAuthService
         return [
             'token' => $token,
             'expires_in' => $ttlSeconds,
+            'collection_id' => $collectionId,
             'collection_name' => $collectionName,
         ];
     }
