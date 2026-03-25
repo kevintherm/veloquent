@@ -15,7 +15,7 @@ import {
     Checkbox,
     Input,
 } from "@/components/ui";
-import { Search, SlidersHorizontal } from "lucide-vue-next";
+import { RefreshCw, Search, SlidersHorizontal } from "lucide-vue-next";
 import { useRoute, useRouter } from "vue-router";
 import DashboardLayout from "@/layouts/DashboardLayout.vue";
 import DataTable from "@/pages/Dashboard/DataTable.vue";
@@ -105,10 +105,6 @@ const fetchRecords = async () => {
             totalPages.value = 1;
             totalRecords.value = rows.length;
         }
-    } catch {
-        records.value = [];
-        totalPages.value = 1;
-        totalRecords.value = 0;
     } finally {
         selectedRecords.value = [];
         loading.value = false;
@@ -496,43 +492,35 @@ onUnmounted(() => {
         <div class="space-y-6">
             <div class="flex items-center justify-between gap-3">
                 <div class="relative w-full">
-                    <Search class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground"/>
-                    <Input
-                        v-model="searchQuery"
-                        placeholder="Search records..."
-                        class="pl-9 h-10 bg-card w-full"
-                    />
+                    <Search class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input v-model="searchQuery" placeholder="Search records..." class="pl-9 h-10 bg-card w-full" />
                 </div>
-                <Button type="button" variant="outline" class="shrink-0 gap-2" @click="showColumnPicker = !showColumnPicker">
+                <Button type="button" variant="outline" class="shrink-0 gap-2"
+                    @click="showColumnPicker = !showColumnPicker">
                     <SlidersHorizontal class="h-4 w-4" />
                     Columns
+                </Button>
+                <Button variant="outline" class="shrink-0 gap-2" @click="fetchRecords" :disabled="loading"
+                    title="Refresh records">
+                    <RefreshCw :class="['h-4 w-4', { 'animate-spin': loading }]" />
                 </Button>
             </div>
 
             <div v-if="showColumnPicker" class="rounded-md border bg-card p-4">
                 <div class="mb-3 text-sm font-medium">Show/Hide Fields</div>
                 <div class="grid grid-cols-2 gap-2 md:grid-cols-4">
-                    <label
-                        v-for="column in recordColumns"
-                        :key="`column-picker-${column}`"
-                        class="flex cursor-pointer items-center gap-2 text-sm"
-                    >
-                        <Checkbox
-                            :model-value="displayedColumns.includes(column)"
-                            @update:model-value="() => toggleColumn(column)"
-                        />
+                    <label v-for="column in recordColumns" :key="`column-picker-${column}`"
+                        class="flex cursor-pointer items-center gap-2 text-sm">
+                        <Checkbox :model-value="displayedColumns.includes(column)"
+                            @update:model-value="() => toggleColumn(column)" />
                         <span>{{ column }}</span>
                     </label>
                 </div>
             </div>
 
             <!-- Floating Bulk Actions Bar -->
-            <BulkActions
-                :selected-records="selectedRecords"
-                :processing="bulkActionProcessing"
-                @clear-selection="selectedRecords = []"
-                @delete-records="requestBulkDelete"
-            />
+            <BulkActions :selected-records="selectedRecords" :processing="bulkActionProcessing"
+                @clear-selection="selectedRecords = []" @delete-records="requestBulkDelete" />
 
             <AlertDialog :open="showBulkDeleteDialog" @update:open="(value) => { showBulkDeleteDialog = value; }">
                 <AlertDialogContent>
@@ -551,25 +539,12 @@ onUnmounted(() => {
                 </AlertDialogContent>
             </AlertDialog>
 
-            <DataTable
-                :records="records"
-                :columns="displayedColumns"
-                :column-types="columnTypes"
-                :relation-fields="relationFieldsMeta"
-                :sort-by="sortBy"
-                :sort-direction="sortDirection"
-                :selected-records="selectedRecords"
-                :current-page="currentPage"
-                :total-pages="totalPages"
-                :items-per-page="itemsPerPage"
-                :filtered-records-length="totalRecords"
-                :loading="loading"
-                @toggle-all="toggleAll"
-                @toggle-record="toggleRecord"
-                @sort="handleSort"
-                @change-page="(p) => currentPage = p"
-                @open-record="handleOpenRecord"
-            />
+            <DataTable :records="records" :columns="displayedColumns" :column-types="columnTypes"
+                :relation-fields="relationFieldsMeta" :sort-by="sortBy" :sort-direction="sortDirection"
+                :selected-records="selectedRecords" :current-page="currentPage" :total-pages="totalPages"
+                :items-per-page="itemsPerPage" :filtered-records-length="totalRecords" :loading="loading"
+                @toggle-all="toggleAll" @toggle-record="toggleRecord" @sort="handleSort"
+                @change-page="(p) => currentPage = p" @open-record="handleOpenRecord" />
         </div>
     </DashboardLayout>
 </template>

@@ -72,6 +72,8 @@ abstract class BaseRecordRequest extends FormRequest
 
             if (isset($field['max']) && $field['max']) {
                 $fieldRules[] = 'max:'.$field['max'];
+            } elseif ($fieldType === CollectionFieldType::Text || $fieldType === CollectionFieldType::Email) {
+                $fieldRules[] = 'max:255';
             }
 
             if ($fieldType === CollectionFieldType::Relation) {

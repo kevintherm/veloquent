@@ -36,9 +36,7 @@ class Record extends Authenticatable
     public function __construct(array $attributes = [])
     {
         if (! static::$allowDirectInstantiation) {
-            $trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 10);
-            $summary = array_map(fn($t) => ($t['class'] ?? '') . ($t['type'] ?? '') . $t['function'] . ' in ' . ($t['file'] ?? 'unknown'), $trace);
-            throw new \RuntimeException('Record must be instantiated using Record::of($collection). Stack: ' . implode(' -> ', $summary));
+            throw new \RuntimeException('Record must be instantiated using Record::of($collection).');
         }
 
         parent::__construct($attributes);

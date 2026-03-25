@@ -28,8 +28,9 @@ import {
     PaginationNext,
     PaginationPrevious,
 } from "@/components/ui/pagination";
+import { watchEffect } from "vue";
 
-defineProps({
+const props = defineProps({
     records: {
         type: Array,
         required: true
@@ -82,7 +83,7 @@ defineProps({
 
 defineEmits(['toggle-all', 'toggle-record', 'change-page', 'open-record', 'sort'])
 
-const skeletonRows = 5;
+const skeletonRows = 8;
 
 const datetimeTypes = new Set(["timestamp", "datetime", "date"]);
 
@@ -287,11 +288,11 @@ const copyRecordId = async (recordId) => {
                     <template v-if="loading">
                         <TableRow v-for="rowIndex in skeletonRows" :key="`skeleton-row-${rowIndex}`">
                             <TableCell>
-                                <Skeleton class="h-8 w-4 rounded-sm" />
+                                <Skeleton class="h-4 w-4 rounded-sm" />
                             </TableCell>
                             <TableCell v-for="column in columns" :key="`skeleton-${rowIndex}-${column}`"
                                 :class="resolveColumnWidthClass(column, columnTypes)">
-                                <Skeleton class="h-8 w-full" />
+                                <Skeleton class="h-4 w-full" />
                             </TableCell>
                         </TableRow>
                     </template>

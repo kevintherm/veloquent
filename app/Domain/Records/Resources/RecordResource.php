@@ -5,6 +5,7 @@ namespace App\Domain\Records\Resources;
 use App\Domain\Collections\Enums\CollectionType;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Auth;
 
 class RecordResource extends JsonResource
 {
@@ -19,7 +20,7 @@ class RecordResource extends JsonResource
         $data['collection_id'] = $this->resource->collection->id;
         $data['collection_name'] = $this->resource->collection->name;
 
-        if ($this->resource->collection->type === CollectionType::Auth) {
+        if ($this->resource->collection->type === CollectionType::Auth && Auth::user()?->getTable() !== 'superusers') {
             if (isset($data['email_visibility']) && $data['email_visibility'] !== true) {
                 unset($data['email']);
             }

@@ -34,7 +34,7 @@ const handleSubmit = async () => {
   loading.value = true;
   try {
     await login({
-      email: email.value,
+      identity: email.value,
       password: password.value,
     });
     await fetchUser();
@@ -64,28 +64,13 @@ const handleSubmit = async () => {
         <form @submit.prevent="handleSubmit" class="space-y-4">
           <div class="space-y-2">
             <Label for="email">Email</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="name@example.com"
-              v-model="email"
-              autocomplete="username"
-              required
-              :disabled="loading"
-            />
+            <Input id="email" name="email" type="email" placeholder="name@example.com" v-model="email"
+              autocomplete="username" required :disabled="loading" />
           </div>
           <div class="space-y-2">
             <Label for="password">Password</Label>
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              v-model="password"
-              autocomplete="current-password"
-              required
-              :disabled="loading"
-            />
+            <Input id="password" name="password" type="password" v-model="password" autocomplete="current-password"
+              required :disabled="loading" />
           </div>
           <Button type="submit" class="w-full" :disabled="loading">
             {{ loading ? "Signing In..." : "Sign In" }}

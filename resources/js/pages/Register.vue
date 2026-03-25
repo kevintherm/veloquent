@@ -40,7 +40,7 @@ const handleSubmit = async () => {
     });
 
     await login({
-      email: email.value,
+      identity: email.value,
       password: password.value,
     });
 
@@ -75,32 +75,18 @@ const handleSubmit = async () => {
           </div>
           <div class="space-y-2">
             <Label for="email">Email</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="name@example.com"
-              v-model="email"
-              autocomplete="username"
-              required
-              :disabled="loading"
-            />
+            <Input id="email" name="email" type="email" placeholder="name@example.com" v-model="email"
+              autocomplete="username" required :disabled="loading" />
           </div>
           <div class="space-y-2">
             <Label for="password">Password</Label>
-            <Input id="password" name="password" type="password" v-model="password" autocomplete="new-password" required :disabled="loading" />
+            <Input id="password" name="password" type="password" v-model="password" autocomplete="new-password" required
+              :disabled="loading" />
           </div>
           <div class="space-y-2">
             <Label for="password_confirmation">Confirm Password</Label>
-            <Input
-              id="password_confirmation"
-              name="password_confirmation"
-              type="password"
-              v-model="password_confirmation"
-              autocomplete="new-password"
-              required
-              :disabled="loading"
-            />
+            <Input id="password_confirmation" name="password_confirmation" type="password"
+              v-model="password_confirmation" autocomplete="new-password" required :disabled="loading" />
           </div>
           <Button type="submit" class="w-full" :disabled="loading">
             {{ loading ? "Registering..." : "Register" }}
