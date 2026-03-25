@@ -1,6 +1,5 @@
 ## TODO
 
-- feat: cascade_on_delete option on collectionformsheet
 - Setup system variables
     - Rate limit (defer)
     - Trust proxies (defer)

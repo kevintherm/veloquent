@@ -11,6 +11,8 @@ use App\Domain\Records\Models\Record;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
 use function Pest\Laravel\deleteJson;
 
@@ -109,4 +111,73 @@ it('prevents truncating the default auth collection', function () {
 
     expect($response->getStatusCode())->toBe(400);
     expect($response->getData(true)['message'])->toBe('Cannot truncate default auth collection');
+});
+
+it('cascades deletion of referencing records if enabled', function () {
+    $authors = app(CreateCollectionAction::class)->execute([
+        'name' => 'authors',
+        'type' => CollectionType::Base->value,
+        'fields' => [['name' => 'name', 'type' => CollectionFieldType::Text->value]],
+    ]);
+
+    $books = app(CreateCollectionAction::class)->execute([
+        'name' => 'books',
+        'type' => CollectionType::Base->value,
+        'fields' => [
+            ['name' => 'title', 'type' => CollectionFieldType::Text->value],
+            ['name' => 'author_id', 'type' => CollectionFieldType::Relation->value, 'target_collection_id' => $authors->id, 'cascade_on_delete' => true],
+        ],
+    ]);
+
+    $authorId = (string) Str::ulid();
+    Record::of($authors)->fill(['id' => $authorId, 'name' => 'John Doe'])->save();
+
+    $bookId = (string) Str::ulid();
+    Record::of($books)->fill(['id' => $bookId, 'title' => 'My Book', 'author_id' => $authorId])->save();
+
+    // Verify records exist
+    expect(Record::of($authors)->where('id', $authorId)->exists())->toBeTrue();
+    expect(Record::of($books)->where('id', $bookId)->exists())->toBeTrue();
+
+    // Delete author
+    Record::of($authors)->find($authorId)->delete();
+
+    // Verify both are deleted
+    expect(Record::of($authors)->where('id', $authorId)->exists())->toBeFalse();
+    expect(Record::of($books)->where('id', $bookId)->exists())->toBeFalse();
+});
+
+it('blocks deletion of referenced records if cascade is disabled', function () {
+    $authors = app(CreateCollectionAction::class)->execute([
+        'name' => 'authors_no_cascade',
+        'type' => CollectionType::Base->value,
+        'fields' => [['name' => 'name', 'type' => CollectionFieldType::Text->value]],
+    ]);
+
+    $books = app(CreateCollectionAction::class)->execute([
+        'name' => 'books_no_cascade',
+        'type' => CollectionType::Base->value,
+        'fields' => [
+            ['name' => 'title', 'type' => CollectionFieldType::Text->value],
+            ['name' => 'author_id', 'type' => CollectionFieldType::Relation->value, 'target_collection_id' => $authors->id, 'cascade_on_delete' => false],
+        ],
+    ]);
+
+    $authorId = (string) Str::ulid();
+    Record::of($authors)->fill(['id' => $authorId, 'name' => 'John Doe'])->save();
+
+    $bookId = (string) Str::ulid();
+    Record::of($books)->fill(['id' => $bookId, 'title' => 'My Book', 'author_id' => $authorId])->save();
+
+    // Delete author should throw BadRequestHttpException
+    try {
+        Record::of($authors)->find($authorId)->delete();
+        $this->fail('Expected BadRequestHttpException was not thrown');
+    } catch (BadRequestHttpException $e) {
+        expect($e->getMessage())->toContain("Cannot delete this record because it is referenced by collection 'books_no_cascade'");
+    }
+
+    // Verify records still exist
+    expect(Record::of($authors)->where('id', $authorId)->exists())->toBeTrue();
+    expect(Record::of($books)->where('id', $bookId)->exists())->toBeTrue();
 });

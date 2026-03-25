@@ -99,10 +99,8 @@ class RelationIntegrityService
                 ->all();
 
             foreach ($referencingRecordIds as $referencingRecordId) {
-                $this->handleRecordDeletion($referencingCollection, (string) $referencingRecordId);
+                Record::of($referencingCollection)->find($referencingRecordId)?->delete();
             }
-
-            DB::table($tableName)->where($fieldName, $recordId)->delete();
         }
     }
 

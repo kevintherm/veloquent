@@ -1123,6 +1123,12 @@ onMounted(async () => {
                         class="text-sm font-medium text-foreground/80 group-hover:text-foreground transition-colors">Allow
                         Null Values</span>
                     </label>
+                    <label v-if="newField.type === 'relation'" class="flex items-center gap-2 cursor-pointer group">
+                      <Checkbox v-model="newField.cascade_on_delete" />
+                      <span
+                        class="text-sm font-medium text-foreground/80 group-hover:text-foreground transition-colors">Cascade
+                        on Delete</span>
+                    </label>
                   </div>
                   <div class="flex gap-3 justify-end mt-2">
                     <Button variant="outline" size="sm" class="border-primary/20 hover:bg-primary/10"
@@ -1258,6 +1264,12 @@ onMounted(async () => {
                         <span
                           class="text-sm font-medium text-foreground/80 group-hover:text-foreground transition-colors">Allow
                           Null Values</span>
+                      </label>
+                      <label v-if="field.type === 'relation'" class="flex items-center gap-2 cursor-pointer group">
+                        <Checkbox v-model="field.cascade_on_delete" />
+                        <span
+                          class="text-sm font-medium text-foreground/80 group-hover:text-foreground transition-colors">Cascade
+                          on Delete</span>
                       </label>
                     </div>
                   </div>
