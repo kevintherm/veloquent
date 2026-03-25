@@ -8,6 +8,7 @@ use App\Domain\Records\Models\Record;
 use App\Infrastructure\Guards\TokenGuard;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -17,6 +18,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        URL::forceHttps(true);
+        URL::forceRootUrl(config('app.url'));
+
         $this->registerGates();
         $this->registerAuth();
     }

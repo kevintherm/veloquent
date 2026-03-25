@@ -179,7 +179,7 @@ const resolveColumnWidthClass = (column, columnTypes) => {
     switch (type) {
         case "boolean":
         case "number":
-            return "w-32 min-w-32";
+            return "w-36 min-w-36";
         case "timestamp":
         case "datetime":
         case "date":

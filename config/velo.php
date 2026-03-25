@@ -48,6 +48,15 @@ return [
         'cleanup_grace' => (int) env('VELO_OTP_CLEANUP_GRACE', 60),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | OAuth Configuration
+    |--------------------------------------------------------------------------
+    */
+    'oauth' => [
+        'name_field_candidates' => ['name', 'username', 'fullname', 'full_name', 'first_name'],
+    ],
+
     'realtime' => [
         'bus' => env('VELO_REALTIME_BUS', 'redis'),
         'mode' => env('VELO_REALTIME_MODE', 'persistent'),

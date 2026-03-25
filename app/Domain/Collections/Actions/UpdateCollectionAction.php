@@ -5,7 +5,6 @@ namespace App\Domain\Collections\Actions;
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Collections\Validators\CollectionFieldValidator;
-use App\Domain\OAuth\Validators\ValidOAuthDriver;
 use App\Domain\QueryCompiler\Services\QueryFilter;
 use App\Domain\SchemaManagement\Services\SchemaChangePlan;
 use Illuminate\Support\Arr;
@@ -176,7 +175,6 @@ class UpdateCollectionAction
 
         $options['auth_methods']['oauth'] ??= [];
         $options['auth_methods']['oauth']['enabled'] ??= false;
-        $options['auth_methods']['oauth']['providers'] ??= [];
 
         $validator = Validator::make($options, [
             'auth_methods' => 'required|array',
@@ -188,24 +186,9 @@ class UpdateCollectionAction
 
             'auth_methods.oauth' => 'required|array',
             'auth_methods.oauth.enabled' => 'required|boolean',
-            'auth_methods.oauth.providers' => ['array', function ($attribute, $value, $fail) {
-                $invalidDrivers = array_diff(array_keys($value), ValidOAuthDriver::VALID_DRIVERS);
-                foreach ($invalidDrivers as $driver) {
-                    $fail("The selected provider \"{$driver}\" is invalid.");
-                }
-            }],
-            'auth_methods.oauth.providers.*' => 'array',
-            'auth_methods.oauth.providers.*.client_id' => 'required|string',
-            'auth_methods.oauth.providers.*.client_secret' => 'required|string',
 
             'require_email_verification' => 'nullable|boolean',
         ]);
-
-        $validator->after(function ($validator) use ($options) {
-            if (isset($options['auth_methods']['oauth']['providers']) && ! is_array($options['auth_methods']['oauth']['providers'])) {
-                $validator->errors()->add('auth_methods.oauth.providers', 'The providers must be an array.');
-            }
-        });
 
         if ($validator->fails()) {
             throw new ValidationException($validator);

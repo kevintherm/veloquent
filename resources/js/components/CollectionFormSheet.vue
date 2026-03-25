@@ -62,9 +62,9 @@ const fetchedCollection = ref(null);
 const validationErrors = ref({});
 const availableCollections = ref([]);
 const { activeCollection, requestCollectionsReload, requestRecordsReload } = useDashboardState();
-
 const schemaCorrupt = ref(null); // { activity: string, collection_id: string }
 const recovering = ref(false);
+const editProviderForm = ref(null);
 
 const defaultApiRules = () => ({
   list: null,
@@ -106,6 +106,15 @@ const apiRuleDefinitions = [
   { key: 'update', label: 'Update Rule', icon: Pencil, placeholder: "e.g. status = 'published' || @request.body.status = 'draft'", description: "Main record fields represents the existing value, to target the values that are going to be inserted to the database use @request.body.*" },
   { key: 'delete', label: 'Delete Rule', icon: Trash2, placeholder: "e.g. status = 'published'", description: "Rule evaluated when deleting records." },
 ];
+
+const availableProviders = [
+  { id: 'google', name: 'Google', domain: 'google.com' },
+  { id: 'facebook', name: 'Facebook', domain: 'facebook.com' },
+  { id: 'x', name: 'X (Twitter)', domain: 'twitter.com' },
+  { id: 'github', name: 'GitHub', domain: 'github.com' },
+  { id: 'discord', name: 'Discord', domain: 'discord.com' }
+];
+
 
 const isCreateMode = ref(!props.collection);
 
@@ -151,7 +160,7 @@ const formState = ref({
   options: {
     auth_methods: {
       standard: { enabled: true, identity_fields: ["email"] },
-      oauth: { enabled: false, providers: [] },
+      oauth: { enabled: false },
     },
     require_email_verification: false,
   },
@@ -325,6 +334,7 @@ watch(activeTab, (tab) => {
   if (tab === 'options' && fetchedCollection.value?.id) {
     void fetchTemplate('password_reset');
     void fetchTemplate('email_verification');
+    void fetchProviders();
   }
 });
 
@@ -364,7 +374,6 @@ const initializeFormState = () => {
           },
           oauth: {
             enabled: fetchedCollection.value.options?.auth_methods?.oauth?.enabled ?? false,
-            providers: fetchedCollection.value.options?.auth_methods?.oauth?.providers ?? [],
           },
         },
         require_email_verification: fetchedCollection.value.options?.require_email_verification ?? false,
@@ -384,9 +393,8 @@ const initializeFormState = () => {
       options: {
         auth_methods: {
           standard: { enabled: true, identity_fields: ["email"] },
-          oauth: { enabled: false, providers: [] },
-        },
-        require_email_verification: false,
+          oauth: { enabled: false },
+        }
       },
       is_system: false,
     };
@@ -477,7 +485,7 @@ const addField = () => {
   }
 
   const fieldExists = formState.value.fields.some(
-    (f) => f.name === newField.value.name.trim()
+    (f) => f.name === newField.value.name.trim() && !f._deleted
   );
 
   if (getReservedFieldNames(formState.value.type).has(newField.value.name.trim())) {
@@ -601,13 +609,89 @@ const toggleColumnInIndex = (columnName) => {
   }
 };
 
+// OAuth provider management state
+const configProviders = ref([]);
+const loadingProviders = ref(false);
+const editingProvider = ref(null); // { provider: string, client_id: string, ... }
+
+const fetchProviders = async () => {
+  if (!fetchedCollection.value?.id) return;
+  loadingProviders.value = true;
+  try {
+    const response = await axios.get(`/api/collections/${fetchedCollection.value.id}/oauth-providers`);
+    configProviders.value = response.data.data || [];
+  } catch (error) {
+    console.error(error);
+  } finally {
+    loadingProviders.value = false;
+  }
+};
+
+const saveProviderConfig = async () => {
+  if (!editingProvider.value) return;
+
+  const isNew = !editingProvider.value.id;
+  const method = isNew ? 'post' : 'put';
+  const url = isNew
+    ? `/api/collections/${fetchedCollection.value.id}/oauth-providers`
+    : `/api/collections/${fetchedCollection.value.id}/oauth-providers/${editingProvider.value.id}`;
+
+  try {
+    await axios[method](url, editingProvider.value);
+    toast.success(`OAuth provider ${isNew ? 'added' : 'updated'} successfully`);
+    editingProvider.value = null;
+    await fetchProviders();
+  } catch (error) {
+    console.error(error);
+    if (error.response?.status === 422) {
+      const msg = Object.values(error.response.data.errors)?.[0]?.[0] ?? "Validation failed";
+      toast.error(msg);
+    } else {
+      toast.error("Failed to save provider configuration");
+    }
+  }
+};
+
+const deleteProviderConfig = async (providerId) => {
+  if (!confirm('Are you sure you want to delete this provider configuration?')) return;
+  try {
+    await axios.delete(`/api/collections/${fetchedCollection.value.id}/oauth-providers/${providerId}`);
+    toast.success("OAuth provider deleted");
+    await fetchProviders();
+  } catch (error) {
+    console.error(error);
+    toast.error("Failed to delete provider");
+  }
+};
+
+const startEditingProvider = (providerId) => {
+  const existing = configProviders.value.find(p => p.provider === providerId);
+  if (existing) {
+    editingProvider.value = { ...existing };
+  } else {
+    editingProvider.value = {
+      provider: providerId,
+      enabled: true,
+      client_id: '',
+      client_secret: '',
+      redirect_uri: '',
+      scopes: []
+    };
+  }
+
+  void nextTick(() => {
+    editProviderForm.value?.scrollIntoView({
+      behavior: "smooth",
+    });
+  });
+};
+
+
 const buildPayload = () => {
-  // Clean up fields - exclude deleted fields
   const cleanedFields = formState.value.fields
     .filter(field => !field._deleted)
     .map(field => {
       const cleaned = { ...field };
-      // Only include id if it's a non-empty string
       if (cleaned.id === undefined || cleaned.id === null || cleaned.id === '') {
         delete cleaned.id;
       } else if (typeof cleaned.id !== 'string') {
@@ -638,7 +722,15 @@ const buildPayload = () => {
     fields: cleanedFields,
     indexes: cleanedIndexes,
     api_rules: normalizeApiRules(formState.value.api_rules),
-    options: formState.value.type === 'auth' ? formState.value.options : null,
+    options: formState.value.type === 'auth' ? {
+      ...formState.value.options,
+      auth_methods: {
+        ...formState.value.options.auth_methods,
+        oauth: {
+          enabled: formState.value.options.auth_methods.oauth.enabled
+        }
+      }
+    } : null,
   };
 };
 
@@ -927,7 +1019,7 @@ onMounted(async () => {
                 <Input id="collectionDescription" v-model="formState.description" placeholder="Optional description"
                   @input="clearValidationError('description')" />
                 <p v-if="firstErrorFor('description')" class="text-xs text-destructive">{{ firstErrorFor('description')
-                }}</p>
+                  }}</p>
               </div>
 
               <div class="grid gap-2">
@@ -957,7 +1049,7 @@ onMounted(async () => {
 
               <!-- New Field Form -->
               <div v-if="showNewFieldForm"
-                class="p-5 border border-primary/20 rounded-lg flex flex-col gap-5 bg-primary/5 shadow-sm">
+                class="p-5 border border-primary/20 flex flex-col gap-5 bg-primary/5 shadow-sm">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div class="space-y-2">
                     <Label class="text-xs font-semibold tracking-wide text-primary/80 uppercase">Field Name</Label>
@@ -1032,7 +1124,7 @@ onMounted(async () => {
 
               <!-- Fields List -->
               <div v-for="(field, index) in orderedFields" :key="index"
-                class="flex flex-col gap-2 p-3 border rounded-lg bg-background transition-all duration-200"
+                class="flex flex-col gap-2 p-3 border bg-background transition-all duration-200"
                 :class="{ 'opacity-50 bg-destructive/5 border-destructive/20 relative overflow-hidden': field._deleted }">
 
                 <!-- Summary Row -->
@@ -1179,7 +1271,7 @@ onMounted(async () => {
             </div>
 
             <!-- New Index Form -->
-            <div v-if="showNewIndexForm" class="p-4 border rounded-lg space-y-3 bg-muted/30">
+            <div v-if="showNewIndexForm" class="p-4 border space-y-3 bg-muted/30">
               <div class="grid grid-cols-2 gap-3">
                 <div class="grid gap-2">
                   <Label>Unique</Label>
@@ -1218,7 +1310,7 @@ onMounted(async () => {
 
             <!-- Indexes List -->
             <div v-for="(index, idx) in orderedIndexes" :key="idx"
-              class="flex items-center gap-2 p-3 border rounded-lg bg-background">
+              class="flex items-center gap-2 p-3 border bg-background">
               <div class="flex-1 grid grid-cols-2 gap-2 text-sm">
                 <div class="font-medium">{{ index.type }}</div>
                 <div class="text-muted-foreground">
@@ -1239,7 +1331,7 @@ onMounted(async () => {
           <TabsContent value="api" class="space-y-4 mt-4 flex-1 min-h-0 overflow-y-auto pr-2 pb-6">
             <div class="space-y-6">
               <div v-for="rule in apiRuleDefinitions" :key="rule.key"
-                class="grid gap-3 p-4 border rounded-lg bg-background/50 shadow-sm relative overflow-hidden group transition-all duration-200 hover:border-primary/30">
+                class="grid gap-3 p-4 border bg-background/50 shadow-sm relative overflow-hidden group transition-all duration-200 hover:border-primary/30">
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-2">
                     <Label class="text-sm font-semibold flex items-center gap-2">
@@ -1293,7 +1385,7 @@ onMounted(async () => {
             <div class="space-y-6">
               <!-- Authentication Methods -->
               <div
-                class="grid gap-3 p-4 border rounded-lg bg-background/50 shadow-sm transition-all duration-200 hover:border-primary/30">
+                class="grid gap-3 p-4 border bg-background/50 shadow-sm transition-all duration-200 hover:border-primary/30">
                 <div class="flex items-center gap-2">
                   <Lock class="w-4 h-4 text-muted-foreground mr-1" />
                   <Label class="text-sm font-semibold">Authentication Methods</Label>
@@ -1315,8 +1407,9 @@ onMounted(async () => {
                         Fields</Label>
                       <div class="flex flex-wrap gap-2">
                         <template v-for="field in formState.fields" :key="`auth-identity-${field.name}`">
-                          <button v-if="!field._deleted && !['password', 'email_visibility', 'verified'].includes(field.name)" type="button"
-                            @click="() => {
+                          <button
+                            v-if="!field._deleted && !['password', 'email_visibility', 'verified'].includes(field.name)"
+                            type="button" @click="() => {
                               const idx = formState.options.auth_methods.standard.identity_fields.indexOf(field.name);
                               if (idx > -1) {
                                 if (formState.options.auth_methods.standard.identity_fields.length > 1) {
@@ -1345,18 +1438,121 @@ onMounted(async () => {
                     </div>
                   </div>
 
-                  <div
-                    class="flex items-center justify-between p-3 border rounded-md bg-background opacity-50 grayscale cursor-not-allowed">
-                    <div class="flex flex-col gap-0.5">
-                      <div class="flex items-center gap-2">
+                  <div class="flex flex-col gap-3 p-3 border rounded-md bg-background">
+                    <div class="flex items-center justify-between">
+                      <div class="flex flex-col gap-0.5">
                         <span class="text-sm font-medium">OAuth2</span>
-                        <span
-                          class="px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">Coming
-                          Soon</span>
+                        <span class="text-xs text-muted-foreground">Authenticate using third-party providers.</span>
                       </div>
-                      <span class="text-xs text-muted-foreground">Authenticate using third-party providers.</span>
+                      <Switch :model-value="formState.options.auth_methods.oauth.enabled"
+                        @update:model-value="(val) => { formState.options.auth_methods.oauth.enabled = val; isCollectionModified = true; }" />
                     </div>
-                    <Checkbox :model-value="false" :disabled="true" />
+
+                    <div v-if="formState.options.auth_methods.oauth.enabled" class="pt-4 border-t space-y-4">
+                      <p class="text-[11px] text-muted-foreground leading-tight px-1">
+                        Configure client credentials for each provider. These are stored securely in the database.
+                      </p>
+
+                      <div v-if="!fetchedCollection?.id" class="p-4 border bg-muted/20 border-dashed text-center">
+                        <p class="text-xs text-muted-foreground">Save the collection first to configure OAuth providers.
+                        </p>
+                      </div>
+
+                      <div v-else class="space-y-3">
+                        <div v-for="provider in availableProviders" :key="provider.id"
+                          class="p-3 border bg-background flex items-center justify-between group">
+                          <div class="flex items-center gap-3">
+                            <div class="h-8 w-8 bg-white p-1 flex items-center justify-center overflow-hidden border">
+                              <img :src="'https://www.google.com/s2/favicons?sz=64&domain=' + provider.domain"
+                                :alt="provider.name" class="h-full w-auto object-contain" />
+                            </div>
+                            <div class="flex flex-col">
+                              <span class="text-sm font-medium">{{ provider.name }}</span>
+                              <div class="flex items-center gap-2">
+                                <span v-if="configProviders.find(p => p.provider === provider.id)"
+                                  class="inline-flex items-center bg-green-500/10 px-1.5 py-0.5 text-[10px] font-medium text-green-600 ring-1 ring-inset ring-green-600/20">
+                                  Configured
+                                </span>
+                                <span v-else class="text-[10px] text-muted-foreground">Not configured</span>
+                                <span v-if="configProviders.find(p => p.provider === provider.id && !p.enabled)"
+                                  class="inline-flex items-center bg-yellow-500/10 px-1.5 py-0.5 text-[10px] font-medium text-yellow-600 ring-1 ring-inset ring-yellow-600/20">
+                                  Disabled
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div class="flex items-center gap-2">
+                            <Button variant="ghost" size="sm" class="h-8 px-2 text-xs"
+                              @click="startEditingProvider(provider.id)">
+                              {{configProviders.find(p => p.provider === provider.id) ? 'Edit' : 'Configure'}}
+                            </Button>
+                            <Button v-if="configProviders.find(p => p.provider === provider.id)" variant="ghost"
+                              size="icon" class="h-8 w-8 text-destructive transition-opacity"
+                              @click="deleteProviderConfig(configProviders.find(p => p.provider === provider.id).id)">
+                              <Trash2 class="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Provider Edit Form -->
+                      <div ref="editProviderForm" v-if="editingProvider"
+                        class="p-5 border bg-muted/40 space-y-4 shadow-inner relative">
+                        <Button variant="ghost" size="icon" class="absolute top-2 right-2 h-6 w-6"
+                          @click="editingProvider = null">
+                          <RotateCcw class="h-3.5 w-3.5" />
+                        </Button>
+
+                        <div class="flex items-center gap-2 mb-2">
+                          <div
+                            class="h-6 w-6 rounded bg-white p-0.5 shadow-sm flex items-center justify-center overflow-hidden border">
+                            <img
+                              :src="'https://www.google.com/s2/favicons?sz=64&domain=' + availableProviders.find(p => p.id === editingProvider.provider).domain"
+                              class="h-full w-auto object-contain" />
+                          </div>
+                          <h4 class="text-xs font-bold uppercase tracking-wider">Configure {{availableProviders.find(
+                            p => p.id === editingProvider.provider
+                          ).name }}</h4>
+                        </div>
+
+                        <div class="grid gap-4">
+                          <div class="flex items-center justify-between">
+                            <Label class="text-xs">Enabled</Label>
+                            <Switch v-model="editingProvider.enabled" />
+                          </div>
+
+                          <div class="grid gap-1.5">
+                            <Label class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Client
+                              ID</Label>
+                            <Input v-model="editingProvider.client_id" class="h-8 text-xs"
+                              placeholder="OAuth Client ID" />
+                          </div>
+
+                          <div class="grid gap-1.5">
+                            <Label class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Client
+                              Secret</Label>
+                            <Input v-model="editingProvider.client_secret" type="password" class="h-8 text-xs"
+                              placeholder="OAuth Client Secret" />
+                          </div>
+
+                          <div class="grid gap-1.5">
+                            <Label class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Redirect
+                              URI
+                              (Optional)</Label>
+                            <Input v-model="editingProvider.redirect_uri" class="h-8 text-xs"
+                              placeholder="Default: auto-generated" />
+                            <p class="text-[9px] text-muted-foreground">Leave empty to use standard callback route.</p>
+                          </div>
+                        </div>
+
+                        <div class="flex gap-2 pt-2">
+                          <Button size="sm" class="h-8 text-xs flex-1" @click="saveProviderConfig">Save Config</Button>
+                          <Button variant="outline" size="sm" class="h-8 text-xs"
+                            @click="editingProvider = null">Cancel</Button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1369,7 +1565,7 @@ onMounted(async () => {
                 </div>
 
                 <div v-for="action in ['password_reset', 'email_verification']" :key="action"
-                  class="border rounded-lg overflow-hidden bg-background">
+                  class="border overflow-hidden bg-background">
                   <div class="p-4 border-b flex items-center justify-between bg-muted/20">
                     <div class="flex flex-col gap-0.5">
                       <span class="text-sm font-medium capitalize">{{ action.replace('_', ' ') }}</span>

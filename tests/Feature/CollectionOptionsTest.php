@@ -27,7 +27,6 @@ it('creates an auth collection with default options', function () {
             ],
             'oauth' => [
                 'enabled' => false,
-                'drivers' => [],
             ],
         ],
     ]);
@@ -87,7 +86,6 @@ it('updates an auth collection options', function () {
                 ],
                 'oauth' => [
                     'enabled' => false,
-                    'drivers' => [],
                 ],
             ],
         ],
@@ -142,7 +140,6 @@ it('accepts the new auth options schema via controller', function () {
                 ],
                 'oauth' => [
                     'enabled' => false,
-                    'drivers' => [],
                 ],
             ],
         ],

@@ -8,6 +8,8 @@ use App\Domain\SchemaManagement\Controllers\OrphanTableController;
 use App\Domain\SchemaManagement\Controllers\SchemaRecoveryController;
 use App\Http\Controllers\EmailTemplateController;
 use App\Http\Controllers\LogViewerController;
+use App\Http\Controllers\OAuthController;
+use App\Http\Controllers\OAuthProviderController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Middleware\SuperuserOnly;
 use Illuminate\Http\Request;
@@ -46,6 +48,12 @@ Route::prefix('collections/{collection}/auth')->name('collections.auth.')->group
     });
 });
 
+Route::prefix('oauth2')->group(function () {
+    Route::post('/redirect', [OAuthController::class, 'redirect'])->name('oauth.redirect');
+    Route::get('/callback', [OAuthController::class, 'callback'])->name('oauth.callback');
+    Route::post('/exchange', [OAuthController::class, 'exchange'])->name('oauth.exchange');
+});
+
 Route::post('/onboarding/initialized', [OnboardingController::class, 'initialized'])->name('onboarding.initialized.check');
 Route::post('/onboarding/superuser', [OnboardingController::class, 'createSuperuser'])->name('onboarding.superuser.create');
 
@@ -67,4 +75,9 @@ Route::middleware(['auth:api', SuperuserOnly::class])->group(function () {
 
     Route::get('/collections/{collection}/email-templates/{action}', [EmailTemplateController::class, 'show'])->name('email-templates.show');
     Route::put('/collections/{collection}/email-templates/{action}', [EmailTemplateController::class, 'update'])->name('email-templates.update');
+
+    Route::get('/collections/{collection}/oauth-providers', [OAuthProviderController::class, 'index'])->name('oauth-providers.index');
+    Route::post('/collections/{collection}/oauth-providers', [OAuthProviderController::class, 'store'])->name('oauth-providers.store');
+    Route::match(['PUT', 'PATCH'], '/collections/{collection}/oauth-providers/{oauthProvider}', [OAuthProviderController::class, 'update'])->name('oauth-providers.update');
+    Route::delete('/collections/{collection}/oauth-providers/{oauthProvider}', [OAuthProviderController::class, 'destroy'])->name('oauth-providers.destroy');
 });
