@@ -225,7 +225,7 @@ readonly class CollectionObserver
         $invalidKeys = array_diff(array_keys($collection->api_rules ?? []), $validKeys);
 
         if (! empty($invalidKeys)) {
-            throw new \InvalidArgumentException('Invalid api rules keys: '.implode(', ', $invalidKeys));
+            throw new InvalidArgumentException('Invalid api rules keys: '.implode(', ', $invalidKeys));
         }
     }
 

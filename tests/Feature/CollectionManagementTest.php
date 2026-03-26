@@ -12,7 +12,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
-use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
 use function Pest\Laravel\deleteJson;
 
@@ -169,11 +168,10 @@ it('blocks deletion of referenced records if cascade is disabled', function () {
     $bookId = (string) Str::ulid();
     Record::of($books)->fill(['id' => $bookId, 'title' => 'My Book', 'author_id' => $authorId])->save();
 
-    // Delete author should throw BadRequestHttpException
     try {
         Record::of($authors)->find($authorId)->delete();
-        $this->fail('Expected BadRequestHttpException was not thrown');
-    } catch (BadRequestHttpException $e) {
+        $this->fail('Expected InvalidArgumentException was not thrown');
+    } catch (InvalidArgumentException $e) {
         expect($e->getMessage())->toContain("Cannot delete this record because it is referenced by collection 'books_no_cascade'");
     }
 

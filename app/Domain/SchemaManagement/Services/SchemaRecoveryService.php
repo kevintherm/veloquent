@@ -7,7 +7,7 @@ use App\Domain\Collections\ValueObjects\Index;
 use App\Domain\SchemaManagement\Enums\SchemaOperation;
 use App\Domain\SchemaManagement\Models\SchemaJob;
 use Illuminate\Support\Facades\Schema;
-use RuntimeException;
+use InvalidArgumentException;
 
 class SchemaRecoveryService
 {
@@ -31,7 +31,7 @@ class SchemaRecoveryService
             SchemaOperation::Create => $this->recoverFromFailedCreate($collection, $job),
             SchemaOperation::Update => $this->recoverFromFailedUpdate($collection, $job),
             SchemaOperation::Drop => $this->recoverFromFailedDrop($collection, $job),
-            default => throw new RuntimeException("Unsupported recovery operation: {$job->operation->value}"),
+            default => throw new InvalidArgumentException("Unsupported recovery operation: {$job->operation->value}"),
         };
     }
 

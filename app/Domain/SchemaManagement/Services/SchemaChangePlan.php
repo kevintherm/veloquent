@@ -4,6 +4,7 @@ namespace App\Domain\SchemaManagement\Services;
 
 use App\Domain\Collections\Enums\CollectionFieldType;
 use App\Domain\Collections\ValueObjects\Field;
+use InvalidArgumentException;
 
 final class SchemaChangePlan
 {
@@ -258,7 +259,7 @@ final class SchemaChangePlan
     }
 
     /**
-     * @throws \LogicException
+     * @throws InvalidArgumentException
      */
     private static function assertNoReservedFieldsInUserInput(array $fields, array $reservedNames): void
     {
@@ -266,7 +267,7 @@ final class SchemaChangePlan
             $name = $field['name'] ?? null;
 
             if (is_string($name) && in_array($name, $reservedNames, true)) {
-                throw new \LogicException("Reserved field '{$name}' cannot be defined manually.");
+                throw new InvalidArgumentException("Reserved field '{$name}' cannot be defined manually.");
             }
         }
     }

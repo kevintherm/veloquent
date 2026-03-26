@@ -58,7 +58,9 @@ class CreateCollectionAction
         $missingKeys = array_diff($expectedKeys, array_keys($apiRules));
 
         if (! empty($missingKeys)) {
-            throw new \InvalidArgumentException('Missing API rules for: '.implode(', ', $missingKeys));
+            throw ValidationException::withMessages([
+                'api_rules' => ['Missing API rules for: '.implode(', ', $missingKeys)],
+            ]);
         }
 
         foreach ($expectedKeys as $rule) {
@@ -92,7 +94,7 @@ class CreateCollectionAction
             'auth_methods.standard.identity_fields.*' => ['string', Rule::in($fields)],
 
             'auth_methods.oauth' => 'required|array',
-            'auth_methods.oauth.enabled' => 'required|boolean'
+            'auth_methods.oauth.enabled' => 'required|boolean',
         ]);
 
         if ($validator->fails()) {

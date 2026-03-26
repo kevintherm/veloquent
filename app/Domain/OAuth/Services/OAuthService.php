@@ -14,9 +14,8 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
 use Laravel\Socialite\Two\User as SocialiteUser;
-use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class OAuthService
 {
@@ -57,7 +56,7 @@ class OAuthService
         $payload = Cache::pull("oauth_state:{$state}");
 
         if (! $payload) {
-            throw new HttpException(Response::HTTP_BAD_REQUEST, 'Invalid or expired state.');
+            throw new InvalidArgumentException('Invalid or expired state.');
         }
 
         $collectionId = $payload['collection'] ?? null;
@@ -70,7 +69,7 @@ class OAuthService
         $lock = Cache::lock($lockKey, 10);
 
         if (! $lock->get()) {
-            throw new HttpException(Response::HTTP_TOO_MANY_REQUESTS, 'Authentication already in progress.');
+            throw new InvalidArgumentException('Authentication already in progress.');
         }
 
         try {
@@ -105,7 +104,7 @@ class OAuthService
         $tokenData = Cache::pull("oauth_exchange:{$code}");
 
         if (! $tokenData) {
-            throw new HttpException(Response::HTTP_BAD_REQUEST, 'Invalid or expired exchange code.');
+            throw new InvalidArgumentException('Invalid or expired exchange code.');
         }
 
         $collection = Collection::findOrFail($tokenData['collection_id']);
@@ -179,11 +178,11 @@ class OAuthService
     private function ensureOAuthEnabled(Collection $collection): void
     {
         if ($collection->type !== CollectionType::Auth) {
-            throw new HttpException(Response::HTTP_FORBIDDEN, 'This collection does not support authentication.');
+            throw new InvalidArgumentException('This collection does not support authentication.');
         }
 
         if (data_get($collection->options, 'auth_methods.oauth.enabled') !== true) {
-            throw new HttpException(Response::HTTP_FORBIDDEN, 'OAuth is not enabled for this collection.');
+            throw new InvalidArgumentException('OAuth is not enabled for this collection.');
         }
     }
 }
