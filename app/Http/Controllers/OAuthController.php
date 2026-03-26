@@ -50,7 +50,7 @@ class OAuthController extends ApiController
         $result = $this->oauthService->handleCallback(
             $request->input('state'),
         );
- 
+
         return $this->successResponse([
             'code' => $result['code'],
         ]);
@@ -67,11 +67,11 @@ class OAuthController extends ApiController
         );
 
         return $this->successResponse([
-            'token' => $tokenData['token'],
-            'expires_in' => $tokenData['expires_in'],
-            'collection_name' => $tokenData['collection_name'],
-            'collection_id' => $tokenData['collection_id'],
-            'record' => $tokenData['record'] ?? null,
+            'token' => $tokenData->token,
+            'expires_in' => $tokenData->expires_in,
+            'collection_name' => $tokenData->collection_name,
+            'collection_id' => $tokenData->collection_id,
+            'record' => $tokenData->record,
         ]);
     }
 }

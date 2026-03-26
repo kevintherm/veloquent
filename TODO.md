@@ -1,5 +1,10 @@
 ## TODO
 
+- feat: Request change email for auth collection
+- feat: impersonate button for auth collections
+- improv: refactor redundant extractIndexes() methods
+- feat: Store cached target_collection_name for field type relation
+- feat: Add manage_rule to allow updating the password field for auth collections
 - Setup system variables
     - Rate limit (defer)
     - Trust proxies (defer)
@@ -9,16 +14,7 @@
         - Collections, tables, records
     - Export n imports
         - Collections metadata only
-- feat: Request change email for auth collection
-- Unify errors
-    - Creating/Updating uses ValidationException
-    - Other errors use regular exception
-- improv: refactor redundant extractIndexes() methods
-- feat: impersonate button for auth collections
-- fix: normalize custom validator on actions
 - fix?: what happens if you pass a field with your own id thats not in the old data when updating a collection?
-- drop store and update collection requests, define the rule and validator on actions
-- feat: normalize tokenData value object
 - RecordExpansionService revise
     - resolveTargetCollection N+1 on collection lookup
     - No expand field count limit
@@ -27,11 +23,9 @@
 - Naming conventions
     - clarify in code/docs: `SchemaChangePlan::getAllReservedFields(false)` in unique sync intentionally means base reserved fields only
     - reason: auth reserved fields (for example `email`) must still sync `unique` from single-column unique indexes
-- Store cached target_collection_name for field type relation
-- Hooks system
 - Optimize Record model
     - cache collections
-- Add manage_rule to allow updating the password field for auth collections
 - Testing
 - Documentation
 - Ship it into a package
+    - Hooks system?

@@ -85,7 +85,7 @@ it('requests email verification when authenticated', function () {
 
     $tokenData = app(TokenAuthService::class)->generateToken($this->user);
 
-    $response = $this->withHeader('Authorization', "Bearer {$tokenData['token']}")
+    $response = $this->withHeader('Authorization', "Bearer {$tokenData->token}")
         ->postJson("/api/collections/{$this->collection->id}/auth/email-verification/request");
 
     $response->assertOk();
@@ -107,7 +107,7 @@ it('confirms email verification with valid OTP', function () {
         'expires_at' => now()->addMinutes(15),
     ]);
 
-    $response = $this->withHeader('Authorization', "Bearer {$tokenData['token']}")
+    $response = $this->withHeader('Authorization', "Bearer {$tokenData->token}")
         ->postJson("/api/collections/{$this->collection->id}/auth/email-verification/confirm", [
             'token' => $code,
         ]);

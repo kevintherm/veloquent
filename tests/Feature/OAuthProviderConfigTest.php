@@ -25,7 +25,7 @@ beforeEach(function () {
         ]);
 
     $tokenData = app(TokenAuthService::class)->generateToken($this->user);
-    $this->withToken($tokenData['token']);
+    $this->withToken($tokenData->token);
 
     $this->collection = Collection::where('name', 'test_collection')->first() ?? Collection::factory()->auth()->create([
         'name' => 'test_collection',
@@ -104,7 +104,7 @@ it('denies access to non-superusers', function () {
     $record->save();
 
     $tokenData = app(TokenAuthService::class)->generateToken($record);
-    $this->withToken($tokenData['token']);
+    $this->withToken($tokenData->token);
 
     $this->getJson("/api/collections/{$this->collection->id}/oauth-providers")
         ->assertStatus(403);

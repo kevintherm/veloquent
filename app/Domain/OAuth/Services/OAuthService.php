@@ -3,6 +3,7 @@
 namespace App\Domain\OAuth\Services;
 
 use App\Domain\Auth\Services\TokenAuthService;
+use App\Domain\Auth\ValueObjects\TokenData;
 use App\Domain\Collections\Enums\CollectionFieldType;
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
@@ -83,8 +84,6 @@ class OAuthService
             });
 
             $tokenData = $this->tokenService->generateToken($record);
-            $tokenData['record_id'] = (string) $record->id;
-
             $exchangeCode = Str::random(60);
             Cache::put("oauth_exchange:{$exchangeCode}", $tokenData, now()->addMinutes(5));
 
@@ -96,23 +95,22 @@ class OAuthService
 
     /**
      * Exchange a short-lived code for the final authentication token data.
-     *
-     * @return array{token: string, expires_in: int, collection_name: string, collection_id: string, record: Record}
      */
-    public function exchangeCode(string $code): array
+    public function exchangeCode(string $code): TokenData
     {
         $tokenData = Cache::pull("oauth_exchange:{$code}");
 
-        if (! $tokenData) {
+        if (! $tokenData instanceof TokenData) {
             throw new InvalidArgumentException('Invalid or expired exchange code.');
         }
 
-        $collection = Collection::findOrFail($tokenData['collection_id']);
-        $record = Record::of($collection)->findOrFail($tokenData['record_id']);
+        $collection = Collection::findOrFail($tokenData->collection_id);
+        $record = Record::of($collection)->findOrFail($tokenData->record_id);
 
-        $tokenData['record'] = $record;
-
-        return $tokenData;
+        return TokenData::fromArray([
+            ...$tokenData->toArray(),
+            'record' => $record,
+        ]);
     }
 
     /**
