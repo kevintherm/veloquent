@@ -1,5 +1,7 @@
 <?php
 
+use App\Domain\Collections\Enums\CollectionFieldType;
+use App\Domain\Collections\Models\Collection;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -25,6 +27,38 @@ return new class extends Migration
             $table->index(['collection_id', 'record_id', 'action', 'expires_at']);
             $table->index(['expires_at', 'used_at']);
         });
+
+        Collection::createQuietly([
+            'name' => 'otps',
+            'table_name' => 'otp_tokens',
+            'is_system' => true,
+            'fields' => [
+                [
+                    'name' => 'collection_id',
+                    'type' => CollectionFieldType::Text
+                ],
+                [
+                    'name' => 'record_id',
+                    'type' => CollectionFieldType::Text
+                ],
+                [
+                    'name' => 'token_hash',
+                    'type' => CollectionFieldType::Text
+                ],
+                [
+                    'name' => 'action',
+                    'type' => CollectionFieldType::Text
+                ],
+                [
+                    'name' => 'expires_at',
+                    'type' => CollectionFieldType::Datetime
+                ],
+                [
+                    'name' => 'used_at',
+                    'type' => CollectionFieldType::Datetime
+                ],
+            ]
+        ]);
     }
 
     /**
@@ -33,5 +67,6 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('otp_tokens');
+        Collection::where('name', 'otps')->deleteQuietly();
     }
 };
