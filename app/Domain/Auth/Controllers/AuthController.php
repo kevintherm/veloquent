@@ -3,6 +3,7 @@
 namespace App\Domain\Auth\Controllers;
 
 use App\Domain\Auth\Services\TokenAuthService;
+use App\Domain\Auth\ValueObjects\TokenData;
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Otp\Enums\OtpAction;
@@ -229,16 +230,13 @@ class AuthController extends ApiController
         return $user->collection?->id === $collection->id;
     }
 
-    /**
-     * @param  array{token: string, expires_in: int, collection_name: string}  $tokenData
-     */
-    private function tokenResponse(array $tokenData, int $code = Response::HTTP_OK): JsonResponse
+    private function tokenResponse(TokenData $tokenData, int $code = Response::HTTP_OK): JsonResponse
     {
         return $this->successResponse(
             [
-                'token' => $tokenData['token'],
-                'expires_in' => $tokenData['expires_in'],
-                'collection_name' => $tokenData['collection_name'],
+                'token' => $tokenData->token,
+                'expires_in' => $tokenData->expires_in,
+                'collection_name' => $tokenData->collection_name,
             ],
             'Success',
             $code

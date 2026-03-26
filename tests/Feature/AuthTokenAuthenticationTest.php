@@ -161,7 +161,7 @@ it('rejects expired tokens', function () {
         ->forRecord($collection->id, $user->id)
         ->update(['expires_at' => now()->subMinute()]);
 
-    getJson("/api/collections/{$collection->name}/auth/me", bearerHeaders($tokenData['token']))
+    getJson("/api/collections/{$collection->name}/auth/me", bearerHeaders($tokenData->token))
         ->assertUnauthorized();
 });
 

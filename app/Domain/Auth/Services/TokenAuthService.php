@@ -3,6 +3,7 @@
 namespace App\Domain\Auth\Services;
 
 use App\Domain\Auth\Models\AuthToken;
+use App\Domain\Auth\ValueObjects\TokenData;
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Records\Models\Record;
@@ -12,10 +13,8 @@ class TokenAuthService
 {
     /**
      * Issue a persisted opaque bearer token for an auth-collection record.
-     *
-     * @return array{token: string, expires_in: int, collection_name: string}
      */
-    public function generateToken(Record $user): array
+    public function generateToken(Record $user): TokenData
     {
         $ttlSeconds = $this->ttlSeconds();
         $collectionName = $user->collection?->name;
@@ -37,12 +36,13 @@ class TokenAuthService
             'expires_at' => now()->addSeconds($ttlSeconds),
         ]);
 
-        return [
-            'token' => $token,
-            'expires_in' => $ttlSeconds,
-            'collection_id' => $collectionId,
-            'collection_name' => $collectionName,
-        ];
+        return new TokenData(
+            token: $token,
+            expires_in: $ttlSeconds,
+            collection_id: $collectionId,
+            collection_name: $collectionName,
+            record_id: (string) $user->id,
+        );
     }
 
     public function authenticate(string $token): ?Record
