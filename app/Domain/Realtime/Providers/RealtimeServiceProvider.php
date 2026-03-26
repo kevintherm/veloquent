@@ -11,6 +11,7 @@ use App\Domain\Realtime\Commands\RealtimeWorker;
 use App\Domain\Realtime\Contracts\RealtimeBusDriver;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
+use InvalidArgumentException;
 
 class RealtimeServiceProvider extends ServiceProvider
 {
@@ -27,7 +28,7 @@ class RealtimeServiceProvider extends ServiceProvider
             return match ($driver) {
                 'redis' => new RedisRealtimeBus,
                 'filesystem' => new FilesystemRealtimeBus,
-                default => throw new \InvalidArgumentException(
+                default => throw new InvalidArgumentException(
                     "Unknown realtime bus driver: [{$driver}]. Valid options: redis, filesystem"
                 ),
             };

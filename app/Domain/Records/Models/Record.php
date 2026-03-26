@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Attributes\UseEloquentBuilder;
 use Illuminate\Database\Eloquent\Attributes\UseResource;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use RuntimeException;
 
 #[UseResource(RecordResource::class)]
 #[UseEloquentBuilder(RecordBuilder::class)]
@@ -36,7 +37,7 @@ class Record extends Authenticatable
     public function __construct(array $attributes = [])
     {
         if (! static::$allowDirectInstantiation) {
-            throw new \RuntimeException('Record must be instantiated using Record::of($collection).');
+            throw new RuntimeException('Record must be instantiated using Record::of($collection).');
         }
 
         parent::__construct($attributes);
@@ -100,7 +101,7 @@ class Record extends Authenticatable
     public function newInstance($attributes = [], $exists = false): static
     {
         if ($this->collection === null) {
-            throw new \RuntimeException('Record must be instantiated using Record::of($collection)');
+            throw new RuntimeException('Record must be instantiated using Record::of($collection)');
         }
 
         $model = static::of($this->collection);

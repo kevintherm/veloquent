@@ -9,7 +9,6 @@
         - Collections, tables, records
     - Export n imports
         - Collections metadata only
-- fix: inconsistent validation and exception messages
 - feat: Request change email for auth collection
 - Unify errors
     - Creating/Updating uses ValidationException
