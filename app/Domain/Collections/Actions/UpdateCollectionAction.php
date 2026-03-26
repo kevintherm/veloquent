@@ -185,9 +185,7 @@ class UpdateCollectionAction
             'auth_methods.standard.identity_fields.*' => ['string', Rule::in($fields)],
 
             'auth_methods.oauth' => 'required|array',
-            'auth_methods.oauth.enabled' => 'required|boolean',
-
-            'require_email_verification' => 'nullable|boolean',
+            'auth_methods.oauth.enabled' => 'required|boolean'
         ]);
 
         if ($validator->fails()) {

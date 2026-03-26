@@ -161,8 +161,7 @@ const formState = ref({
     auth_methods: {
       standard: { enabled: true, identity_fields: ["email"] },
       oauth: { enabled: false },
-    },
-    require_email_verification: false,
+    }
   },
   is_system: false,
 });
@@ -375,8 +374,7 @@ const initializeFormState = () => {
           oauth: {
             enabled: fetchedCollection.value.options?.auth_methods?.oauth?.enabled ?? false,
           },
-        },
-        require_email_verification: fetchedCollection.value.options?.require_email_verification ?? false,
+        }
       },
       is_system: fetchedCollection.value.is_system || false,
     };
@@ -924,8 +922,7 @@ const handleCopy = () => {
       auth_methods: {
         standard: { enabled: true, identity_fields: ["email"] },
         oauth: { enabled: false },
-      },
-      require_email_verification: false,
+      }
     })),
   };
 
