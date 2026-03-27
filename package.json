@@ -32,6 +32,7 @@
         "vue-eslint-parser": "^10.4.0"
     },
     "dependencies": {
+        "@tailwindcss/typography": "^0.5.19",
         "@tiptap/extension-color": "^3.20.4",
         "@tiptap/extension-highlight": "^3.20.4",
         "@tiptap/extension-link": "^3.20.4",
