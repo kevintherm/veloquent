@@ -169,6 +169,7 @@ const formState = ref({
 const templates = ref({
   password_reset: { content: "", loading: false, saving: false },
   email_verification: { content: "", loading: false, saving: false },
+  email_change: { content: "", loading: false, saving: false },
 });
 
 const fetchTemplate = async (action) => {
@@ -333,6 +334,7 @@ watch(activeTab, (tab) => {
   if (tab === 'options' && fetchedCollection.value?.id) {
     void fetchTemplate('password_reset');
     void fetchTemplate('email_verification');
+    void fetchTemplate('email_change');
     void fetchProviders();
   }
 });
@@ -771,7 +773,8 @@ const handleSave = async () => {
       if (formState.value.type === 'auth' && identifier) {
         await Promise.all([
           saveTemplate('password_reset', identifier, true),
-          saveTemplate('email_verification', identifier, true)
+          saveTemplate('email_verification', identifier, true),
+          saveTemplate('email_change', identifier, true)
         ]);
       }
 
@@ -1583,7 +1586,7 @@ onMounted(async () => {
                   <Label class="text-sm font-semibold">OTP Email Templates</Label>
                 </div>
 
-                <div v-for="action in ['password_reset', 'email_verification']" :key="action"
+                <div v-for="action in ['password_reset', 'email_verification', 'email_change']" :key="action"
                   class="border overflow-hidden bg-background">
                   <div class="p-4 border-b flex items-center justify-between bg-muted/20">
                     <div class="flex flex-col gap-0.5">
