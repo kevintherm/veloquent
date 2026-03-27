@@ -6,7 +6,6 @@ use App\Domain\QueryCompiler\Exceptions\InvalidRuleExpressionException;
 use App\Domain\Records\Services\RelationJoinResolver;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Auth;
 
 class QueryFilter
 {
@@ -133,9 +132,7 @@ class QueryFilter
             return $this->query;
         }
 
-        $this->evaluationContext = $context !== []
-            ? $context
-            : $this->buildRuntimeContext();
+        $this->evaluationContext = $context;
         $this->resolveSystemReferences = true;
 
         try {
@@ -389,25 +386,6 @@ class QueryFilter
             : $field;
 
         return data_get($this->evaluationContext, $path);
-    }
-
-    private function buildRuntimeContext(): array
-    {
-        $request = request();
-        $authenticatedUser = Auth::user();
-
-        $authContext = is_object($authenticatedUser) && method_exists($authenticatedUser, 'getAttributes')
-            ? $authenticatedUser->getAttributes()
-            : null;
-
-        return [
-            'request' => [
-                'body' => $request->all(),
-                'param' => $request->route()?->parameters() ?? [],
-                'query' => $request->query(),
-                'auth' => $authContext,
-            ],
-        ];
     }
 
     private function shouldResolveSystemReferences(): bool

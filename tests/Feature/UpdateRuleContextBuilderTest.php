@@ -2,6 +2,7 @@
 
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Records\Models\Record;
+use App\Domain\Records\Services\RuleContextBuilder;
 use App\Domain\Records\Services\UpdateRuleContextBuilder;
 use Illuminate\Http\Request;
 
@@ -32,7 +33,7 @@ it('builds update rule context with record, request and merged data', function (
 
     $request = Request::create('/api/update', 'PATCH', ['title' => 'New Title']);
 
-    $context = (new UpdateRuleContextBuilder)->build(
+    $context = (new UpdateRuleContextBuilder(new RuleContextBuilder))->build(
         $collection,
         $record,
         ['title' => 'New Title'],

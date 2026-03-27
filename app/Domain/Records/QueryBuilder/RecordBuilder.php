@@ -5,6 +5,7 @@ namespace App\Domain\Records\QueryBuilder;
 use App\Domain\QueryCompiler\Services\AllowedFieldsResolver;
 use App\Domain\QueryCompiler\Services\QueryFilter;
 use App\Domain\Records\Services\RelationJoinResolver;
+use App\Domain\Records\Services\RuleContextBuilder;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Arr;
 use RuntimeException;
@@ -56,9 +57,11 @@ class RecordBuilder extends Builder
         // Ensure we select only the base table columns to avoid collisions with joined tables
         $this->select($collection->getPhysicalTableName().'.*');
 
+        $context = app(RuleContextBuilder::class)->build();
+
         return $this->where(fn ($q) => QueryFilter::for($q, $allowedFields)
             ->withRelationJoinResolver($resolver)
-            ->run($rule)
+            ->run($rule, $context)
         );
     }
 
@@ -78,9 +81,11 @@ class RecordBuilder extends Builder
         // Ensure we select only the base table columns to avoid collisions with joined tables
         $this->select($collection->getPhysicalTableName().'.*');
 
+        $context = app(RuleContextBuilder::class)->build();
+
         return $this->where(fn ($q) => QueryFilter::for($q, $allowedFields)
             ->withRelationJoinResolver($resolver)
-            ->run($filter)
+            ->run($filter, $context)
         );
     }
 }

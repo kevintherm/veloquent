@@ -4,6 +4,7 @@ use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Records\Models\Record;
 use App\Domain\Records\Services\CreateRuleContextBuilder;
+use App\Domain\Records\Services\RuleContextBuilder;
 use Illuminate\Http\Request;
 
 it('builds create rule context with request and collection fields', function () {
@@ -31,7 +32,7 @@ it('builds create rule context with request and collection fields', function () 
         'title' => 'Hello',
     ]);
 
-    $context = (new CreateRuleContextBuilder)->build(
+    $context = (new CreateRuleContextBuilder(new RuleContextBuilder))->build(
         $collection,
         ['title' => 'Hello'],
         $user,

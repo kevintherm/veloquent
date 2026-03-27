@@ -8,13 +8,10 @@
     - Trust proxies (defer)
     - Mail settings (encrypted) (defer)
     - Storage settings (defer)
-    - Backups
+    - Backups (Full metadata n values)
         - Collections, tables, records
     - Export n imports
         - Collections metadata only
-- fix?: what happens if you pass a field with your own id thats not in the old data when updating a collection?
-- refactor QueryFilter
-    - keep http and context stuff out of the queryFilter
 - RecordExpansionService revise
     - resolveTargetCollection N+1 on collection lookup
     - No expand field count limit
