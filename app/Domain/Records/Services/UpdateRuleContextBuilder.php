@@ -27,8 +27,12 @@ class UpdateRuleContextBuilder
 
         foreach ($collection->fields ?? [] as $field) {
             $fieldName = $field['name'];
-            $context[$fieldName] = $record->getAttribute($fieldName);
+            $context[$fieldName] = array_key_exists($fieldName, $data)
+                ? $data[$fieldName]
+                : $record->getAttribute($fieldName);
         }
+
+        $context['record'] = $record->getAttributes();
 
         return $context;
     }

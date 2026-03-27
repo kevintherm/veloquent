@@ -9,7 +9,7 @@ final class SchemaPolicy
 {
     public function assertValidTableName(string $table): void
     {
-        if (! preg_match('/^[a-zA-Z_]+$/', $table)) {
+        if (! preg_match('/^[a-zA-Z0-9_]+$/', $table)) {
             throw new InvalidArgumentException(
                 "Invalid table name '{$table}'. Only letters and underscore allowed."
             );
@@ -21,9 +21,9 @@ final class SchemaPolicy
      */
     public function assertValidColumnName(string $column): void
     {
-        if (! preg_match('/^[a-zA-Z_]+$/', $column)) {
+        if (! preg_match('/^[a-zA-Z0-9_]+$/', $column)) {
             throw new InvalidArgumentException(
-                "Invalid column name '{$column}'. Only letters and underscore allowed."
+                "Invalid column name '{$column}'. Only letters, numbers and underscore allowed."
             );
         }
     }

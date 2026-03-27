@@ -27,7 +27,6 @@ class UpdateCollectionRequest extends FormRequest
                 'string',
                 'max:255',
                 Rule::unique('collections', 'name')->ignore($this->route('collection')->id, 'id'),
-                'regex:/^[a-zA-Z_]+$/',
             ],
             'type' => ['sometimes', new Enum(CollectionType::class)],
             'description' => 'nullable|string',

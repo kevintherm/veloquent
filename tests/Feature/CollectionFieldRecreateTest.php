@@ -60,6 +60,7 @@ it('recreates field type on auth collections while preserving reserved fields', 
             'create' => '',
             'update' => '',
             'delete' => '',
+            'manage' => '',
         ],
         'indexes' => [],
     ]);

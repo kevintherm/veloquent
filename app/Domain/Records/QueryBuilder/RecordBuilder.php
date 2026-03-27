@@ -2,8 +2,7 @@
 
 namespace App\Domain\Records\QueryBuilder;
 
-use App\Domain\Collections\Enums\CollectionFieldType;
-use App\Domain\Collections\Models\Collection;
+use App\Domain\QueryCompiler\Services\AllowedFieldsResolver;
 use App\Domain\QueryCompiler\Services\QueryFilter;
 use App\Domain\Records\Services\RelationJoinResolver;
 use Illuminate\Database\Eloquent\Builder;
@@ -51,7 +50,7 @@ class RecordBuilder extends Builder
             return $this;
         }
 
-        $allowedFields = $this->getAllowedFilterFields($collection);
+        $allowedFields = app(AllowedFieldsResolver::class)->resolveFromCollection($collection);
         $resolver = new RelationJoinResolver($collection, $this);
 
         // Ensure we select only the base table columns to avoid collisions with joined tables
@@ -73,7 +72,7 @@ class RecordBuilder extends Builder
             throw new RuntimeException("Model's collection is not set");
         }
 
-        $allowedFields = $this->getAllowedFilterFields($collection);
+        $allowedFields = app(AllowedFieldsResolver::class)->resolveFromCollection($collection);
         $resolver = new RelationJoinResolver($collection, $this);
 
         // Ensure we select only the base table columns to avoid collisions with joined tables
@@ -83,38 +82,5 @@ class RecordBuilder extends Builder
             ->withRelationJoinResolver($resolver)
             ->run($filter)
         );
-    }
-
-    private function getAllowedFilterFields(Collection $collection, string $prefix = '', int $depth = 0): array
-    {
-        // System fields are always allowed at the root
-        $fields = $depth === 0 ? ['id', 'token', 'created_at', 'updated_at'] : [];
-
-        if ($depth > 2) { // Limit recursion depth for safety
-            return $fields;
-        }
-
-        foreach ($collection->fields ?? [] as $field) {
-            $name = (string) $field['name'];
-            $fullPath = $prefix ? "{$prefix}.{$name}" : $name;
-            $fields[] = $fullPath;
-
-            if (($field['type'] ?? null) === CollectionFieldType::Relation->value) {
-                // Add standard sub-fields for relations (id, created_at, etc.)
-                $fields[] = "{$fullPath}.id";
-                $fields[] = "{$fullPath}.created_at";
-                $fields[] = "{$fullPath}.updated_at";
-
-                $targetCollectionId = $field['target_collection_id'] ?? null;
-                if ($targetCollectionId) {
-                    $targetCollection = Collection::query()->find($targetCollectionId);
-                    if ($targetCollection) {
-                        $fields = array_merge($fields, $this->getAllowedFilterFields($targetCollection, $fullPath, $depth + 1));
-                    }
-                }
-            }
-        }
-
-        return array_unique($fields);
     }
 }
