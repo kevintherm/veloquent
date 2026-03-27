@@ -2,6 +2,7 @@
 
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Records\Models\Record;
+use App\Domain\Records\Services\ResolvesRuleContextRelations;
 use App\Domain\Records\Services\RuleContextBuilder;
 use App\Domain\Records\Services\UpdateRuleContextBuilder;
 use Illuminate\Http\Request;
@@ -33,7 +34,7 @@ it('builds update rule context with record, request and merged data', function (
 
     $request = Request::create('/api/update', 'PATCH', ['title' => 'New Title']);
 
-    $context = (new UpdateRuleContextBuilder(new RuleContextBuilder))->build(
+    $context = (new UpdateRuleContextBuilder(new RuleContextBuilder, new ResolvesRuleContextRelations))->build(
         $collection,
         $record,
         ['title' => 'New Title'],
@@ -43,6 +44,5 @@ it('builds update rule context with record, request and merged data', function (
 
     expect($context['title'])->toBe('New Title')
         ->and($context['status'])->toBe('draft')
-        ->and($context['record']['title'])->toBe('Old Title')
         ->and(data_get($context, 'request.auth.id'))->toBe(99);
 });

@@ -194,9 +194,9 @@ class RealtimeWorker extends Command
 
         foreach ($subscriptions as $subscription) {
             $filter = (string) ($subscription['filter'] ?? '');
-            $matched = $this->evaluateFilter($filter, $collection, $record);
+            $matched = $this->evaluateFilter($filter, $collection, $record, $subscription);
 
-            $this->debug('Realtime subscription filter evaluated', [
+            $this->debug('Realtime subscription filter/auth evaluated', [
                 'event' => $event,
                 'collection_id' => $collectionId,
                 'auth_collection' => (string) ($subscription['auth_collection'] ?? ''),
@@ -204,7 +204,6 @@ class RealtimeWorker extends Command
                 'channel' => (string) ($subscription['channel'] ?? ''),
                 'filter' => $filter,
                 'matched' => $matched,
-                'expired_at' => $subscription['expired_at'] ?? null,
                 'record_id' => $record['id'] ?? null,
             ]);
 
@@ -214,7 +213,7 @@ class RealtimeWorker extends Command
                 broadcast(new RecordChanged(
                     channel: (string) $subscription['channel'],
                     event: $event,
-                    record: $record,
+                    record: array_intersect_key($record, array_flip(array_keys($record))),
                 ));
             }
         }
@@ -269,21 +268,53 @@ class RealtimeWorker extends Command
         return CarbonImmutable::now()->addSeconds($defaultTtl)->timestamp;
     }
 
-    private function evaluateFilter(string $filter, Collection $collection, array $record): bool
+    private function evaluateFilter(string $filter, Collection $collection, array $record, array $subscription): bool
     {
-        if (blank($filter)) {
-            return true;
-        }
-
         try {
-            $context = app(CreateRuleContextBuilder::class)
-                ->build($collection, $record, null, app(Request::class));
+            $subscriberCollection = Collection::query()->where('name', $subscription['auth_collection'])->first();
+            if (! $subscriberCollection) {
+                return false;
+            }
+
+            $subscriber = Record::of($subscriberCollection)
+                ->newQuery()
+                ->find($subscription['subscriber_id']);
+
+            if (! $subscriber) {
+                return false;
+            }
+
+            $viewRule = $collection->api_rules['view'] ?? null;
+            if ($viewRule === null) {
+                return false;
+            }
+
+            $viewRule = trim($viewRule);
+            if ($viewRule !== '') {
+                $viewContext = app(CreateRuleContextBuilder::class)
+                    ->build($collection, $record, $subscriber, Request::create('/'), $viewRule);
+
+                $canView = QueryFilter::for(Record::of($collection)->newQuery(), array_keys($viewContext))
+                    ->evaluate($viewRule, $viewContext);
+
+                if (! $canView) {
+                    return false;
+                }
+            }
+            if (blank($filter)) {
+                return true;
+            }
+
+            $filterContext = app(CreateRuleContextBuilder::class)
+                ->build($collection, $record, $subscriber, Request::create('/'), $filter);
 
             return QueryFilter::for(
                 Record::of($collection)->newQuery(),
-                array_keys($context)
-            )->evaluate($filter, $context);
-        } catch (\Throwable) {
+                array_keys($filterContext)
+            )->evaluate($filter, $filterContext);
+        } catch (\Throwable $e) {
+            $this->debug('Evaluation error', ['error' => $e->getMessage()]);
+
             return false;
         }
     }

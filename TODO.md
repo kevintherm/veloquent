@@ -12,6 +12,10 @@
         - Collections, tables, records
     - Export n imports
         - Collections metadata only
+- Refactor QueryFilter
+    - Rename to something more generic
+    - Break core functionality into modules
+    - Normalize operators
 - RecordExpansionService revise
     - resolveTargetCollection N+1 on collection lookup
     - No expand field count limit
