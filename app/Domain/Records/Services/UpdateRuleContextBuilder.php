@@ -8,22 +8,13 @@ use Illuminate\Http\Request;
 
 class UpdateRuleContextBuilder
 {
+    public function __construct(
+        private readonly RuleContextBuilder $baseBuilder,
+    ) {}
+
     public function build(Collection $collection, Record $record, array $data, mixed $authenticatedUser, Request $request): array
     {
-        $authContext = null;
-
-        if ($authenticatedUser instanceof Record) {
-            $authContext = $authenticatedUser->getAttributes();
-        }
-
-        $context = [
-            'request' => [
-                'body' => $request->all(),
-                'param' => $request->route()?->parameters() ?? [],
-                'query' => $request->query(),
-                'auth' => $authContext,
-            ],
-        ];
+        $context = $this->baseBuilder->build($request, $authenticatedUser);
 
         foreach ($collection->fields ?? [] as $field) {
             $fieldName = $field['name'];
