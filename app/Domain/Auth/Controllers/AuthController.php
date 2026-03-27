@@ -11,9 +11,11 @@ use App\Domain\Otp\Services\OtpService;
 use App\Domain\Realtime\Contracts\RealtimeBusDriver;
 use App\Domain\Realtime\Models\RealtimeSubscription;
 use App\Domain\Records\Models\Record;
+use App\Http\Requests\Auth\ConfirmEmailChangeRequest;
 use App\Http\Requests\Auth\ConfirmEmailVerificationRequest;
 use App\Http\Requests\Auth\ConfirmPasswordResetRequest;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\RequestEmailChangeRequest;
 use App\Http\Requests\Auth\RequestPasswordResetRequest;
 use App\Infrastructure\Http\Controllers\ApiController;
 use Illuminate\Http\JsonResponse;
@@ -223,6 +225,68 @@ class AuthController extends ApiController
             ->update(['verified' => true]);
 
         return $this->successResponse([], 'Email verified successfully.');
+    }
+
+    public function requestEmailChange(RequestEmailChangeRequest $request, Collection $collection): JsonResponse
+    {
+        if ($collection->type !== CollectionType::Auth) {
+            return $this->errorResponse('This collection does not support authentication.', Response::HTTP_FORBIDDEN);
+        }
+
+        /** @var Record|null $user */
+        $user = Auth::user();
+
+        if (! $user || ! $this->userMatchesCollection($user, $collection)) {
+            return $this->errorResponse('User not authenticated.', Response::HTTP_UNAUTHORIZED);
+        }
+
+        $newEmail = $request->input('new_email');
+
+        $emailAlreadyExists = Record::of($collection)
+            ->where('email', $newEmail)
+            ->exists();
+
+        if ($emailAlreadyExists) {
+            return $this->errorResponse(
+                'The provided email address is already in use.',
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+            );
+        }
+
+        $this->otpService->issueToAddress($user, OtpAction::EmailChange, $collection, $newEmail);
+
+        return $this->successResponse([], 'A verification code has been sent to your new email address.');
+    }
+
+    public function confirmEmailChange(ConfirmEmailChangeRequest $request, Collection $collection): JsonResponse
+    {
+        if ($collection->type !== CollectionType::Auth) {
+            return $this->errorResponse('This collection does not support authentication.', Response::HTTP_FORBIDDEN);
+        }
+
+        /** @var Record|null $user */
+        $user = Auth::user();
+
+        if (! $user || ! $this->userMatchesCollection($user, $collection)) {
+            return $this->errorResponse('User not authenticated.', Response::HTTP_UNAUTHORIZED);
+        }
+
+        $newEmail = $request->input('new_email');
+
+        return DB::transaction(function () use ($request, $collection, $user, $newEmail) {
+            $this->otpService->consume(
+                $request->input('token'),
+                OtpAction::EmailChange,
+                $collection,
+                (string) $user->id,
+            );
+
+            Record::of($collection)
+                ->where('id', $user->id)
+                ->update(['email' => $newEmail]);
+
+            return $this->successResponse([], 'Email address updated successfully.');
+        });
     }
 
     private function userMatchesCollection(Record $user, Collection $collection): bool

@@ -75,12 +75,14 @@ HTML;
         $bodyText = match ($action) {
             'password_reset' => 'Use the code below to reset your password.',
             'email_verification' => 'Use the code below to verify your email address.',
+            'email_change' => 'Use the code below to confirm your new email address.',
             default => 'Use the verification code below.',
         };
 
         $footerNote = match ($action) {
             'password_reset' => 'If you did not request a password reset, you can safely ignore this email.',
             'email_verification' => 'If you did not request this, you can safely ignore this email.',
+            'email_change' => 'If you did not request an email change, please secure your account immediately.',
             default => 'If you did not request this code, please ignore this email.',
         };
 

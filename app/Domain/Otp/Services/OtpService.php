@@ -45,6 +45,38 @@ class OtpService
     }
 
     /**
+     * Like issue(), but sends the OTP to a custom target address instead of $user->email.
+     * Used for email-change flows where the code goes to the new address.
+     */
+    public function issueToAddress(Record $user, OtpAction $action, Collection $collection, string $targetEmail): void
+    {
+        DB::transaction(function () use ($user, $action, $collection, $targetEmail) {
+            OtpToken::query()
+                ->forRecord($collection->id, $user->id)
+                ->where('action', $action->value)
+                ->unused()
+                ->delete();
+
+            $code = $this->generateCode();
+
+            OtpToken::create([
+                'collection_id' => $collection->id,
+                'record_id' => (string) $user->id,
+                'token_hash' => $this->hashCode($code),
+                'action' => $action->value,
+                'expires_at' => now()->addMinutes($this->ttlMinutes()),
+            ]);
+
+            SendOtpJob::dispatch(
+                $targetEmail,
+                $code,
+                $action,
+                $collection,
+            );
+        });
+    }
+
+    /**
      * Validate + mark token as used, return the associated user record.
      *
      * @throws ValidationException
