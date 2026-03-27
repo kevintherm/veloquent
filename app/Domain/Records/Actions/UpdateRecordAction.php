@@ -51,16 +51,36 @@ class UpdateRecordAction
             }
         }
 
-        if ($isAuthCollection && ! $bypassApiRules && isset($data['email'])) {
-            throw ValidationException::withMessages([
-                'email' => 'Email cannot be changed directly. Use the email change flow.',
-            ]);
-        }
+        if ($isAuthCollection && ! $bypassApiRules && (isset($data['email']) || isset($data['password']))) {
+            $manageRule = $collection->api_rules['manage'] ?? null;
+            $canManageAuthFields = false;
 
-        if ($isAuthCollection && ! $bypassApiRules && isset($data['password'])) {
-            throw ValidationException::withMessages([
-                'password' => 'Password cannot be changed directly. Use the password reset flow.',
-            ]);
+            if ($manageRule !== null) {
+                $manageRule = trim($manageRule);
+                if ($manageRule === '') {
+                    $canManageAuthFields = true;
+                } else {
+                    $context = app(UpdateRuleContextBuilder::class)
+                        ->build($collection, $record, $data, $authenticatedUser, request());
+
+                    $canManageAuthFields = QueryFilter::for($record->newQuery(), array_keys($context))
+                        ->evaluate($manageRule, $context);
+                }
+            }
+
+            if (! $canManageAuthFields) {
+                if (isset($data['email'])) {
+                    throw ValidationException::withMessages([
+                        'email' => 'Email cannot be changed directly. Use the email change flow.',
+                    ]);
+                }
+
+                if (isset($data['password'])) {
+                    throw ValidationException::withMessages([
+                        'password' => 'Password cannot be changed directly. Use the password reset flow.',
+                    ]);
+                }
+            }
         }
 
         $data = array_diff_key($data, array_flip(['created_at', 'updated_at']));

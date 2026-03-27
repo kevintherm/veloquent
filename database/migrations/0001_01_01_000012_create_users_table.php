@@ -44,6 +44,7 @@ return new class extends Migration
                 'create' => '',
                 'update' => 'id = @request.auth.id',
                 'delete' => 'id = @request.auth.id',
+                'manage' => null,
             ],
         ]);
     }

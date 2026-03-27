@@ -30,6 +30,7 @@ class StoreCollectionRequest extends FormRequest
             'api_rules.create' => 'nullable|string',
             'api_rules.update' => 'nullable|string',
             'api_rules.delete' => 'nullable|string',
+            'api_rules.manage' => 'nullable|string',
 
             'fields' => 'required|array|min:1',
             'fields.*' => ['required', 'array'],
