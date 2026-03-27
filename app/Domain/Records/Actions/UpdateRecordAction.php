@@ -88,7 +88,7 @@ class UpdateRecordAction
         $this->relationIntegrityService->validateRelationIds($collection->fields ?? [], $data);
 
         $record->update($data);
-        $record->fresh();
+        $record->refresh();
 
         return $record;
     }
