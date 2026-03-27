@@ -219,17 +219,12 @@ readonly class CollectionObserver
             'create' => null,
             'update' => null,
             'delete' => null,
+            'manage' => null,
         ];
 
-        $validKeys = ['list', 'view', 'create', 'update', 'delete'];
-
-        if ($collection->type === CollectionType::Auth) {
-            $defaults['manage'] = null;
-            $validKeys[] = 'manage';
-        }
+        $validKeys = ['list', 'view', 'create', 'update', 'delete', 'manage'];
 
         $collection->api_rules = array_merge($defaults, $collection->api_rules ?? []);
-
         $invalidKeys = array_diff(array_keys($collection->api_rules ?? []), $validKeys);
 
         if (! empty($invalidKeys)) {

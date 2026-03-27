@@ -21,7 +21,7 @@ class SuperuserOnly
             abort(401, 'Unauthorized');
         }
 
-        if ($user->getTable() !== 'superusers' && $user->collection?->name !== 'superusers') {
+        if ($user->getTable() !== 'superusers') {
             abort(403, 'Forbidden');
         }
 
