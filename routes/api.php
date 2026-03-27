@@ -45,6 +45,9 @@ Route::prefix('collections/{collection}/auth')->name('collections.auth.')->group
 
         Route::post('/email-verification/request', [AuthController::class, 'requestEmailVerification'])->middleware('throttle:otp')->name('email-verification.request');
         Route::post('/email-verification/confirm', [AuthController::class, 'confirmEmailVerification'])->name('email-verification.confirm');
+
+        Route::post('/email-change/request', [AuthController::class, 'requestEmailChange'])->middleware('throttle:otp')->name('email-change.request');
+        Route::post('/email-change/confirm', [AuthController::class, 'confirmEmailChange'])->name('email-change.confirm');
     });
 });
 

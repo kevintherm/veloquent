@@ -11,7 +11,6 @@ use App\Domain\Records\Services\UpdateRuleContextBuilder;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 class UpdateRecordAction
@@ -52,23 +51,15 @@ class UpdateRecordAction
             }
         }
 
-        if ($isAuthCollection
-            && ! $bypassApiRules
-            && isset($data['password'])
-            && ! isset($data['old_password'])
-            && ! empty($data['old_password'])) {
+        if ($isAuthCollection && ! $bypassApiRules && isset($data['email'])) {
             throw ValidationException::withMessages([
-                'old_password' => 'The old password is required when changing the password.',
+                'email' => 'Email cannot be changed directly. Use the email change flow.',
             ]);
         }
 
-        if ($isAuthCollection
-            && ! $bypassApiRules
-            && isset($data['password'])
-            && isset($data['old_password'])
-            && ! Hash::check($data['old_password'], $record->password)) {
+        if ($isAuthCollection && ! $bypassApiRules && isset($data['password'])) {
             throw ValidationException::withMessages([
-                'old_password' => 'The old password is incorrect.',
+                'password' => 'Password cannot be changed directly. Use the password reset flow.',
             ]);
         }
 
