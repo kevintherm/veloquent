@@ -63,7 +63,7 @@ class UpdateCollectionAction
         }
 
         if (isset($data['api_rules'])) {
-            $this->validateApiRules($data['api_rules'], Arr::pluck($fieldsForRules, 'name'));
+            $this->validateApiRules($data['api_rules'], Arr::pluck($fieldsForRules, 'name'), $collection->type === CollectionType::Auth);
         }
 
         if (isset($data['options']) || $collection->type === CollectionType::Auth) {
@@ -195,9 +195,13 @@ class UpdateCollectionAction
         return $validator->validated();
     }
 
-    private function validateApiRules(array $apiRules, array $fields): void
+    private function validateApiRules(array $apiRules, array $fields, bool $isAuthCollection): void
     {
         $expectedKeys = ['list', 'create', 'view', 'update', 'delete'];
+        if ($isAuthCollection) {
+            $expectedKeys[] = 'manage';
+        }
+
         $missingKeys = array_diff($expectedKeys, array_keys($apiRules));
 
         if (! empty($missingKeys)) {
@@ -206,7 +210,7 @@ class UpdateCollectionAction
 
         foreach ($expectedKeys as $rule) {
             $query = app(Collection::class)->newQuery();
-            $inMemory = in_array($rule, ['create', 'update'], true);
+            $inMemory = in_array($rule, ['create', 'update', 'manage'], true);
             QueryFilter::for($query, $fields)->lint($apiRules[$rule], $inMemory);
         }
     }

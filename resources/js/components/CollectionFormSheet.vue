@@ -72,6 +72,7 @@ const defaultApiRules = () => ({
   create: null,
   update: null,
   delete: null,
+  manage: null,
 });
 
 const normalizeApiRules = (apiRules = {}) => ({
@@ -80,6 +81,7 @@ const normalizeApiRules = (apiRules = {}) => ({
   create: apiRules?.create,
   update: apiRules?.update,
   delete: apiRules?.delete,
+  manage: apiRules?.manage,
 });
 
 const fieldTypes = [
@@ -105,6 +107,7 @@ const apiRuleDefinitions = [
   { key: 'create', label: 'Create Rule', icon: CirclePlus, placeholder: "e.g. status = 'published'", description: "Main record fields represents the values that are going to be inserted to the database." },
   { key: 'update', label: 'Update Rule', icon: Pencil, placeholder: "e.g. status = 'published' || @request.body.status = 'draft'", description: "Main record fields represents the existing value, to target the values that are going to be inserted to the database use @request.body.*" },
   { key: 'delete', label: 'Delete Rule', icon: Trash2, placeholder: "e.g. status = 'published'", description: "Rule evaluated when deleting records." },
+  { key: 'manage', label: 'Manage Rule', icon: Settings2, placeholder: "e.g. id = @request.auth.id", description: "Rule evaluated when updating protected auth fields (e.g. email, password)." },
 ];
 
 const availableProviders = [
@@ -1353,6 +1356,7 @@ onMounted(async () => {
           <TabsContent value="api" class="space-y-4 mt-4 flex-1 min-h-0 overflow-y-auto pr-2 pb-6">
             <div class="space-y-6">
               <div v-for="rule in apiRuleDefinitions" :key="rule.key"
+                v-show="rule.key !== 'manage' || formState.type === 'auth'"
                 class="grid gap-3 p-4 border bg-background/50 shadow-sm relative overflow-hidden group transition-all duration-200 hover:border-primary/30">
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-2">

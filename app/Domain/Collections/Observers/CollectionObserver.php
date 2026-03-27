@@ -213,15 +213,23 @@ readonly class CollectionObserver
 
     private function validateApiRules(Collection $collection): void
     {
-        $collection->api_rules = array_merge([
+        $defaults = [
             'list' => null,
             'view' => null,
             'create' => null,
             'update' => null,
             'delete' => null,
-        ], $collection->api_rules ?? []);
+        ];
 
         $validKeys = ['list', 'view', 'create', 'update', 'delete'];
+
+        if ($collection->type === CollectionType::Auth) {
+            $defaults['manage'] = null;
+            $validKeys[] = 'manage';
+        }
+
+        $collection->api_rules = array_merge($defaults, $collection->api_rules ?? []);
+
         $invalidKeys = array_diff(array_keys($collection->api_rules ?? []), $validKeys);
 
         if (! empty($invalidKeys)) {
