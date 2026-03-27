@@ -35,7 +35,7 @@ class CreateRecordAction
 
             if ($rule !== '') {
                 $context = app(CreateRuleContextBuilder::class)
-                    ->build($collection, $data, $authenticatedUser, request());
+                    ->build($collection, $data, $authenticatedUser, request(), $rule);
 
                 $isAllowed = QueryFilter::for(Record::of($collection)->newQuery(), array_keys($context))
                     ->evaluate($rule, $context);

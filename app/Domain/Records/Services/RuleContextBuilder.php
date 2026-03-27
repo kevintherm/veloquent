@@ -12,8 +12,8 @@ class RuleContextBuilder
         $request ??= request();
         $authenticatedUser ??= Auth::user();
 
-        $authContext = is_object($authenticatedUser) && method_exists($authenticatedUser, 'getAttributes')
-            ? $authenticatedUser->getAttributes()
+        $authContext = is_object($authenticatedUser) && method_exists($authenticatedUser, 'toArray')
+            ? $authenticatedUser->toArray()
             : null;
 
         return [

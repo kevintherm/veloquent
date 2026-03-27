@@ -40,7 +40,7 @@ class UpdateRecordAction
 
             if ($rule !== '') {
                 $context = app(UpdateRuleContextBuilder::class)
-                    ->build($collection, $record, $data, $authenticatedUser, request());
+                    ->build($collection, $record, $data, $authenticatedUser, request(), $rule);
 
                 $isAllowed = QueryFilter::for($record->newQuery(), array_keys($context))
                     ->evaluate($rule, $context);
@@ -61,7 +61,7 @@ class UpdateRecordAction
                     $canManageAuthFields = true;
                 } else {
                     $context = app(UpdateRuleContextBuilder::class)
-                        ->build($collection, $record, $data, $authenticatedUser, request());
+                        ->build($collection, $record, $data, $authenticatedUser, request(), $manageRule);
 
                     $canManageAuthFields = QueryFilter::for($record->newQuery(), array_keys($context))
                         ->evaluate($manageRule, $context);

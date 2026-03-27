@@ -10,20 +10,25 @@ class UpdateRuleContextBuilder
 {
     public function __construct(
         private readonly RuleContextBuilder $baseBuilder,
+        private readonly ResolvesRuleContextRelations $relationResolver,
     ) {}
 
-    public function build(Collection $collection, Record $record, array $data, mixed $authenticatedUser, Request $request): array
+    public function build(Collection $collection, Record $record, array $data, mixed $authenticatedUser, Request $request, ?string $rule = null): array
     {
         $context = $this->baseBuilder->build($request, $authenticatedUser);
+
+        $recordData = $record->toArray();
 
         foreach ($collection->fields ?? [] as $field) {
             $fieldName = $field['name'];
             $context[$fieldName] = array_key_exists($fieldName, $data)
                 ? $data[$fieldName]
-                : $record->getAttribute($fieldName);
+                : ($recordData[$fieldName] ?? null);
         }
 
-        $context['record'] = $record->getAttributes();
+        if ($rule) {
+            $this->relationResolver->resolve($collection, $context, $rule);
+        }
 
         return $context;
     }
