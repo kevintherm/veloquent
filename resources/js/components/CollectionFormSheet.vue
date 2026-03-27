@@ -743,11 +743,6 @@ const validateForm = () => {
     return false;
   }
 
-  if (!/^[a-zA-Z_]+$/.test(formState.value.name)) {
-    toast.error("Collection name may only contain letters and underscores");
-    return false;
-  }
-
   return true;
 };
 

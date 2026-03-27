@@ -29,6 +29,7 @@ function createRealtimeCollection(string $name, CollectionType $type): Collectio
             'create' => '',
             'update' => '',
             'delete' => '',
+            ...($type === CollectionType::Auth ? ['manage' => ''] : []),
         ],
     ]);
 }

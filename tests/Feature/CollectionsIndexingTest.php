@@ -457,6 +457,7 @@ it('syncs auth reserved email unique metadata from explicit unique index', funct
             'create' => '',
             'update' => '',
             'delete' => '',
+            'manage' => '',
         ],
         'indexes' => [
             ['columns' => ['email'], 'type' => IndexType::Unique->value],

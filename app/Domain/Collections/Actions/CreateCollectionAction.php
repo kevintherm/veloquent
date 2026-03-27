@@ -5,6 +5,7 @@ namespace App\Domain\Collections\Actions;
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Collections\Validators\CollectionFieldValidator;
+use App\Domain\QueryCompiler\Services\AllowedFieldsResolver;
 use App\Domain\QueryCompiler\Services\QueryFilter;
 use App\Domain\SchemaManagement\Services\SchemaChangePlan;
 use Illuminate\Support\Arr;
@@ -16,6 +17,7 @@ class CreateCollectionAction
 {
     public function __construct(
         private readonly CollectionFieldValidator $collectionFieldValidator,
+        private readonly AllowedFieldsResolver $allowedFieldsResolver,
     ) {}
 
     public function execute(array $data): Collection
@@ -37,7 +39,7 @@ class CreateCollectionAction
         );
 
         if (isset($data['api_rules'])) {
-            $this->validateApiRules($data['api_rules'], Arr::pluck($mergedFields, 'name'), $isAuthCollection);
+            $this->validateApiRules($data['api_rules'], $mergedFields, $isAuthCollection);
         }
 
         if (isset($data['options']) || $isAuthCollection) {
@@ -45,6 +47,7 @@ class CreateCollectionAction
         }
 
         return Collection::create([
+            'is_system' => $data['is_system'] ?? false,
             ...$data,
             'table_name' => SchemaChangePlan::generateTableName($data['name'], $data['is_system'] ?? false),
             'fields' => $mergedFields,
@@ -67,10 +70,12 @@ class CreateCollectionAction
             ]);
         }
 
+        $allowedFields = $this->allowedFieldsResolver->resolveFromFieldDefinitions($fields);
+
         foreach ($expectedKeys as $rule) {
             $query = app(Collection::class)->newQuery();
             $inMemory = in_array($rule, ['create', 'update', 'manage'], true);
-            QueryFilter::for($query, $fields)->lint($apiRules[$rule], $inMemory);
+            QueryFilter::for($query, $allowedFields)->lint($apiRules[$rule], $inMemory);
         }
     }
 

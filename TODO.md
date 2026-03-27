@@ -3,7 +3,6 @@
 - feat: impersonate button for auth collections
 - improv: refactor redundant extractIndexes() methods
 - feat: Store cached target_collection_name for field type relation
-- feat: api_rule access relation in memory
 - Setup system variables
     - Rate limit (defer)
     - Trust proxies (defer)
@@ -14,6 +13,8 @@
     - Export n imports
         - Collections metadata only
 - fix?: what happens if you pass a field with your own id thats not in the old data when updating a collection?
+- refactor QueryFilter
+    - keep http and context stuff out of the queryFilter
 - RecordExpansionService revise
     - resolveTargetCollection N+1 on collection lookup
     - No expand field count limit

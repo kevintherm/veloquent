@@ -25,6 +25,7 @@ beforeEach(function () {
             'create' => '',
             'update' => '',
             'delete' => '',
+            'manage' => null,
         ],
     ]);
     $this->user = Record::of($this->collection)->create([

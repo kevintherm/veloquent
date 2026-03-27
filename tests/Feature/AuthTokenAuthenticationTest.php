@@ -35,6 +35,7 @@ function createAuthCollection(string $name): Collection
             'create' => '',
             'update' => '',
             'delete' => '',
+            'manage' => '',
         ],
     ]);
 }

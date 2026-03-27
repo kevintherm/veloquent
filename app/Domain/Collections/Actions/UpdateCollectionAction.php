@@ -5,6 +5,7 @@ namespace App\Domain\Collections\Actions;
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Collections\Validators\CollectionFieldValidator;
+use App\Domain\QueryCompiler\Services\AllowedFieldsResolver;
 use App\Domain\QueryCompiler\Services\QueryFilter;
 use App\Domain\SchemaManagement\Services\SchemaChangePlan;
 use Illuminate\Support\Arr;
@@ -16,6 +17,7 @@ class UpdateCollectionAction
 {
     public function __construct(
         private readonly CollectionFieldValidator $collectionFieldValidator,
+        private readonly AllowedFieldsResolver $allowedFieldsResolver,
     ) {}
 
     public function execute(Collection $collection, array $data): Collection
@@ -63,7 +65,7 @@ class UpdateCollectionAction
         }
 
         if (isset($data['api_rules'])) {
-            $this->validateApiRules($data['api_rules'], Arr::pluck($fieldsForRules, 'name'), $collection->type === CollectionType::Auth);
+            $this->validateApiRules($data['api_rules'], $fieldsForRules, $collection->type === CollectionType::Auth);
         }
 
         if (isset($data['options']) || $collection->type === CollectionType::Auth) {
@@ -185,7 +187,7 @@ class UpdateCollectionAction
             'auth_methods.standard.identity_fields.*' => ['string', Rule::in($fields)],
 
             'auth_methods.oauth' => 'required|array',
-            'auth_methods.oauth.enabled' => 'required|boolean'
+            'auth_methods.oauth.enabled' => 'required|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -208,10 +210,12 @@ class UpdateCollectionAction
             throw ValidationException::withMessages(['api_rules' => 'Missing API rules for: '.implode(', ', $missingKeys)]);
         }
 
+        $allowedFields = $this->allowedFieldsResolver->resolveFromFieldDefinitions($fields);
+
         foreach ($expectedKeys as $rule) {
             $query = app(Collection::class)->newQuery();
             $inMemory = in_array($rule, ['create', 'update', 'manage'], true);
-            QueryFilter::for($query, $fields)->lint($apiRules[$rule], $inMemory);
+            QueryFilter::for($query, $allowedFields)->lint($apiRules[$rule], $inMemory);
         }
     }
 }

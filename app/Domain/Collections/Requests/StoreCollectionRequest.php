@@ -21,7 +21,7 @@ class StoreCollectionRequest extends FormRequest
     public function rules(): array
     {
         $rules = [
-            'name' => 'required|string|max:255|unique:collections,name|regex:/^[a-zA-Z_]+$/',
+            'name' => 'required|string|max:255|unique:collections,name',
             'type' => ['required', new Enum(CollectionType::class)],
             'description' => 'nullable|string',
             'api_rules' => 'nullable|array',
