@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Velo - The Open Source Laravel Backend</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #ffffff;
+            background-image: radial-gradient(circle at 1px 1px, rgba(0, 0, 0, 0.08) 1.5px, transparent 0);
+            background-size: 30px 30px;
+            color: #000;
+            overflow-x: hidden;
+        }
+
+        .brutalist-border {
+            border: 4px solid #000;
+        }
+
+        .brutalist-shadow {
+            box-shadow: 16px 16px 0px 0px #000;
+        }
+
+        .brutalist-shadow-blue {
+            box-shadow: 16px 16px 0px 0px #3b82f6;
+        }
+
+        .no-round {
+            border-radius: 0 !important;
+        }
+
+        .brutalist-button {
+            border: 4px solid #000;
+            box-shadow: 12px 12px 0px 0px #000;
+            padding: 1.25rem 2.5rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: -0.05em;
+            transition: all 0.1s;
+            background-color: #fff;
+            display: inline-block;
+            cursor: pointer;
+        }
+
+        .brutalist-button:hover {
+            transform: translate(8px, 8px);
+            box-shadow: 4px 4px 0px 0px #000;
+        }
+
+        .brutalist-button:active {
+            transform: translate(12px, 12px);
+            box-shadow: 0px 0px 0px 0px #000;
+        }
+
+        .ocean-texture {
+            background-image: repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.03) 0px, rgba(0, 0, 0, 0.03) 1px, transparent 1px, transparent 15px);
+        }
+
+        .mono {
+            font-family: 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', monospace;
+        }
+
+        .detail-label {
+            font-size: 0.65rem;
+            font-weight: 900;
+            line-height: normal;
+            background: #000;
+            color: #fff;
+            padding: 2px 5px;
+            text-transform: uppercase;
+        }
+
+        .brutalist-card {
+            background: #fff;
+            border: 4px solid #000;
+            box-shadow: 16px 16px 0px 0px #000;
+        }
+    </style>
+</head>
+
+<body class="p-6 md:p-12">
+    <!-- Navbar -->
+    <nav class="max-w-[1400px] mx-auto flex justify-between items-center mb-24">
+        <div class="p-5 brutalist-border bg-white brutalist-shadow">
+            <img src="/docs/logo.svg" alt="Velo Logo" class="h-20 w-auto">
+        </div>
+        <div class="flex gap-8">
+            <a href="introduction.md" class="brutalist-button text-xl">DOCS SYSTEM</a>
+            <a href="https://github.com" class="brutalist-button bg-black text-white border-black">GITHUB CORE</a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <main class="max-w-[1400px] mx-auto">
+        <section class="mb-48 relative">
+            <!-- Hero Container: Reduced padding for better fit -->
+            <div
+                class="brutalist-card py-12 px-6 md:py-20 md:px-10 ocean-texture relative z-10 text-center border-blue-500">
+                <h1
+                    class="text-5xl md:text-7xl lg:text-9xl font-extrabold tracking-tighter leading-[0.85] mb-10 uppercase text-black overflow-hidden">
+                    OPEN SOURCE<br>BACKEND
+                </h1>
+
+                <p
+                    class="text-3xl md:text-5xl font-black max-w-6xl mx-auto mb-16 px-10 py-6 bg-black text-white brutalist-border uppercase tracking-tight leading-none">
+                    PHP NATURE. CHEAP HOSTING. INFINITE OPTIONS.
+                </p>
+
+                <div class="flex justify-center">
+                    <a href="#explore"
+                        class="brutalist-button text-4xl px-16 py-8 bg-blue-500 text-white border-black">EXPLORE
+                        ARCHITECTURE</a>
+                </div>
+            </div>
+
+            <div class="absolute -top-12 -left-12 w-64 h-64 border-2 border-black/10 opacity-10"></div>
+            <div class="absolute -bottom-16 -right-16 w-80 h-80 border-2 border-black/10 opacity-10"></div>
+        </section>
+
+        <!-- Product Preview Layer -->
+        <section class="mb-56 relative">
+            <div class="bg-white brutalist-border brutalist-shadow overflow-hidden">
+                <div class="bg-black text-white px-10 py-5 flex justify-between items-center">
+                    <div class="flex items-center gap-6">
+                        <div class="w-5 h-5 bg-blue-500"></div>
+                        <span class="mono text-base font-bold tracking-widest uppercase">VeloPHP - Dashboard</span>
+                    </div>
+                </div>
+                <div class="bg-blue-500/10 p-4 relative">
+                    <img src="/docs/dashboard.png" alt="Velo Dashboard" class="w-full brutalist-border contrast-[1.12]">
+                    <div class="absolute bottom-8 right-8 bg-white p-4 brutalist-border">
+                        <a href="/" class="mono text-base font-bold tracking-widest uppercase">Try Demo</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Messaging Grid -->
+        <section id="explore" class="mb-56">
+            <div class="flex items-center gap-8 mb-20">
+                <h2 class="text-8xl md:text-9xl font-black uppercase tracking-tighter">WHY</h2>
+                <div class="h-2 bg-black grow"></div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-16">
+                <!-- Large Feature: Hosting & PHP -->
+                <div
+                    class="md:col-span-8 brutalist-card p-12 md:p-16 relative flex flex-col justify-between overflow-hidden">
+                    <div>
+                        <div class="w-24 h-24 bg-white brutalist-border mb-10 flex items-center justify-center">
+                            <svg class="w-14 h-14 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="square" stroke-linejoin="miter" stroke-width="3"
+                                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011-1v5m-4 0h4">
+                                </path>
+                            </svg>
+                        </div>
+                        <h3 class="text-6xl md:text-7xl font-black mb-8 uppercase tracking-tighter">HOST EVERYWHERE</h3>
+                        <p class="text-2xl md:text-3xl font-bold leading-[1.1] mb-12">Leverage the true nature of PHP.
+                            From cheap shared hosting to dedicated VPS, Velo runs wherever PHP lives.</p>
+                    </div>
+                    <div class="mono text-base font-black text-black/40 border-t-4 border-black pt-8">
+                        + PHP RUNTIME: 8.2+ REQUIRED
+                    </div>
+                </div>
+
+                <!-- Small Feature: Stateful Auth -->
+                <div
+                    class="md:col-span-4 bg-black text-white brutalist-border brutalist-shadow p-12 md:p-16 relative border-blue-500">
+                    <div class="w-24 h-24 bg-white brutalist-border mb-10 flex items-center justify-center">
+                        <svg class="w-14 h-14 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="square" stroke-linejoin="miter" stroke-width="3"
+                                d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z">
+                            </path>
+                        </svg>
+                    </div>
+                    <h3 class="text-5xl md:text-6xl font-black mb-10 uppercase tracking-tighter leading-none">NO JWT
+                        NONSENSE</h3>
+                    <p class="text-xl md:text-2xl font-bold leading-tight opacity-90">Simple, secure, and fast. Velo
+                        uses 64-char token that you attach on every requests. No JWT complex signing, overhead, or
+                        revocation
+                        difficuly.</p>
+                </div>
+
+                <!-- Small Feature: Real-time -->
+                <div class="md:col-span-5 brutalist-card p-12 md:p-16 relative border-dashed">
+                    <div class="w-16 h-16 bg-blue-500 brutalist-border flex items-center justify-center mb-10">
+                        <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="square" stroke-linejoin="miter" stroke-width="3"
+                                d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-5xl md:text-6xl font-black mb-8 uppercase tracking-tighter">REALTIME READY</h3>
+                    <p class="text-xl md:text-2xl font-bold leading-tight opacity-80">Built on top of Laravel's
+                        real-time broadcasting system. Pusher, Reverb, or whatever you like.
+                    </p>
+                </div>
+
+                <!-- Large Feature: Ecosystem -->
+                <div
+                    class="md:col-span-7 bg-blue-500 text-white brutalist-border brutalist-shadow p-12 md:p-16 ocean-texture relative">
+                    <div class="w-24 h-24 bg-black brutalist-border mb-10 flex items-center justify-center">
+                        <svg class="w-14 h-14 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="square" stroke-linejoin="miter" stroke-width="3"
+                                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
+                            </path>
+                        </svg>
+                    </div>
+                    <h3 class="text-6xl md:text-7xl font-black mb-8 uppercase tracking-tighter leading-none">LARAVEL
+                        NATIVE</h3>
+                    <p class="text-2xl md:text-3xl font-bold leading-[1.1]">Built on top of Laravel. Utilize the tools
+                        and patterns you already know and love.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="border-t-8 border-black pt-24 pb-48">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-24">
+                <div class="md:col-span-1">
+                    <div class="p-4 brutalist-border bg-white inline-block mb-10">
+                        <img src="/docs/logo.svg" alt="Velo Logo" class="h-14 w-auto">
+                    </div>
+                    <p class="text-2xl font-black leading-none uppercase tracking-tighter">THE LARAVEL BACKEND.<br>OPEN
+                        SOURCE. FOREVER.</p>
+                </div>
+                <div class="md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-16">
+                    <div>
+                        <h4 class="detail-label mb-8 inline-block">Docs</h4>
+                        <ul class="space-y-4 text-2xl font-black uppercase tracking-tighter">
+                            <li><a href="docs/introduction.md" class="hover:text-blue-500">INTRODUCTION</a></li>
+                            <li><a href="docs/api-rules.md" class="hover:text-blue-500">API RULES</a></li>
+                            <li><a href="docs/records-api.md" class="hover:text-blue-500">RECORDS API</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-40 text-center mono text-sm opacity-30 uppercase font-black tracking-[0.2em]">
+                &copy; 2026 VELOPHP
+            </div>
+        </footer>
+    </main>
+</body>
+
+</html>
