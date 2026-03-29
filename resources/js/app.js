@@ -38,7 +38,6 @@ axios.interceptors.response.use(
 		return Promise.reject(error);
 	}
 );
-
 const app = createApp(App);
 app.use(router);
 app.mount('#app');
