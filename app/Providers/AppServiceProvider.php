@@ -18,7 +18,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        if (config('app.force_https', false)) URL::forceHttps(true);
+        if (config('app.force_https', false)) {
+            URL::forceHttps(true);
+        }
         URL::forceRootUrl(config('app.url'));
 
         $this->registerGates();
@@ -28,10 +30,7 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-    public function boot(): void
-    {
-        //
-    }
+    public function boot(): void {}
 
     private function registerAuth(): void
     {

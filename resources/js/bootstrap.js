@@ -86,7 +86,7 @@ const connectEcho = () => {
 
 	window.Echo = new Echo({
 		...config,
-		authEndpoint: '/broadcasting/auth',
+		authEndpoint: '/api/broadcasting/auth',
 		auth: {
 			headers: {
 				Authorization: `Bearer ${token}`,
