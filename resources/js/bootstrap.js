@@ -56,6 +56,7 @@ const buildEchoConnectionConfig = () => {
 		config: {
 			broadcaster: 'pusher',
 			key: import.meta.env.VITE_REVERB_APP_KEY,
+			cluster: 'mt1',
 			wsHost: reverbHost,
 			wsPort: reverbPort,
 			wssPort: reverbPort,
