@@ -1351,7 +1351,7 @@ onMounted(async () => {
           <TabsContent value="api" class="space-y-4 mt-4 flex-1 min-h-0 overflow-y-auto pr-2 pb-6">
             <div class="space-y-6">
               <div v-for="rule in apiRuleDefinitions" :key="rule.key"
-                v-show="rule.key !== 'manage' || formState.type === 'auth'"
+                v-show="formState.type === 'auth' || rule.key !== 'manage'"
                 class="grid gap-3 p-4 border bg-background/50 shadow-sm relative overflow-hidden group transition-all duration-200 hover:border-primary/30">
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-2">

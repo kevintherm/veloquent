@@ -49,6 +49,7 @@ const detachRealtimeChannel = () => {
 };
 
 const attachRealtimeChannel = () => {
+    console.log(window.Echo)
     if (!window.Echo || !privateChannelName.value) {
         realtimeStatus.value = "echo-unavailable";
         return;
