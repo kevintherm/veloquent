@@ -1,5 +1,6 @@
 ## TODO
 
+- fix: realtime event triggered twice
 - feat?: Update record requests set nullable unless key exists
 - refactor controller: delegate to action files
 - feat: impersonate button for auth collections
