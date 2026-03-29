@@ -213,7 +213,7 @@ class RealtimeWorker extends Command
                 broadcast(new RecordChanged(
                     channel: (string) $subscription['channel'],
                     event: $event,
-                    record: array_intersect_key($record, array_flip(array_keys($record))),
+                    record: array_merge(array_intersect_key($record, array_flip(array_keys($record))), ['_collection' => $collection->name]),
                 ));
             }
         }
