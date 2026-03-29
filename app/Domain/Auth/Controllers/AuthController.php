@@ -33,6 +33,22 @@ class AuthController extends ApiController
         private OtpService $otpService,
     ) {}
 
+    public function user(Collection $collection): JsonResponse
+    {
+        if ($collection->type !== CollectionType::Auth) {
+            return $this->errorResponse('This collection does not support authentication.', Response::HTTP_FORBIDDEN);
+        }
+
+        /** @var Record|null $user */
+        $user = Auth::user();
+
+        if (! $user || ! $this->userMatchesCollection($user, $collection)) {
+            return $this->errorResponse('User not authenticated.', Response::HTTP_UNAUTHORIZED);
+        }
+
+        return $this->successResponse($user);
+    }
+
     public function login(LoginRequest $request, Collection $collection): JsonResponse
     {
         if ($collection->type !== CollectionType::Auth) {
