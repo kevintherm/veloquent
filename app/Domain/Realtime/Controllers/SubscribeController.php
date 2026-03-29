@@ -33,7 +33,7 @@ class SubscribeController extends ApiController
             'filter' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $authCollection = $collection->name;
+        $authCollection = $user->collection->name;
         $subscriberId = (string) $user->getKey();
         $channel = "private-$authCollection.$subscriberId";
         $subscriptionTtl = max(1, (int) config('velo.realtime.subscription_ttl', 120));
