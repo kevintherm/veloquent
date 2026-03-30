@@ -2,9 +2,7 @@
 
 - feat: expose realtime subscriptions list
 - fix: datatable pagination did not work
-- fix: realtime event triggered twice
-- feat?: Update record requests set nullable unless key exists
-- refactor controller: delegate to action files
+- refactor collection, auth, subscribe controller: delegate to action files
 - feat: impersonate button for auth collections
 - improv: refactor redundant extractIndexes() methods
 - feat: Store cached target_collection_name for field type relation
@@ -29,6 +27,7 @@
 - Naming conventions
     - clarify in code/docs: `SchemaChangePlan::getAllReservedFields(false)` in unique sync intentionally means base reserved fields only
     - reason: auth reserved fields (for example `email`) must still sync `unique` from single-column unique indexes
+- feat: add octane support
 - Optimize Record model
     - cache collections
 - Testing
