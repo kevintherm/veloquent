@@ -9,29 +9,31 @@ use League\CommonMark\Extension\GithubFlavoredMarkdownExtension;
 use League\CommonMark\Extension\HeadingPermalink\HeadingPermalinkExtension;
 use League\CommonMark\MarkdownConverter;
 
-function getMarkdownConverter()
-{
-    $config = [
-        'heading_permalink' => [
-            'html_class' => 'heading-permalink',
-            'id_prefix' => 'content',
-            'apply_id_to_heading' => true,
-            'heading_class' => '',
-            'fragment_prefix' => 'content',
-            'insert' => 'before',
-            'min_heading_level' => 1,
-            'max_heading_level' => 6,
-            'title' => 'Permalink',
-            'symbol' => '#',
-        ],
-    ];
+if (! function_exists('getMarkdownConverter')) {
+    function getMarkdownConverter()
+    {
+        $config = [
+            'heading_permalink' => [
+                'html_class' => 'heading-permalink',
+                'id_prefix' => 'content',
+                'apply_id_to_heading' => true,
+                'heading_class' => '',
+                'fragment_prefix' => 'content',
+                'insert' => 'before',
+                'min_heading_level' => 1,
+                'max_heading_level' => 6,
+                'title' => 'Permalink',
+                'symbol' => '#',
+            ],
+        ];
 
-    $environment = new Environment($config);
-    $environment->addExtension(new CommonMarkCoreExtension);
-    $environment->addExtension(new GithubFlavoredMarkdownExtension);
-    $environment->addExtension(new HeadingPermalinkExtension);
+        $environment = new Environment($config);
+        $environment->addExtension(new CommonMarkCoreExtension);
+        $environment->addExtension(new GithubFlavoredMarkdownExtension);
+        $environment->addExtension(new HeadingPermalinkExtension);
 
-    return new MarkdownConverter($environment);
+        return new MarkdownConverter($environment);
+    }
 }
 
 Route::get('/docs/search', function () {
