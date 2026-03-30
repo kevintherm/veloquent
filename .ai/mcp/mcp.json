@@ -3,7 +3,7 @@
     "laravel-boost": {
       "command": "/usr/bin/php",
       "args": [
-        "/home/kevin/Projects/laravel/velo-revamp/artisan",
+        "/home/kevin/Projects/laravel/veloquent/veloquent-php/artisan",
         "boost:mcp"
       ]
     },
