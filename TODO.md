@@ -1,5 +1,6 @@
 ## TODO
 
+- feat: expose realtime subscriptions list
 - fix: datatable pagination did not work
 - fix: realtime event triggered twice
 - feat?: Update record requests set nullable unless key exists
