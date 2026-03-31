@@ -1,7 +1,5 @@
 ## TODO
 
-- feat: expose realtime subscriptions list
-- fix: datatable pagination did not work
 - refactor collection, auth, subscribe controller: delegate to action files
 - feat: impersonate button for auth collections
 - improv: refactor redundant extractIndexes() methods
@@ -27,6 +25,7 @@
 - Naming conventions
     - clarify in code/docs: `SchemaChangePlan::getAllReservedFields(false)` in unique sync intentionally means base reserved fields only
     - reason: auth reserved fields (for example `email`) must still sync `unique` from single-column unique indexes
+- feat: add multi tenant support stancl/tenant
 - feat: add octane support
 - Optimize Record model
     - cache collections

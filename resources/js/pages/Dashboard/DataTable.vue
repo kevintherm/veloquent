@@ -28,7 +28,7 @@ import {
     PaginationNext,
     PaginationPrevious,
 } from "@/components/ui/pagination";
-import { watchEffect } from "vue";
+import { computed, watchEffect } from "vue";
 
 const props = defineProps({
     records: {
@@ -83,7 +83,7 @@ const props = defineProps({
 
 defineEmits(['toggle-all', 'toggle-record', 'change-page', 'open-record', 'sort'])
 
-const skeletonRows = 8;
+const skeletonRows = computed(() => props.records.length > 0 ? props.records.length : 8);
 
 const datetimeTypes = new Set(["timestamp", "datetime", "date"]);
 
@@ -172,7 +172,7 @@ const resolveColumnIcon = (column, columnTypes) => {
 
 const resolveColumnWidthClass = (column, columnTypes) => {
     if (column === "id") {
-        return "w-48 min-w-48 whitespace-nowrap";
+        return "min-w-48 whitespace-nowrap";
     }
 
     const type = columnTypes?.[column];
@@ -180,18 +180,18 @@ const resolveColumnWidthClass = (column, columnTypes) => {
     switch (type) {
         case "boolean":
         case "number":
-            return "w-36 min-w-36";
+            return "min-w-36";
         case "timestamp":
         case "datetime":
         case "date":
-            return "w-40 min-w-40 whitespace-nowrap";
+            return "min-w-40 whitespace-nowrap";
         case "json":
         case "longtext":
-            return "w-80 min-w-80";
+            return "min-w-80";
         case "relation":
-            return "w-48 min-w-48";
+            return "min-w-48";
         default:
-            return "w-48 min-w-48";
+            return "min-w-48";
     }
 };
 
@@ -288,11 +288,11 @@ const copyRecordId = async (recordId) => {
                     <template v-if="loading">
                         <TableRow v-for="rowIndex in skeletonRows" :key="`skeleton-row-${rowIndex}`">
                             <TableCell>
-                                <Skeleton class="h-4 w-4 rounded-sm" />
+                                <Skeleton class="h-8 w-8 rounded-sm" />
                             </TableCell>
                             <TableCell v-for="column in columns" :key="`skeleton-${rowIndex}-${column}`"
                                 :class="resolveColumnWidthClass(column, columnTypes)">
-                                <Skeleton class="h-4 w-full" />
+                                <Skeleton class="h-8 w-full" />
                             </TableCell>
                         </TableRow>
                     </template>
