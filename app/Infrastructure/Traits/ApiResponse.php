@@ -15,7 +15,19 @@ trait ApiResponse
             'message' => $message,
         ];
 
-        if ($data instanceof LengthAwarePaginator) {
+        if ($data instanceof \Illuminate\Http\Resources\Json\ResourceCollection && $data->resource instanceof LengthAwarePaginator) {
+            $paginator = $data->resource;
+            $response['data'] = $data->collection;
+            $response['meta'] = [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'from' => $paginator->firstItem(),
+                'to' => $paginator->lastItem(),
+                'has_more_pages' => $paginator->hasMorePages(),
+            ];
+        } elseif ($data instanceof LengthAwarePaginator) {
             $response['data'] = $data->items();
             $response['meta'] = [
                 'current_page' => $data->currentPage(),

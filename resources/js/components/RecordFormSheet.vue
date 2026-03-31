@@ -291,7 +291,7 @@ const loadRelationOptions = async (field) => {
       }
     );
 
-    const rows = normalizeRecordsPayload(response?.data?.data);
+    const rows = normalizeRecordsPayload(response?.data);
 
     relationOptions.value[field.name] = rows.map((row) => ({
       value: row?.id,

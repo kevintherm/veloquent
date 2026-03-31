@@ -93,7 +93,7 @@ const fetchRecords = async () => {
             },
         });
 
-        const { rows, meta } = normalizeRecordsPayload(response?.data?.data);
+        const { rows, meta } = normalizeRecordsPayload(response?.data);
 
         records.value = rows;
 

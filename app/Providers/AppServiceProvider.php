@@ -21,6 +21,7 @@ class AppServiceProvider extends ServiceProvider
         if (config('app.force_https', false)) {
             URL::forceHttps(true);
         }
+        
         URL::forceRootUrl(config('app.url'));
 
         $this->registerGates();
