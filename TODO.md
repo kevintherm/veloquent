@@ -17,6 +17,8 @@
     - Rename to something more generic
     - Break core functionality into modules
     - Normalize operators
+    - Check for @-prefixed variables names e.g @rquest.auth.id // not valid
+    - Add support for record values in VALUE place e.g post = parent.post or parent.post = post
 - RecordExpansionService revise
     - resolveTargetCollection N+1 on collection lookup
     - No expand field count limit
@@ -24,7 +26,7 @@
     - Field|array type inconsistency
 - Naming conventions
     - clarify in code/docs: `SchemaChangePlan::getAllReservedFields(false)` in unique sync intentionally means base reserved fields only
-    - reason: auth reserved fields (for example `email`) must still sync `unique` from single-column unique indexes
+    - reason: auth reserved fields (for example `email`) must still sync `unique` from single-column unique indexes-
 - feat: add multi tenant support stancl/tenant
 - feat: add octane support
 - Optimize Record model
