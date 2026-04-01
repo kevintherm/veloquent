@@ -11,10 +11,23 @@ it('allows @request system grammar during lint', function () {
         ->not->toThrow(InvalidRuleExpressionException::class);
 });
 
-it('rejects @-prefixed system grammar in field position during lint', function () {
+it('allows symmetric scalar grammar during SQL lint for reversible operators', function () {
     $query = Collection::query();
 
-    expect(fn () => QueryFilter::for($query, ['id'])->lint('@request.auth.id = 1'))
+    expect(fn () => QueryFilter::for($query, ['id', 'title'])->lint('@request.auth.id = id'))
+        ->not->toThrow(InvalidRuleExpressionException::class)
+        ->and(fn () => QueryFilter::for($query, ['id', 'title'])->lint('5 > id'))
+        ->not->toThrow(InvalidRuleExpressionException::class)
+        ->and(fn () => QueryFilter::for($query, ['id', 'title'])->lint('id = title'))
+        ->not->toThrow(InvalidRuleExpressionException::class)
+        ->and(fn () => QueryFilter::for($query, ['id', 'title'])->lint('@request.body.user = @request.auth.id'))
+        ->not->toThrow(InvalidRuleExpressionException::class);
+});
+
+it('rejects flipped grammar for non-reversible operators during SQL lint', function () {
+    $query = Collection::query();
+
+    expect(fn () => QueryFilter::for($query, ['title'])->lint('"admin" like title'))
         ->toThrow(InvalidRuleExpressionException::class);
 });
 
