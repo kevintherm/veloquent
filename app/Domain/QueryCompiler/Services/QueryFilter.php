@@ -2,129 +2,72 @@
 
 namespace App\Domain\QueryCompiler\Services;
 
-use App\Domain\QueryCompiler\Exceptions\InvalidRuleExpressionException;
-use App\Domain\Records\Services\RelationJoinResolver;
-use Carbon\Carbon;
+use App\Domain\RuleEngine\Adapters\JsonFieldAdapter;
+use App\Domain\RuleEngine\Contracts\QueryFieldAdapter;
+use App\Domain\RuleEngine\RuleEngine;
 use Illuminate\Database\Eloquent\Builder;
 
-class QueryFilter
+/**
+ * SQL query filter — extends RuleEngine to compile filter expressions
+ * into Eloquent Builder where-clauses.
+ *
+ * Shares the tokenizer, date helpers, value casting and lint/evaluate logic
+ * from RuleEngine. Only the condition application path differs: instead of
+ * evaluating in-memory, conditions are compiled to Eloquent where() calls.
+ *
+ * LHS/RHS normalization in SQL mode:
+ *   user = @request.auth.id   → ->where('user', '=', $authId)
+ *   @request.auth.id = user   → ->where('user', '=', $authId)  (column always on the DB side)
+ */
+class QueryFilter extends RuleEngine
 {
     private Builder $query;
 
-    private ?RelationJoinResolver $relationJoinResolver = null;
+    /** @var list<QueryFieldAdapter> */
+    private array $queryFieldAdapters = [];
 
-    private array $tokens = [];
+    private array $sqlContext = [];
 
-    private int $pos = 0;
+    private bool $resolveReferences = false;
 
-    private array $allowedFields = [];
+    // ── Factory ───────────────────────────────────────────────────────────────
 
-    private array $evaluationContext = [];
-
-    private bool $allowUnknownFields = false;
-
-    private bool $isEvaluating = false;
-
-    private bool $resolveSystemReferences = false;
-
-    private const VALUE_KEYWORDS = ['true', 'false', 'null'];
-
-    private const OPERATORS = [
-        'is not null',
-        'not like',
-        'not in',
-        '!=',
-        '>=',
-        '<=',
-        'is null',
-        'like',
-        'in',
-        '>',
-        '<',
-        '=',
-    ];
-
-    // Simple no-arg date functions
-    private const DATE_FUNCTIONS_SIMPLE = [
-        'now',
-        'today',
-        'yesterday',
-        'tomorrow',
-        'thisweek',
-        'lastweek',
-        'nextweek',
-        'thismonth',
-        'lastmonth',
-        'nextmonth',
-        'thisyear',
-        'lastyear',
-        'nextyear',
-        'startofday',
-        'endofday',
-        'startofweek',
-        'endofweek',
-        'startofmonth',
-        'endofmonth',
-        'startofyear',
-        'endofyear',
-    ];
-
-    // Parameterized date functions (take a single integer argument)
-    private const DATE_FUNCTIONS_PARAM = [
-        'daysago',
-        'daysfromnow',
-        'weeksago',
-        'weeksfromnow',
-        'monthsago',
-        'monthsfromnow',
-        'yearsago',
-        'yearsfromnow',
-    ];
-
-    // -------------------------------------------------------------------------
-
-    public function __construct(Builder $query, array $allowedFields)
+    public static function for(Builder $query, array $allowedFields): static
     {
-        $this->query = $query;
-        $this->allowedFields = $allowedFields;
+        $instance = new static;
+        $instance->query = $query;
+        $instance->allowedFields = $allowedFields; // sets the protected property from RuleEngine
+
+        return $instance;
     }
 
-    public static function for(Builder $query, array $allowedFields): self
+    /**
+     * Add a QueryFieldAdapter for SQL-mode field resolution (joins, JSON, etc.).
+     */
+    public function withQueryFieldAdapter(QueryFieldAdapter $adapter): static
     {
-        return new self($query, $allowedFields);
-    }
-
-    public function withRelationJoinResolver(RelationJoinResolver $resolver): self
-    {
-        $this->relationJoinResolver = $resolver;
+        $this->queryFieldAdapters[] = $adapter;
 
         return $this;
     }
 
-    public function lint(?string $filter = null, bool $inMemory = false): void
+    /**
+     * Convenience: register a RelationJoinResolver as an adapter.
+     *
+     * @deprecated Use withQueryFieldAdapter(new RelationJoinAdapter($resolver)) instead.
+     */
+    public function withRelationJoinResolver(\App\Domain\Records\Services\RelationJoinResolver $resolver): static
     {
-        $filter = trim($filter ?? '');
-        if ($filter === '') {
-            return;
-        }
-
-        $this->tokens = $this->tokenize($filter);
-        $this->pos = 0;
-
-        if ($inMemory) {
-            $this->isEvaluating = true;
-            $this->allowUnknownFields = true;
-            try {
-                $this->evaluateExpr();
-            } finally {
-                $this->isEvaluating = false;
-                $this->allowUnknownFields = false;
-            }
-        } else {
-            $this->applyExpr($this->query, false);
-        }
+        return $this->withQueryFieldAdapter(
+            new \App\Domain\RuleEngine\Adapters\RelationJoinAdapter($resolver)
+        );
     }
 
+    // ── Public API ─────────────────────────────────────────────────────────────
+
+    /**
+     * Compile and apply a filter expression to the Eloquent query builder.
+     */
     public function run(string $filter, array $context = []): Builder
     {
         $filter = trim($filter);
@@ -132,120 +75,181 @@ class QueryFilter
             return $this->query;
         }
 
-        $this->evaluationContext = $context;
-        $this->resolveSystemReferences = true;
+        $this->sqlContext = $context;
+        $this->resolveReferences = true;
 
         try {
-            $this->tokens = $this->tokenize($filter);
-            $this->pos = 0;
+            $tokens = $this->makeTokenizer(
+                allowedFields: $this->allowedFields,
+                allowUnknownFields: false,
+            )->tokenize($filter);
 
-            $this->applyExpr($this->query, false);
+            $this->setTokens($tokens);
+            $this->applyOr($this->query, false);
         } finally {
-            $this->resolveSystemReferences = false;
-            $this->evaluationContext = [];
+            $this->resolveReferences = false;
+            $this->sqlContext = [];
         }
 
         return $this->query;
     }
 
-    public function evaluate(string $filter, array $context = []): bool
+    /**
+     * Validate a filter expression.
+     *
+     * @param  bool  $inMemory  When true, uses RuleEngine in-memory lint (fields/@-vars on either side).
+     *                          When false (default), validates SQL-mode grammar.
+     */
+    public function lint(?string $filter, bool $inMemory = false): void
     {
-        $filter = trim($filter);
+        $filter = trim($filter ?? '');
         if ($filter === '') {
-            return true;
+            return;
         }
 
-        $this->evaluationContext = $context;
-        $this->allowUnknownFields = true;
-        $this->isEvaluating = true;
+        if ($inMemory) {
+            // In-memory mode: delegate to the parent — it uses $this->allowedFields (protected)
+            parent::lint($filter);
+        } else {
+            // SQL mode: tokenize with field validation, then do a SQL grammar dry-run
+            $tokens = $this->makeTokenizer(
+                allowedFields: $this->allowedFields,
+                allowUnknownFields: false,
+            )->tokenize($filter);
 
-        try {
-            $this->tokens = $this->tokenize($filter);
-            $this->pos = 0;
-
-            $result = $this->evaluateExpr();
-
-            if (isset($this->tokens[$this->pos])) {
-                $token = $this->tokens[$this->pos];
-                $this->invalid("Unexpected token '{$token['value']}'");
+            foreach ($tokens as $token) {
+                if ($token['type'] === 'SYSVAR') {
+                    $this->validateSysVar($token['value']);
+                }
             }
 
-            return $result;
-        } finally {
-            $this->allowUnknownFields = false;
-            $this->isEvaluating = false;
-            $this->evaluationContext = [];
+            $this->setTokens($tokens);
+            $this->sqlDryRunOr();
         }
     }
 
-    // ── Recursive descent ─────────────────────────────────────────────────────
+    // ── Recursive descent — SQL mode dry-run (lint) ────────────────────────
 
-    private function applyExpr(Builder $q, bool $isOr): void
+    private function sqlDryRunOr(): void
     {
-        $this->applyOr($q, $isOr);
+        $this->sqlDryRunAnd();
+        while ($this->peek('OR')) {
+            $this->consume();
+            $this->sqlDryRunAnd();
+        }
     }
 
-    private function evaluateExpr(): bool
+    private function sqlDryRunAnd(): void
     {
-        return $this->evaluateOr();
+        $this->sqlDryRunPrimary();
+        while ($this->peek('AND')) {
+            $this->consume();
+            $this->sqlDryRunPrimary();
+        }
     }
+
+    private function sqlDryRunPrimary(): void
+    {
+        if ($this->peek('LPAREN')) {
+            $this->consume();
+            $this->sqlDryRunOr();
+            $this->expect('RPAREN');
+
+            return;
+        }
+
+        $this->sqlDryRunCondition();
+    }
+
+    private function sqlDryRunCondition(): void
+    {
+        $leftToken = $this->consume();
+        if (!in_array($leftToken['type'], ['FIELD', 'SYSVAR'], true)) {
+            $this->invalid("Expected field or @-variable on left-hand side, got '{$leftToken['value']}'");
+        }
+
+        $opToken = $this->consume();
+        if ($opToken['type'] !== 'OP') {
+            $this->invalid("Expected operator, got '{$opToken['value']}'");
+        }
+
+        $op = $opToken['value'];
+
+        if ($op === 'in' || $op === 'not in') {
+            if ($leftToken['type'] === 'SYSVAR') {
+                $this->invalid("Operator '{$op}' requires a field on the left-hand side in SQL mode");
+            }
+            $this->dryRunListValue();
+
+            return;
+        }
+
+        // Skip the RHS token (can be VALUE, DATE_FUNC, FIELD, SYSVAR)
+        $token = $this->consume();
+        if (!in_array($token['type'], ['VALUE', 'DATE_FUNC', 'FIELD', 'SYSVAR'], true)) {
+            $this->invalid("Expected value on right-hand side, got '{$token['value']}'");
+        }
+
+        // In SQL mode: if LHS is SYSVAR and RHS is not a FIELD, that's also invalid
+        if ($leftToken['type'] === 'SYSVAR' && $token['type'] !== 'FIELD') {
+            $this->invalid("When @-variable is on the left, right-hand side must be a plain field name in SQL mode");
+        }
+    }
+
+    private function dryRunListValue(): void
+    {
+        $this->expect('LPAREN');
+        $count = 0;
+        while (true) {
+            if ($this->peek('RPAREN')) {
+                $this->consume();
+                break;
+            }
+            $token = $this->consume();
+            if (!in_array($token['type'], ['VALUE', 'DATE_FUNC'], true)) {
+                $this->invalid("Expected scalar list value, got '{$token['value']}'");
+            }
+            $count++;
+            if ($this->peek('COMMA')) {
+                $this->consume();
+                continue;
+            }
+            $this->expect('RPAREN');
+            break;
+        }
+        if ($count === 0) {
+            $this->invalid('List operator requires at least one value');
+        }
+    }
+
+    // ── Recursive descent — SQL compilation (run) ─────────────────────────
 
     private function applyOr(Builder $q, bool $isOr): void
     {
         $this->applyAnd($q, $isOr);
-
         while ($this->peek('OR')) {
             $this->consume();
             $this->applyAnd($q, true);
         }
     }
 
-    private function evaluateOr(): bool
-    {
-        $result = $this->evaluateAnd();
-
-        while ($this->peek('OR')) {
-            $this->consume();
-            $right = $this->evaluateAnd();
-            $result = $result || $right;
-        }
-
-        return $result;
-    }
-
     private function applyAnd(Builder $q, bool $isOr): void
     {
         $this->applyPrimary($q, $isOr);
-
         while ($this->peek('AND')) {
             $this->consume();
             $this->applyPrimary($q, false);
         }
     }
 
-    private function evaluateAnd(): bool
-    {
-        $result = $this->evaluatePrimary();
-
-        while ($this->peek('AND')) {
-            $this->consume();
-            $right = $this->evaluatePrimary();
-            $result = $result && $right;
-        }
-
-        return $result;
-    }
-
     private function applyPrimary(Builder $q, bool $isOr): void
     {
         if ($this->peek('LPAREN')) {
             $this->consume();
-
             $method = $isOr ? 'orWhere' : 'where';
             $q->$method(function (Builder $sub) {
-                $this->applyExpr($sub, false);
+                $this->applyOr($sub, false);
             });
-
             $this->expect('RPAREN');
 
             return;
@@ -254,28 +258,11 @@ class QueryFilter
         $this->applyCondition($q, $isOr);
     }
 
-    private function evaluatePrimary(): bool
-    {
-        if ($this->peek('LPAREN')) {
-            $this->consume();
-            $result = $this->evaluateExpr();
-            $this->expect('RPAREN');
-
-            return $result;
-        }
-
-        return $this->evaluateCondition();
-    }
-
     private function applyCondition(Builder $q, bool $isOr): void
     {
-        $fieldToken = $this->consume();
-        if ($fieldToken['type'] !== 'FIELD') {
-            $this->invalid("Expected field name, got '{$fieldToken['value']}'");
-        }
-
-        if ($this->isSystemReference($fieldToken['value'])) {
-            $this->invalid('Invalid rule expression: expected FIELD OP VALUE and field cannot be @-prefixed.');
+        $leftToken = $this->consume();
+        if (!in_array($leftToken['type'], ['FIELD', 'SYSVAR'], true)) {
+            $this->invalid("Expected field or @-variable, got '{$leftToken['value']}'");
         }
 
         $opToken = $this->consume();
@@ -283,232 +270,168 @@ class QueryFilter
             $this->invalid("Expected operator, got '{$opToken['value']}'");
         }
 
-        $field = $fieldToken['value'];
-        $op = strtolower($opToken['value']);
+        $op = $opToken['value'];
+        $leftIsSysVar = $leftToken['type'] === 'SYSVAR';
 
-        if (str_contains($field, '.') && $this->relationJoinResolver) {
-            $field = $this->relationJoinResolver->resolveField($field);
+        // in / not in — list operand; field must be on the left
+        if ($op === 'in' || $op === 'not in') {
+            if ($leftIsSysVar) {
+                $this->invalid("Operator '{$op}' requires a field on the left-hand side in SQL mode");
+            }
+            $list  = $this->resolveListOperand();
+            $field = $this->resolveFieldForQuery($leftToken['value'], $q);
+            $not   = $op === 'not in';
+
+            if ($isOr) {
+                $not ? $q->orWhereNotIn($field, $list) : $q->orWhereIn($field, $list);
+            } else {
+                $not ? $q->whereNotIn($field, $list) : $q->whereIn($field, $list);
+            }
+
+            return;
         }
 
+        // JSON operators (?= and ?&)
+        if ($op === '?=' || $op === '?&') {
+            $rightValue = $this->resolveScalarValue();
+            $jsonField  = $leftIsSysVar
+                ? $this->resolveSysVar($leftToken['value'])
+                : $leftToken['value'];
+
+            $adapter = $this->findJsonAdapter((string) $jsonField);
+
+            if (!$adapter) {
+                $this->invalid("JSON operators require a JSON-path field (using '->' notation): {$jsonField}");
+            }
+
+            if ($op === '?=') {
+                $adapter->applyJsonContains($q, (string) $jsonField, $rightValue, $isOr);
+            } else {
+                $adapter->applyJsonHasKey($q, (string) $jsonField, $rightValue, $isOr);
+            }
+
+            return;
+        }
+
+        // Scalar comparison
+        $rightToken  = $this->consume();
+        $rightValue  = $this->resolveScalarToken($rightToken);
+
+        // Normalize: the SQL column must always be the FIELD side
+        if ($leftIsSysVar) {
+            // @-var on LHS: RHS must be a field name
+            if ($rightToken['type'] !== 'FIELD') {
+                $this->invalid("When @-variable is on the left, right-hand side must be a plain field name in SQL mode");
+            }
+            $field     = $this->resolveFieldForQuery($rightToken['value'], $q);
+            $bindValue = $this->resolveSysVar($leftToken['value']);
+        } else {
+            $field     = $this->resolveFieldForQuery($leftToken['value'], $q);
+            $bindValue = $rightValue;
+        }
+
+        $this->applySqlScalarCondition($q, $field, $op, $bindValue, $isOr);
+    }
+
+    private function applySqlScalarCondition(
+        Builder $q,
+        string $field,
+        string $op,
+        mixed $value,
+        bool $isOr,
+    ): void {
         switch ($op) {
-            case 'is null':
-                $isOr ? $q->orWhereNull($field) : $q->whereNull($field);
-
-                return;
-
-            case 'is not null':
-                $isOr ? $q->orWhereNotNull($field) : $q->whereNotNull($field);
-
-                return;
-
-            case 'in':
-                $value = $this->parseListValue();
-                $isOr ? $q->orWhereIn($field, $value) : $q->whereIn($field, $value);
-
-                return;
-
-            case 'not in':
-                $value = $this->parseListValue();
-                $isOr ? $q->orWhereNotIn($field, $value) : $q->whereNotIn($field, $value);
-
-                return;
-
             case '=':
-                $value = $this->parseScalarValue();
-
                 if ($value === null) {
                     $isOr ? $q->orWhereNull($field) : $q->whereNull($field);
 
                     return;
                 }
-
-                $isOr
-                    ? $q->orWhere($field, '=', $value)
-                    : $q->where($field, '=', $value);
+                $isOr ? $q->orWhere($field, '=', $value) : $q->where($field, '=', $value);
 
                 return;
 
             case '!=':
-                $value = $this->parseScalarValue();
-
                 if ($value === null) {
                     $isOr ? $q->orWhereNotNull($field) : $q->whereNotNull($field);
 
                     return;
                 }
-
-                $isOr
-                    ? $q->orWhere($field, '!=', $value)
-                    : $q->where($field, '!=', $value);
+                $isOr ? $q->orWhere($field, '!=', $value) : $q->where($field, '!=', $value);
 
                 return;
 
             default:
-                $value = $this->parseScalarValue();
-
-                $isOr
-                    ? $q->orWhere($field, $op, $value)
-                    : $q->where($field, $op, $value);
+                // like, not like, >, <, >=, <=
+                $isOr ? $q->orWhere($field, $op, $value) : $q->where($field, $op, $value);
         }
     }
 
-    private function evaluateCondition(): bool
+    // ── Field / value resolution helpers ─────────────────────────────────────
+
+    private function resolveFieldForQuery(string $field, Builder $q): string
     {
-        $fieldToken = $this->consume();
-        if ($fieldToken['type'] !== 'FIELD') {
-            $this->invalid("Expected field name, got '{$fieldToken['value']}'");
-        }
+        foreach ($this->queryFieldAdapters as $adapter) {
+            if ($adapter->supports($field)) {
+                $resolved = $adapter->resolveForQuery($field, $q);
 
-        $opToken = $this->consume();
-        if ($opToken['type'] !== 'OP') {
-            $this->invalid("Expected operator, got '{$opToken['value']}'");
-        }
-
-        $fieldValue = $this->resolveContextValue($fieldToken['value']);
-        $op = strtolower($opToken['value']);
-
-        return match ($op) {
-            'is null' => $fieldValue === null,
-            'is not null' => $fieldValue !== null,
-            'in' => in_array($fieldValue, $this->parseListValue(), false),
-            'not in' => ! in_array($fieldValue, $this->parseListValue(), false),
-            'like' => $this->matchesLike($fieldValue, $this->parseScalarValue()),
-            'not like' => ! $this->matchesLike($fieldValue, $this->parseScalarValue()),
-            '=', '!=', '>', '<', '>=', '<=' => $this->compareValues($fieldValue, $op, $this->parseScalarValue()),
-            default => $this->invalid("Unsupported operator '{$op}' for evaluation"),
-        };
-    }
-
-    private function resolveContextValue(string $field): mixed
-    {
-        $path = str_starts_with($field, '@')
-            ? substr($field, 1)
-            : $field;
-
-        return data_get($this->evaluationContext, $path);
-    }
-
-    private function shouldResolveSystemReferences(): bool
-    {
-        return $this->isEvaluating || $this->resolveSystemReferences;
-    }
-
-    // ── Value helpers ─────────────────────────────────────────────────────────
-
-    private function castValue(string $v): mixed
-    {
-        if (strtolower($v) === 'null') {
-            return null;
-        }
-        if (strtolower($v) === 'true') {
-            return true;
-        }
-        if (strtolower($v) === 'false') {
-            return false;
-        }
-        if (is_numeric($v)) {
-            return $v + 0;
-        }
-
-        return $v;
-    }
-
-    /**
-     * Resolve a DATE_FUNC token (e.g. "today()", "daysago(5)") to a Carbon instance.
-     * Token value is always lowercase and already validated during tokenization.
-     */
-    private function resolveDateFunction(string $v): Carbon
-    {
-        if (! preg_match('/^(\w+)\((\d*)\)$/', $v, $m)) {
-            $this->invalid("Malformed date function: {$v}");
-        }
-
-        $name = $m[1];
-        $arg = $m[2] !== '' ? (int) $m[2] : null;
-
-        if (in_array($name, self::DATE_FUNCTIONS_PARAM, true)) {
-            if ($arg === null) {
-                $this->invalid("Date function {$name}() requires a numeric argument.");
+                return is_string($resolved) ? $resolved : (string) $resolved;
             }
-
-            return match ($name) {
-                'daysago' => now()->subDays($arg),
-                'daysfromnow' => now()->addDays($arg),
-                'weeksago' => now()->subWeeks($arg),
-                'weeksfromnow' => now()->addWeeks($arg),
-                'monthsago' => now()->subMonths($arg),
-                'monthsfromnow' => now()->addMonths($arg),
-                'yearsago' => now()->subYears($arg),
-                'yearsfromnow' => now()->addYears($arg),
-            };
         }
 
-        if ($arg !== null) {
-            $this->invalid("Date function {$name}() does not accept arguments.");
+        return $field;
+    }
+
+    private function resolveSysVar(string $name): mixed
+    {
+        if (!$this->resolveReferences) {
+            return $name;
         }
 
-        return match ($name) {
-            'now' => now(),
-            'today' => now()->startOfDay(),
-            'yesterday' => now()->subDay()->startOfDay(),
-            'tomorrow' => now()->addDay()->startOfDay(),
-            'thisweek' => now()->startOfWeek(),
-            'lastweek' => now()->subWeek()->startOfWeek(),
-            'nextweek' => now()->addWeek()->startOfWeek(),
-            'thismonth' => now()->startOfMonth(),
-            'lastmonth' => now()->subMonth()->startOfMonth(),
-            'nextmonth' => now()->addMonth()->startOfMonth(),
-            'thisyear' => now()->startOfYear(),
-            'lastyear' => now()->subYear()->startOfYear(),
-            'nextyear' => now()->addYear()->startOfYear(),
-            'startofday' => now()->startOfDay(),
-            'endofday' => now()->endOfDay(),
-            'startofweek' => now()->startOfWeek(),
-            'endofweek' => now()->endOfWeek(),
-            'startofmonth' => now()->startOfMonth(),
-            'endofmonth' => now()->endOfMonth(),
-            'startofyear' => now()->startOfYear(),
-            'endofyear' => now()->endOfYear(),
+        return data_get($this->sqlContext, substr($name, 1));
+    }
+
+    private function resolveScalarValue(): mixed
+    {
+        $token = $this->consume();
+
+        return $this->resolveScalarToken($token);
+    }
+
+    private function resolveScalarToken(array $token): mixed
+    {
+        return match ($token['type']) {
+            'DATE_FUNC' => $this->resolveDateFunction($token['value']),
+            'SYSVAR'    => $this->resolveSysVar($token['value']),
+            'FIELD'     => $token['value'], // caller decides what to do with it
+            default     => $this->castLiteral($token['value']),
         };
     }
 
-    private function parseListValue(): array
+    private function resolveListOperand(): array
     {
         $this->expect('LPAREN');
-
         $values = [];
 
         while (true) {
             if ($this->peek('RPAREN')) {
                 $this->consume();
-
                 break;
             }
 
             $token = $this->consume();
-
-            if (! in_array($token['type'], ['VALUE', 'DATE_FUNC', 'FIELD'], true)) {
+            if (!in_array($token['type'], ['VALUE', 'DATE_FUNC', 'SYSVAR'], true)) {
                 $this->invalid("Expected list value, got '{$token['type']}' ('{$token['value']}')");
             }
 
-            if ($token['type'] === 'DATE_FUNC') {
-                $values[] = $this->resolveDateFunction($token['value']);
-            } elseif ($token['type'] === 'FIELD' && $this->isSystemReference($token['value'])) {
-                $values[] = $this->shouldResolveSystemReferences()
-                    ? $this->resolveContextValue($token['value'])
-                    : $token['value'];
-            } else {
-                $values[] = $this->castValue($token['value']);
-            }
+            $values[] = $this->resolveScalarToken($token);
 
             if ($this->peek('COMMA')) {
                 $this->consume();
-
                 continue;
             }
 
             $this->expect('RPAREN');
-
             break;
         }
 
@@ -519,266 +442,14 @@ class QueryFilter
         return $values;
     }
 
-    private function parseScalarValue(): mixed
+    private function findJsonAdapter(string $field): ?JsonFieldAdapter
     {
-        $token = $this->consume();
-
-        if (! in_array($token['type'], ['VALUE', 'DATE_FUNC', 'FIELD'], true)) {
-            $this->invalid("Expected value token, got '{$token['type']}' ('{$token['value']}')");
+        foreach ($this->queryFieldAdapters as $adapter) {
+            if ($adapter instanceof JsonFieldAdapter && $adapter->supports($field)) {
+                return $adapter;
+            }
         }
 
-        if ($token['type'] === 'FIELD') {
-            if (! $this->isSystemReference($token['value'])) {
-                $this->invalid("Expected value token, got 'FIELD' ('{$token['value']}')");
-            }
-
-            return $this->shouldResolveSystemReferences()
-                ? $this->resolveContextValue($token['value'])
-                : $token['value'];
-        }
-
-        return $token['type'] === 'DATE_FUNC'
-            ? $this->resolveDateFunction($token['value'])
-            : $this->castValue($token['value']);
-    }
-
-    private function isSystemReference(string $value): bool
-    {
-        return str_starts_with($value, '@');
-    }
-
-    private function matchesLike(mixed $subject, mixed $pattern): bool
-    {
-        if ($subject === null || $pattern === null) {
-            return false;
-        }
-
-        $subject = (string) $subject;
-        $pattern = (string) $pattern;
-
-        $regex = '/^'.str_replace(['%', '_'], ['.*', '.'], preg_quote($pattern, '/')).'$/u';
-
-        return preg_match($regex, $subject) === 1;
-    }
-
-    private function compareValues(mixed $left, string $op, mixed $right): bool
-    {
-        if ($left instanceof Carbon) {
-            $left = $left->getTimestamp();
-        }
-
-        if ($right instanceof Carbon) {
-            $right = $right->getTimestamp();
-        }
-
-        return match ($op) {
-            '=' => $left == $right,
-            '!=' => $left != $right,
-            '>' => $left > $right,
-            '<' => $left < $right,
-            '>=' => $left >= $right,
-            '<=' => $left <= $right,
-            default => $this->invalid("Unsupported comparison operator '{$op}'"),
-        };
-    }
-
-    // ── Tokenizer ─────────────────────────────────────────────────────────────
-
-    private function tokenize(string $src): array
-    {
-        $tokens = [];
-        $i = 0;
-        $len = strlen($src);
-        $allDateFuncs = array_merge(self::DATE_FUNCTIONS_SIMPLE, self::DATE_FUNCTIONS_PARAM);
-
-        while ($i < $len) {
-            if (ctype_space($src[$i])) {
-                $i++;
-
-                continue;
-            }
-
-            if ($src[$i] === '(') {
-                $tokens[] = ['type' => 'LPAREN', 'value' => '('];
-                $i++;
-
-                continue;
-            }
-            if ($src[$i] === ')') {
-                $tokens[] = ['type' => 'RPAREN', 'value' => ')'];
-                $i++;
-
-                continue;
-            }
-            if ($src[$i] === ',') {
-                $tokens[] = ['type' => 'COMMA', 'value' => ','];
-                $i++;
-
-                continue;
-            }
-
-            if (substr($src, $i, 2) === '&&') {
-                $tokens[] = ['type' => 'AND', 'value' => '&&'];
-                $i += 2;
-
-                continue;
-            }
-            if (substr($src, $i, 2) === '||') {
-                $tokens[] = ['type' => 'OR', 'value' => '||'];
-                $i += 2;
-
-                continue;
-            }
-
-            // quoted string value
-            if ($src[$i] === '"' || $src[$i] === "'") {
-                $q = $src[$i];
-                $j = $i + 1;
-                $val = '';
-                while ($j < $len && $src[$j] !== $q) {
-                    $val .= $src[$j++];
-                }
-                $tokens[] = ['type' => 'VALUE', 'value' => $val];
-                $i = $j + 1;
-
-                continue;
-            }
-
-            // comparison operators (longest match first)
-            $matched = false;
-            foreach (self::OPERATORS as $op) {
-                if (strtolower(substr($src, $i, strlen($op))) === $op) {
-                    $tokens[] = ['type' => 'OP', 'value' => $op];
-                    $i += strlen($op);
-                    $matched = true;
-                    break;
-                }
-            }
-            if ($matched) {
-                continue;
-            }
-
-            // Numeric literal (bare, e.g. 42 or 3.14)
-            if (ctype_digit($src[$i]) || ($src[$i] === '-' && isset($src[$i + 1]) && ctype_digit($src[$i + 1]))) {
-                $num = '';
-                if ($src[$i] === '-') {
-                    $num .= $src[$i++];
-                }
-                while ($i < $len && (ctype_digit($src[$i]) || $src[$i] === '.')) {
-                    $num .= $src[$i++];
-                }
-                $tokens[] = ['type' => 'VALUE', 'value' => $num];
-
-                continue;
-            }
-
-            // Read a bare word (stops at whitespace, parens, or logical symbols)
-            $word = '';
-            while ($i < $len && ! ctype_space($src[$i]) && ! in_array($src[$i], ['(', ')', ',', '&', '|'], true)) {
-                $word .= $src[$i++];
-            }
-
-            if ($word === '') {
-                continue;
-            }
-
-            $lower = strtolower($word);
-
-            // Keyword logical operators (word form)
-            if ($lower === 'and') {
-                $tokens[] = ['type' => 'AND', 'value' => '&&'];
-
-                continue;
-            }
-            if ($lower === 'or') {
-                $tokens[] = ['type' => 'OR', 'value' => '||'];
-
-                continue;
-            }
-
-            // Function call — word followed immediately by '('
-            if (isset($src[$i]) && $src[$i] === '(') {
-                if (! in_array($lower, $allDateFuncs, true)) {
-                    $this->invalid("Unknown function: {$lower}()");
-                }
-
-                // Capture the full argument list including surrounding parens
-                $j = $i;
-                $depth = 0;
-                $args = '';
-                while ($j < $len) {
-                    if ($src[$j] === '(') {
-                        $depth++;
-                    }
-                    if ($src[$j] === ')') {
-                        $depth--;
-                        $args .= $src[$j++];
-                        if ($depth === 0) {
-                            break;
-                        }
-
-                        continue;
-                    }
-                    $args .= $src[$j++];
-                }
-                $i = $j;
-
-                $tokens[] = ['type' => 'DATE_FUNC', 'value' => $lower.$args];
-
-                continue;
-            }
-
-            // Value keywords: true, false, null — always valid as bare words on the RHS
-            if (in_array($lower, self::VALUE_KEYWORDS, true)) {
-                $tokens[] = ['type' => 'VALUE', 'value' => $lower];
-
-                continue;
-            }
-
-            // Everything else must be a known field name
-            $isSystemField = $this->isSystemReference($word);
-
-            if (! in_array($word, $this->allowedFields, true) && ! $this->allowUnknownFields && ! $isSystemField) {
-                $this->invalid("Unknown field or variable: {$word}");
-            }
-
-            $tokens[] = ['type' => 'FIELD', 'value' => $word];
-        }
-
-        return $tokens;
-    }
-
-    // ── Token helpers ─────────────────────────────────────────────────────────
-
-    private function peek(string $type): bool
-    {
-        return isset($this->tokens[$this->pos])
-            && $this->tokens[$this->pos]['type'] === $type;
-    }
-
-    private function consume(): array
-    {
-        $token = $this->tokens[$this->pos] ?? null;
-        if (! $token) {
-            $this->invalid('Unexpected end of filter string');
-        }
-        $this->pos++;
-
-        return $token;
-    }
-
-    private function expect(string $type): array
-    {
-        $token = $this->consume();
-        if ($token['type'] !== $type) {
-            $this->invalid("Expected {$type}, got {$token['type']} ('{$token['value']}')");
-        }
-
-        return $token;
-    }
-
-    private function invalid(string $message): never
-    {
-        throw new InvalidRuleExpressionException($message);
+        return null;
     }
 }
