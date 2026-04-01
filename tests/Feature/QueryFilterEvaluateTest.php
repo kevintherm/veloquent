@@ -26,7 +26,7 @@ it('evaluates a boolean expression against flat context values', function () {
 it('treats missing context variables as null during evaluation', function () {
     $filter = QueryFilter::for(Collection::query(), []);
 
-    expect($filter->evaluate('record.id is null', []))->toBeTrue()
+    expect($filter->evaluate('record.id = null', []))->toBeTrue()
         ->and($filter->evaluate('id = @request.auth.id', ['id' => 1]))->toBeFalse();
 });
 
