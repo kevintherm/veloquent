@@ -2,7 +2,9 @@
 
 namespace App\Domain\QueryCompiler\Services;
 
+use App\Domain\Records\Services\RelationJoinResolver;
 use App\Domain\RuleEngine\Adapters\JsonFieldAdapter;
+use App\Domain\RuleEngine\Adapters\RelationJoinAdapter;
 use App\Domain\RuleEngine\Contracts\QueryFieldAdapter;
 use App\Domain\RuleEngine\RuleEngine;
 use Illuminate\Database\Eloquent\Builder;
@@ -16,8 +18,12 @@ use Illuminate\Database\Eloquent\Builder;
  * evaluating in-memory, conditions are compiled to Eloquent where() calls.
  *
  * LHS/RHS normalization in SQL mode:
- *   user = @request.auth.id   → ->where('user', '=', $authId)
- *   @request.auth.id = user   → ->where('user', '=', $authId)  (column always on the DB side)
+ *   user = @request.auth.id              → ->where('user', '=', $authId)
+ *
+ *   @request.auth.id = user              → ->where('user', '=', $authId)
+ *   5 > score                            → ->where('score', '<', 5)
+ *
+ *   @request.body.user = @request.auth.id→ ->whereRaw('? = ?', [$bodyUser, $authId])
  */
 class QueryFilter extends RuleEngine
 {
@@ -56,10 +62,10 @@ class QueryFilter extends RuleEngine
      *
      * @deprecated Use withQueryFieldAdapter(new RelationJoinAdapter($resolver)) instead.
      */
-    public function withRelationJoinResolver(\App\Domain\Records\Services\RelationJoinResolver $resolver): static
+    public function withRelationJoinResolver(RelationJoinResolver $resolver): static
     {
         return $this->withQueryFieldAdapter(
-            new \App\Domain\RuleEngine\Adapters\RelationJoinAdapter($resolver)
+            new RelationJoinAdapter($resolver)
         );
     }
 
@@ -164,8 +170,8 @@ class QueryFilter extends RuleEngine
     private function sqlDryRunCondition(): void
     {
         $leftToken = $this->consume();
-        if (!in_array($leftToken['type'], ['FIELD', 'SYSVAR'], true)) {
-            $this->invalid("Expected field or @-variable on left-hand side, got '{$leftToken['value']}'");
+        if (! in_array($leftToken['type'], ['FIELD', 'SYSVAR', 'VALUE', 'DATE_FUNC'], true)) {
+            $this->invalid("Expected scalar token on left-hand side, got '{$leftToken['value']}'");
         }
 
         $opToken = $this->consume();
@@ -176,7 +182,7 @@ class QueryFilter extends RuleEngine
         $op = $opToken['value'];
 
         if ($op === 'in' || $op === 'not in') {
-            if ($leftToken['type'] === 'SYSVAR') {
+            if ($leftToken['type'] !== 'FIELD') {
                 $this->invalid("Operator '{$op}' requires a field on the left-hand side in SQL mode");
             }
             $this->dryRunListValue();
@@ -184,15 +190,33 @@ class QueryFilter extends RuleEngine
             return;
         }
 
-        // Skip the RHS token (can be VALUE, DATE_FUNC, FIELD, SYSVAR)
-        $token = $this->consume();
-        if (!in_array($token['type'], ['VALUE', 'DATE_FUNC', 'FIELD', 'SYSVAR'], true)) {
-            $this->invalid("Expected value on right-hand side, got '{$token['value']}'");
+        if ($op === '?=' || $op === '?&') {
+            if (! in_array($leftToken['type'], ['FIELD', 'SYSVAR'], true)) {
+                $this->invalid('JSON operators require a field or @-variable on the left-hand side in SQL mode');
+            }
+
+            $rightToken = $this->consume();
+            if (! in_array($rightToken['type'], ['VALUE', 'DATE_FUNC', 'FIELD', 'SYSVAR'], true)) {
+                $this->invalid("Expected scalar token on right-hand side, got '{$rightToken['value']}'");
+            }
+
+            return;
         }
 
-        // In SQL mode: if LHS is SYSVAR and RHS is not a FIELD, that's also invalid
-        if ($leftToken['type'] === 'SYSVAR' && $token['type'] !== 'FIELD') {
-            $this->invalid("When @-variable is on the left, right-hand side must be a plain field name in SQL mode");
+        // Skip the RHS token (can be VALUE, DATE_FUNC, FIELD, SYSVAR)
+        $rightToken = $this->consume();
+        if (! in_array($rightToken['type'], ['VALUE', 'DATE_FUNC', 'FIELD', 'SYSVAR'], true)) {
+            $this->invalid("Expected scalar token on right-hand side, got '{$rightToken['value']}'");
+        }
+
+        if (! $this->isReversibleSqlOperator($op)) {
+            if ($leftToken['type'] !== 'FIELD') {
+                $this->invalid("Operator '{$op}' requires a field on the left-hand side in SQL mode");
+            }
+
+            if ($rightToken['type'] === 'FIELD') {
+                $this->invalid("Operator '{$op}' does not support a field on the right-hand side in SQL mode");
+            }
         }
     }
 
@@ -206,12 +230,13 @@ class QueryFilter extends RuleEngine
                 break;
             }
             $token = $this->consume();
-            if (!in_array($token['type'], ['VALUE', 'DATE_FUNC'], true)) {
+            if (! in_array($token['type'], ['VALUE', 'DATE_FUNC'], true)) {
                 $this->invalid("Expected scalar list value, got '{$token['value']}'");
             }
             $count++;
             if ($this->peek('COMMA')) {
                 $this->consume();
+
                 continue;
             }
             $this->expect('RPAREN');
@@ -261,8 +286,8 @@ class QueryFilter extends RuleEngine
     private function applyCondition(Builder $q, bool $isOr): void
     {
         $leftToken = $this->consume();
-        if (!in_array($leftToken['type'], ['FIELD', 'SYSVAR'], true)) {
-            $this->invalid("Expected field or @-variable, got '{$leftToken['value']}'");
+        if (! in_array($leftToken['type'], ['FIELD', 'SYSVAR', 'VALUE', 'DATE_FUNC'], true)) {
+            $this->invalid("Expected scalar token, got '{$leftToken['value']}'");
         }
 
         $opToken = $this->consume();
@@ -271,16 +296,17 @@ class QueryFilter extends RuleEngine
         }
 
         $op = $opToken['value'];
+        $leftIsField = $leftToken['type'] === 'FIELD';
         $leftIsSysVar = $leftToken['type'] === 'SYSVAR';
 
         // in / not in — list operand; field must be on the left
         if ($op === 'in' || $op === 'not in') {
-            if ($leftIsSysVar) {
+            if (! $leftIsField) {
                 $this->invalid("Operator '{$op}' requires a field on the left-hand side in SQL mode");
             }
-            $list  = $this->resolveListOperand();
+            $list = $this->resolveListOperand();
             $field = $this->resolveFieldForQuery($leftToken['value'], $q);
-            $not   = $op === 'not in';
+            $not = $op === 'not in';
 
             if ($isOr) {
                 $not ? $q->orWhereNotIn($field, $list) : $q->orWhereIn($field, $list);
@@ -293,14 +319,18 @@ class QueryFilter extends RuleEngine
 
         // JSON operators (?= and ?&)
         if ($op === '?=' || $op === '?&') {
+            if (! in_array($leftToken['type'], ['FIELD', 'SYSVAR'], true)) {
+                $this->invalid('JSON operators require a field or @-variable on the left-hand side in SQL mode');
+            }
+
             $rightValue = $this->resolveScalarValue();
-            $jsonField  = $leftIsSysVar
+            $jsonField = $leftIsSysVar
                 ? $this->resolveSysVar($leftToken['value'])
                 : $leftToken['value'];
 
             $adapter = $this->findJsonAdapter((string) $jsonField);
 
-            if (!$adapter) {
+            if (! $adapter) {
                 $this->invalid("JSON operators require a JSON-path field (using '->' notation): {$jsonField}");
             }
 
@@ -314,23 +344,62 @@ class QueryFilter extends RuleEngine
         }
 
         // Scalar comparison
-        $rightToken  = $this->consume();
-        $rightValue  = $this->resolveScalarToken($rightToken);
-
-        // Normalize: the SQL column must always be the FIELD side
-        if ($leftIsSysVar) {
-            // @-var on LHS: RHS must be a field name
-            if ($rightToken['type'] !== 'FIELD') {
-                $this->invalid("When @-variable is on the left, right-hand side must be a plain field name in SQL mode");
-            }
-            $field     = $this->resolveFieldForQuery($rightToken['value'], $q);
-            $bindValue = $this->resolveSysVar($leftToken['value']);
-        } else {
-            $field     = $this->resolveFieldForQuery($leftToken['value'], $q);
-            $bindValue = $rightValue;
+        $rightToken = $this->consume();
+        if (! in_array($rightToken['type'], ['VALUE', 'DATE_FUNC', 'FIELD', 'SYSVAR'], true)) {
+            $this->invalid("Expected scalar token on right-hand side, got '{$rightToken['value']}'");
         }
 
-        $this->applySqlScalarCondition($q, $field, $op, $bindValue, $isOr);
+        $rightIsField = $rightToken['type'] === 'FIELD';
+
+        if (! $this->isReversibleSqlOperator($op)) {
+            if (! $leftIsField) {
+                $this->invalid("Operator '{$op}' requires a field on the left-hand side in SQL mode");
+            }
+
+            if ($rightIsField) {
+                $this->invalid("Operator '{$op}' does not support a field on the right-hand side in SQL mode");
+            }
+
+            $field = $this->resolveFieldForQuery($leftToken['value'], $q);
+            $value = $this->resolveScalarToken($rightToken);
+            $this->applySqlScalarCondition($q, $field, $op, $value, $isOr);
+
+            return;
+        }
+
+        if ($leftIsField && $rightIsField) {
+            $leftField = $this->resolveFieldForQuery($leftToken['value'], $q);
+            $rightField = $this->resolveFieldForQuery($rightToken['value'], $q);
+
+            if ($isOr) {
+                $q->orWhereColumn($leftField, $op, $rightField);
+            } else {
+                $q->whereColumn($leftField, $op, $rightField);
+            }
+
+            return;
+        }
+
+        if ($leftIsField) {
+            $field = $this->resolveFieldForQuery($leftToken['value'], $q);
+            $value = $this->resolveScalarToken($rightToken);
+            $this->applySqlScalarCondition($q, $field, $op, $value, $isOr);
+
+            return;
+        }
+
+        if ($rightIsField) {
+            $field = $this->resolveFieldForQuery($rightToken['value'], $q);
+            $value = $this->resolveScalarToken($leftToken);
+            $this->applySqlScalarCondition($q, $field, $this->invertOrderedOperator($op), $value, $isOr);
+
+            return;
+        }
+
+        $leftValue = $this->resolveScalarToken($leftToken);
+        $rightValue = $this->resolveScalarToken($rightToken);
+
+        $this->applySqlLiteralCondition($q, $op, $leftValue, $rightValue, $isOr);
     }
 
     private function applySqlScalarCondition(
@@ -367,6 +436,33 @@ class QueryFilter extends RuleEngine
         }
     }
 
+    private function applySqlLiteralCondition(
+        Builder $q,
+        string $op,
+        mixed $leftValue,
+        mixed $rightValue,
+        bool $isOr,
+    ): void {
+        $method = $isOr ? 'orWhereRaw' : 'whereRaw';
+        $q->$method('? '.$op.' ?', [$leftValue, $rightValue]);
+    }
+
+    private function isReversibleSqlOperator(string $op): bool
+    {
+        return in_array($op, ['=', '!=', '>', '<', '>=', '<='], true);
+    }
+
+    private function invertOrderedOperator(string $op): string
+    {
+        return match ($op) {
+            '>' => '<',
+            '<' => '>',
+            '>=' => '<=',
+            '<=' => '>=',
+            default => $op,
+        };
+    }
+
     // ── Field / value resolution helpers ─────────────────────────────────────
 
     private function resolveFieldForQuery(string $field, Builder $q): string
@@ -384,7 +480,7 @@ class QueryFilter extends RuleEngine
 
     private function resolveSysVar(string $name): mixed
     {
-        if (!$this->resolveReferences) {
+        if (! $this->resolveReferences) {
             return $name;
         }
 
@@ -402,9 +498,9 @@ class QueryFilter extends RuleEngine
     {
         return match ($token['type']) {
             'DATE_FUNC' => $this->resolveDateFunction($token['value']),
-            'SYSVAR'    => $this->resolveSysVar($token['value']),
-            'FIELD'     => $token['value'], // caller decides what to do with it
-            default     => $this->castLiteral($token['value']),
+            'SYSVAR' => $this->resolveSysVar($token['value']),
+            'FIELD' => $token['value'], // caller decides what to do with it
+            default => $this->castLiteral($token['value']),
         };
     }
 
@@ -420,7 +516,7 @@ class QueryFilter extends RuleEngine
             }
 
             $token = $this->consume();
-            if (!in_array($token['type'], ['VALUE', 'DATE_FUNC', 'SYSVAR'], true)) {
+            if (! in_array($token['type'], ['VALUE', 'DATE_FUNC', 'SYSVAR'], true)) {
                 $this->invalid("Expected list value, got '{$token['type']}' ('{$token['value']}')");
             }
 
@@ -428,6 +524,7 @@ class QueryFilter extends RuleEngine
 
             if ($this->peek('COMMA')) {
                 $this->consume();
+
                 continue;
             }
 

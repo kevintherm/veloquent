@@ -21,8 +21,8 @@ Rules are written in a custom, human-readable expression language. For example:
 
 ### Evaluation Constraints
 
-- **SQL Evaluation**: When rules are translated to SQL (e.g., for `list` or `view`), they must strictly follow the `field operator value` format (e.g., `status = "active"`). Using `value operator field` (e.g., `"active" = status`) is not supported for SQL-based filtering.
-- **Memory Evaluation**: In-memory evaluation allows for more complex logic, including the use of `@` prefixed variables like `@request.body`, `@request.auth`, and `@request.query`.
+- **SQL Evaluation**: SQL mode supports symmetric scalar comparisons for reversible operators (`=`, `!=`, `>`, `<`, `>=`, `<=`), including `field op value`, `value op field`, `field op field`, and `@request op @request`. Non-reversible operators (`like`, `not like`) require a field on the left side. See `docs/rule-engine/query-filter.md`.
+- **Memory Evaluation**: In-memory evaluation supports symmetric field and `@` variable comparisons and broader context resolution with `@request.body`, `@request.auth`, and `@request.query`. See `docs/rule-engine/rule-engine.md`.
 
 ### Contextual Variables
 
