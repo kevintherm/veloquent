@@ -16,7 +16,7 @@ class ConfirmPasswordResetRequest extends FormRequest
         return [
             'token' => ['required', 'string'],
             'email' => ['required', 'string', 'email'],
-            'password' => ['required', 'string', 'min:8'],
+            'new_password' => ['required', 'string', 'min:8'],
         ];
     }
 }

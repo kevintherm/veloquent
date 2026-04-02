@@ -14,6 +14,15 @@ use App\Http\Controllers\OnboardingController;
 use App\Http\Middleware\SuperuserOnly;
 use Illuminate\Support\Facades\Route;
 
+/*
+|--------------------------------------------------------------------------
+| Collection Management
+|--------------------------------------------------------------------------
+|
+| Public endpoints to manage collection resources. Namespaced route names
+| use the `collections.*` convention for easier referencing.
+|
+*/
 Route::prefix('collections')->group(function () {
     Route::get('/', [CollectionController::class, 'index'])->name('collections.index');
     Route::post('/', [CollectionController::class, 'store'])->name('collections.store');
@@ -23,6 +32,16 @@ Route::prefix('collections')->group(function () {
     Route::delete('/{collection}', [CollectionController::class, 'destroy'])->name('collections.destroy');
 });
 
+/*
+|--------------------------------------------------------------------------
+| Record Management (Per-Collection)
+|--------------------------------------------------------------------------
+|
+| CRUD endpoints for records scoped to a collection. Controllers should
+| perform authorization and validation; route model binding is used for
+| `collection` and `record` parameters.
+|
+*/
 Route::prefix('collections/{collection}/records')->group(function () {
     Route::get('/', [RecordController::class, 'index'])->name('records.index');
     Route::post('/', [RecordController::class, 'store'])->name('records.store');
@@ -31,6 +50,16 @@ Route::prefix('collections/{collection}/records')->group(function () {
     Route::delete('/{record}', [RecordController::class, 'destroy'])->name('records.destroy');
 });
 
+/*
+|--------------------------------------------------------------------------
+| Per-Collection Authentication
+|--------------------------------------------------------------------------
+|
+| Authentication endpoints that operate within the scope of a collection.
+| Some routes are throttled (OTP flows) and others are protected by the
+| `auth:api` middleware to require a valid API token.
+|
+*/
 Route::prefix('collections/{collection}/auth')->name('collections.auth.')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->name('authenticate');
 
@@ -50,21 +79,61 @@ Route::prefix('collections/{collection}/auth')->name('collections.auth.')->group
     });
 });
 
+/*
+|--------------------------------------------------------------------------
+| OAuth2 Integration
+|--------------------------------------------------------------------------
+|
+| Endpoints used by third-party OAuth providers: redirect helper, callback
+| handler and token exchange. Keep provider-specific logic inside the
+| corresponding controller.
+|
+*/
 Route::prefix('oauth2')->group(function () {
     Route::post('/redirect', [OAuthController::class, 'redirect'])->name('oauth.redirect');
     Route::get('/callback', [OAuthController::class, 'callback'])->name('oauth.callback');
     Route::post('/exchange', [OAuthController::class, 'exchange'])->name('oauth.exchange');
 });
 
+/*
+|--------------------------------------------------------------------------
+| Onboarding
+|--------------------------------------------------------------------------
+|
+| Routes used during initial setup for the application.
+| These endpoints are used to check if the application is initialized and
+| to create a superuser account. Creating superuser account is only allowed
+| during the initial setup process, once.
+|
+*/
 Route::post('/onboarding/initialized', [OnboardingController::class, 'initialized'])->name('onboarding.initialized.check');
 Route::post('/onboarding/superuser', [OnboardingController::class, 'createSuperuser'])->name('onboarding.superuser.create');
 
+/*
+|--------------------------------------------------------------------------
+| Authenticated Endpoints
+|--------------------------------------------------------------------------
+|
+| Routes that require a valid API token. Keep them grouped together and
+| ensure controllers perform fine-grained authorization.
+|
+*/
 Route::middleware('auth:api')->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
     Route::post('/collections/{collection}/subscribe', [SubscribeController::class, 'subscribe']);
     Route::delete('/collections/{collection}/subscribe', [SubscribeController::class, 'unsubscribe']);
 });
 
+/*
+|--------------------------------------------------------------------------
+| Superuser / Admin Routes
+|--------------------------------------------------------------------------
+|
+| These routes are restricted to superusers and expose administrative
+| functionality such as schema recovery, orphan detection, log viewing,
+| email template management, and OAuth provider configuration.
+|
+*/
 Route::middleware(['auth:api', SuperuserOnly::class])->group(function () {
     Route::get('/schema/corrupt', [SchemaRecoveryController::class, 'index'])->name('schema.corrupt.index');
     Route::post('/collections/{collection}/recover', [SchemaRecoveryController::class, 'recover'])->name('collections.recover');

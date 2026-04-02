@@ -6,6 +6,7 @@ use App\Domain\Collections\Enums\CollectionFieldType;
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\QueryCompiler\Exceptions\InvalidRuleExpressionException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 
 uses(RefreshDatabase::class);
 
@@ -100,4 +101,79 @@ it('still rejects unknown relation field access in api rule lint', function () {
             'delete' => '',
         ],
     ]))->toThrow(InvalidRuleExpressionException::class);
+});
+
+it('requires manage api rule for auth collections and returns array-shaped errors', function () {
+    try {
+        app(CreateCollectionAction::class)->execute([
+            'name' => 'auth_'.alphaSuffix(),
+            'type' => CollectionType::Auth->value,
+            'fields' => [],
+            'api_rules' => [
+                'list' => '',
+                'create' => '',
+                'view' => '',
+                'update' => '',
+                'delete' => '',
+            ],
+        ]);
+
+        $this->fail('Expected ValidationException was not thrown.');
+    } catch (ValidationException $exception) {
+        expect($exception->errors())
+            ->toHaveKey('api_rules')
+            ->and($exception->errors()['api_rules'])
+            ->toBe(['Missing API rules for: manage']);
+    }
+});
+
+it('allows manage key for base collections', function () {
+    expect(fn () => app(CreateCollectionAction::class)->execute([
+        'name' => 'base_'.alphaSuffix(),
+        'type' => CollectionType::Base->value,
+        'fields' => [
+            ['name' => 'title', 'type' => CollectionFieldType::Text->value],
+        ],
+        'api_rules' => [
+            'list' => '',
+            'create' => '',
+            'view' => '',
+            'update' => '',
+            'delete' => '',
+            'manage' => '',
+        ],
+    ]))->not->toThrow(ValidationException::class);
+});
+
+it('uses in-memory lint mode for create and update api rules', function () {
+    expect(fn () => app(CreateCollectionAction::class)->execute([
+        'name' => 'memory_'.alphaSuffix(),
+        'type' => CollectionType::Base->value,
+        'fields' => [
+            ['name' => 'title', 'type' => CollectionFieldType::Text->value],
+        ],
+        'api_rules' => [
+            'list' => '',
+            'create' => '@request.auth.id in (1, 2)',
+            'view' => '',
+            'update' => '@request.auth.id in (1, 2)',
+            'delete' => '',
+        ],
+    ]))->not->toThrow(InvalidRuleExpressionException::class);
+});
+
+it('uses in-memory lint mode for auth manage rules', function () {
+    expect(fn () => app(CreateCollectionAction::class)->execute([
+        'name' => 'auth_manage_'.alphaSuffix(),
+        'type' => CollectionType::Auth->value,
+        'fields' => [],
+        'api_rules' => [
+            'list' => '',
+            'create' => '',
+            'view' => '',
+            'update' => '',
+            'delete' => '',
+            'manage' => '@request.auth.id in (1, 2)',
+        ],
+    ]))->not->toThrow(InvalidRuleExpressionException::class);
 });

@@ -6,6 +6,7 @@ use App\Domain\Collections\Models\Collection;
 use App\Domain\OAuth\Factory\OAuthDriverFactory;
 use App\Domain\OAuth\Models\OAuthProvider;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Laravel\Socialite\Two\GithubProvider;
 use Laravel\Socialite\Two\User as SocialiteUser;
@@ -45,7 +46,7 @@ it('redirects to provider', function () {
         $mock->shouldReceive('make')->andReturn($mockDriver);
     }));
 
-    $response = $this->postJson("/api/oauth2/redirect", [
+    $response = $this->postJson('/api/oauth2/redirect', [
         'collection' => $this->collection->id,
         'provider' => 'github',
     ]);
@@ -73,18 +74,18 @@ it('handles callback and creates record', function () {
     }));
 
     $state = 'fake-state';
-    \Illuminate\Support\Facades\Cache::put("oauth_state:{$state}", [
+    Cache::put("oauth_state:{$state}", [
         'provider' => 'github',
         'collection' => $this->collection->id,
     ]);
     $response = $this->get("/api/oauth2/callback?code=fake-code&state={$state}");
- 
+
     $response->assertStatus(200)
         ->assertJsonStructure(['data' => ['code']]);
 
     $exchangeCode = $response->json('data.code');
 
-    $exchangeResponse = $this->postJson("/api/oauth2/exchange", [
+    $exchangeResponse = $this->postJson('/api/oauth2/exchange', [
         'code' => $exchangeCode,
     ]);
 
@@ -126,26 +127,26 @@ it('logs in existing oauth user', function () {
 
     // Run once to create
     $state1 = 'fake-state-1';
-    \Illuminate\Support\Facades\Cache::put("oauth_state:{$state1}", [
+    Cache::put("oauth_state:{$state1}", [
         'provider' => 'github',
         'collection' => $this->collection->id,
     ]);
     $callback1 = $this->get("/api/oauth2/callback?code=fake-code&state={$state1}");
     $code1 = $callback1->json('data.code');
-    $this->postJson("/api/oauth2/exchange", ['code' => $code1])->assertStatus(200);
+    $this->postJson('/api/oauth2/exchange', ['code' => $code1])->assertStatus(200);
 
     $count = DB::table($this->collection->getPhysicalTableName())->count();
     expect($count)->toBe(1);
 
     // Run again to login
     $state2 = 'fake-state-2';
-    \Illuminate\Support\Facades\Cache::put("oauth_state:{$state2}", [
+    Cache::put("oauth_state:{$state2}", [
         'provider' => 'github',
         'collection' => $this->collection->id,
     ]);
     $callback2 = $this->get("/api/oauth2/callback?code=fake-code&state={$state2}");
     $code2 = $callback2->json('data.code');
-    $response = $this->postJson("/api/oauth2/exchange", ['code' => $code2]);
+    $response = $this->postJson('/api/oauth2/exchange', ['code' => $code2]);
     $response->assertStatus(200);
 
     // Still should only be 1 record

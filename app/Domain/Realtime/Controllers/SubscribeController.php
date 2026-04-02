@@ -3,21 +3,20 @@
 namespace App\Domain\Realtime\Controllers;
 
 use App\Domain\Collections\Models\Collection;
-use App\Domain\Realtime\Contracts\RealtimeBusDriver;
-use App\Domain\Realtime\Models\RealtimeSubscription;
+use App\Domain\Realtime\Actions\SubscribeToCollectionAction;
+use App\Domain\Realtime\Actions\UnsubscribeFromCollectionAction;
 use App\Domain\Records\Models\Record;
 use App\Infrastructure\Http\Controllers\ApiController;
-use Carbon\CarbonImmutable;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 
 class SubscribeController extends ApiController
 {
     public function __construct(
-        private readonly RealtimeBusDriver $driver,
+        private readonly SubscribeToCollectionAction $subscribeAction,
+        private readonly UnsubscribeFromCollectionAction $unsubscribeAction,
     ) {}
 
     public function subscribe(Request $request, Collection $collection): JsonResponse
@@ -33,43 +32,12 @@ class SubscribeController extends ApiController
             'filter' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $authCollection = $user->collection->name;
-        $subscriberId = (string) $user->getKey();
-        $channel = "private-$authCollection.$subscriberId";
-        $subscriptionTtl = max(1, (int) config('velo.realtime.subscription_ttl', 120));
-        $expiresAt = CarbonImmutable::now()->addSeconds($subscriptionTtl);
-
-        dispatch(function () use ($collection, $authCollection, $subscriberId, $channel, $validated, $expiresAt): void {
-            $subscription = RealtimeSubscription::query()->updateOrCreate(
-                [
-                    'collection_id' => $collection->id,
-                    'auth_collection' => $authCollection,
-                    'subscriber_id' => $subscriberId,
-                ],
-                [
-                    'id' => (string) Str::ulid(),
-                    'channel' => $channel,
-                    'filter' => (string) ($validated['filter'] ?? ''),
-                    'expired_at' => $expiresAt,
-                ]
-            );
-
-            $this->driver->publish([
-                'type' => 'connection',
-                'action' => 'subscribe',
-                'collection_id' => $collection->id,
-                'auth_collection' => $authCollection,
-                'subscriber_id' => $subscriberId,
-                'filter' => $subscription->filter,
-                'channel' => $channel,
-                'expired_at' => $expiresAt->toIso8601String(),
-            ]);
-        })->afterResponse();
+        $result = $this->subscribeAction->execute($user, $collection, $validated['filter'] ?? null);
 
         return $this->successResponse([
             'status' => 'subscribed',
-            'channel' => $channel,
-            'expires_at' => $expiresAt->toIso8601String(),
+            'channel' => $result['channel'],
+            'expires_at' => $result['expires_at'],
         ]);
     }
 
@@ -82,26 +50,7 @@ class SubscribeController extends ApiController
             throw new AuthenticationException;
         }
 
-        $authCollection = $user->getTable();
-        $subscriberId = (string) $user->getKey();
-        $channel = 'private-'.$authCollection.'.'.$subscriberId;
-
-        dispatch(function () use ($collection, $authCollection, $subscriberId, $channel): void {
-            RealtimeSubscription::query()->where([
-                'collection_id' => $collection->id,
-                'auth_collection' => $authCollection,
-                'subscriber_id' => $subscriberId,
-            ])->delete();
-
-            $this->driver->publish([
-                'type' => 'connection',
-                'action' => 'unsubscribe',
-                'collection_id' => $collection->id,
-                'auth_collection' => $authCollection,
-                'subscriber_id' => $subscriberId,
-                'channel' => $channel,
-            ]);
-        })->afterResponse();
+        $this->unsubscribeAction->execute($user, $collection);
 
         return $this->successResponse(['status' => 'unsubscribed']);
     }

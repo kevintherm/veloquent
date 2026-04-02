@@ -1,6 +1,5 @@
 <?php
 
-use App\Domain\Collections\Models\Collection;
 use App\Domain\QueryCompiler\Exceptions\InvalidRuleExpressionException;
 use App\Domain\RuleEngine\RuleEngine;
 

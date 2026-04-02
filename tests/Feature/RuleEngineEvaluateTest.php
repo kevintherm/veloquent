@@ -1,6 +1,5 @@
 <?php
 
-use App\Domain\QueryCompiler\Exceptions\InvalidRuleExpressionException;
 use App\Domain\RuleEngine\RuleEngine;
 
 // ── Basic evaluation ─────────────────────────────────────────────────────────

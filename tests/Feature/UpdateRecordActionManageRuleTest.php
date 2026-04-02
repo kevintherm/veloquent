@@ -13,7 +13,7 @@ uses(RefreshDatabase::class);
 
 it('prevents direct update of email and password when manage rule is null', function () {
     $collection = app(CreateCollectionAction::class)->execute([
-        'name' => 'users_' . Str::random(5),
+        'name' => 'users_'.Str::random(5),
         'type' => CollectionType::Auth->value,
         'fields' => [],
         'api_rules' => [
@@ -44,7 +44,7 @@ it('prevents direct update of email and password when manage rule is null', func
 
 it('allows direct update of email and password when manage rule is empty string', function () {
     $collection = app(CreateCollectionAction::class)->execute([
-        'name' => 'users_'. Str::random(5),
+        'name' => 'users_'.Str::random(5),
         'type' => CollectionType::Auth->value,
         'fields' => [],
         'api_rules' => [
@@ -76,7 +76,7 @@ it('allows direct update of email and password when manage rule is empty string'
 
 it('evaluates manage rule correctly to allow or deny update', function () {
     $collection = app(CreateCollectionAction::class)->execute([
-        'name' => 'users_' . Str::random(5),
+        'name' => 'users_'.Str::random(5),
         'type' => CollectionType::Auth->value,
         'fields' => [],
         'api_rules' => [

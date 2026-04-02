@@ -2,8 +2,8 @@
 
 namespace App\Domain\RuleEngine\Adapters;
 
-use App\Domain\RuleEngine\Contracts\QueryFieldAdapter;
 use App\Domain\Records\Services\RelationJoinResolver;
+use App\Domain\RuleEngine\Contracts\QueryFieldAdapter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Expression;
 
