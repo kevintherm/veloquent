@@ -11,6 +11,7 @@ use App\Domain\Auth\Actions\LogoutAllAction;
 use App\Domain\Auth\Actions\RequestEmailChangeAction;
 use App\Domain\Auth\Actions\RequestEmailVerificationAction;
 use App\Domain\Auth\Actions\RequestPasswordResetAction;
+use App\Domain\Auth\Services\TokenAuthService;
 use App\Domain\Auth\ValueObjects\TokenData;
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
@@ -39,7 +40,25 @@ class AuthController extends ApiController
         private ConfirmEmailVerificationAction $confirmEmailVerificationAction,
         private RequestEmailChangeAction $requestEmailChangeAction,
         private ConfirmEmailChangeAction $confirmEmailChangeAction,
+        private TokenAuthService $tokenAuthService,
     ) {}
+
+    public function impersonate(Collection $collection, string $recordId): JsonResponse
+    {
+        if ($collection->type !== CollectionType::Auth) {
+            return $this->errorResponse('This collection does not support authentication.', Response::HTTP_FORBIDDEN);
+        }
+
+        $record = Record::of($collection)->find($recordId);
+
+        if (! $record) {
+            return $this->errorResponse('Record does not belong to this collection.', Response::HTTP_NOT_FOUND);
+        }
+
+        $tokenData = $this->tokenAuthService->generateToken($record);
+
+        return $this->tokenResponse($tokenData, Response::HTTP_OK);
+    }
 
     public function user(Collection $collection): JsonResponse
     {

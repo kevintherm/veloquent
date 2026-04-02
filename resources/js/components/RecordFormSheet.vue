@@ -22,7 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui";
-import { Copy, Plus, Search, Trash2, X, MoreVertical } from "lucide-vue-next";
+import { Copy, Plus, Search, Trash2, X, MoreVertical, Key } from "lucide-vue-next";
 import { resolveCollectionFieldTypeIcon } from "@/lib/collectionFieldTypeIcons";
 import { openRecordForm } from "@/lib/recordFormSheet";
 import { useDashboardState } from "@/lib/dashboardState";
@@ -712,6 +712,45 @@ const handleCopyRawJson = async () => {
   }
 };
 
+const handleGenerateAuthToken = async () => {
+  closeRecordActionsMenu();
+
+  const recordId = resolveRecordIdentifier();
+  const identifier = fetchedCollection.value?.id ?? collectionIdentifier.value;
+
+  if (!recordId || !identifier) {
+    toast.error("Unable to resolve record or collection.");
+    return;
+  }
+
+  submitting.value = true;
+  const loadingToastId = toast.loading("Generating auth token...");
+
+  try {
+    const response = await axios.post(
+      `/api/collections/${encodeURIComponent(identifier)}/auth/impersonate/${encodeURIComponent(recordId)}`
+    );
+
+    const token = response?.data?.data?.token;
+
+    if (!token) {
+      throw new Error("No token received.");
+    }
+
+    await navigator.clipboard.writeText(token);
+    toast.success("Auth token generated and copied to clipboard.");
+  } catch (err) {
+    if (err?.response?.status === 403) {
+      toast.error("You are not authorized to generate tokens.");
+    } else {
+      toast.error("Failed to generate auth token.");
+    }
+  } finally {
+    toast.dismiss(loadingToastId);
+    submitting.value = false;
+  }
+};
+
 const handleDeleteRecord = async () => {
   closeRecordActionsMenu();
 
@@ -803,7 +842,7 @@ onMounted(async () => {
               </Button>
               <p v-if="relationLoading[field.name]" class="text-xs text-muted-foreground">Loading related records...</p>
               <p v-else-if="relationErrors[field.name]" class="text-xs text-destructive">{{ relationErrors[field.name]
-                }}</p>
+              }}</p>
               <p v-else-if="relationSelectionLabels(field).length" class="text-xs text-muted-foreground">
                 Selected: {{ relationSelectionLabels(field).join(", ") }}
               </p>
@@ -914,6 +953,12 @@ onMounted(async () => {
                 :disabled="submitting" @click="handleCopyRawJson">
                 <Copy class="h-4 w-4" />
                 Copy Raw JSON
+              </button>
+              <button v-if="isAuthCollection" type="button"
+                class="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-sm hover:bg-muted"
+                :disabled="submitting" @click="handleGenerateAuthToken">
+                <Key class="h-4 w-4" />
+                Impersonate
               </button>
             </div>
           </div>

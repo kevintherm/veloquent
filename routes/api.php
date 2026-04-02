@@ -141,6 +141,8 @@ Route::middleware(['auth:api', SuperuserOnly::class])->group(function () {
     Route::delete('/schema/orphans', [OrphanTableController::class, 'destroyAll'])->name('schema.orphans.destroy-all');
     Route::delete('/schema/orphans/{table_name}', [OrphanTableController::class, 'destroy'])->name('schema.orphans.destroy');
 
+    Route::post('/collections/{collection}/auth/impersonate/{recordId}', [AuthController::class, 'impersonate'])->name('collections.auth.impersonate');
+
     Route::get('/logs/dates', [LogViewerController::class, 'getDates'])->name('logs.dates');
     Route::get('/logs', [LogViewerController::class, 'index'])->name('logs.index');
 
