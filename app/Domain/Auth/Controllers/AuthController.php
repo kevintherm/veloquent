@@ -128,7 +128,7 @@ class AuthController extends ApiController
 
     public function confirmPasswordReset(ConfirmPasswordResetRequest $request, Collection $collection): JsonResponse
     {
-        $this->confirmPasswordResetAction->execute($collection, $request->only(['email', 'token', 'password']));
+        $this->confirmPasswordResetAction->execute($collection, $request->only(['email', 'token', 'new_password']));
 
         return $this->successResponse([], 'Password has been reset successfully.');
     }

@@ -22,6 +22,8 @@ class ConfirmPasswordResetAction
      */
     public function execute(Collection $collection, array $payload): array
     {
+        $newPassword = $payload['new_password'] ?? null;
+
         if ($collection->type !== CollectionType::Auth) {
             throw new AuthorizationException('This collection does not support authentication.');
         }
@@ -32,7 +34,7 @@ class ConfirmPasswordResetAction
             throw new AuthenticationException('Invalid credentials.');
         }
 
-        return DB::transaction(function () use ($payload, $collection, $user) {
+        return DB::transaction(function () use ($payload, $collection, $user, $newPassword) {
             $this->otpService->consume(
                 $payload['token'],
                 OtpAction::PasswordReset,
@@ -42,7 +44,7 @@ class ConfirmPasswordResetAction
 
             Record::of($collection)
                 ->where('id', $user->id)
-                ->update(['password' => Hash::make($payload['new_password'])]);
+                ->update(['password' => Hash::make($newPassword)]);
 
             $this->tokenService->revokeRecordTokens($collection->id, (string) $user->id);
 
