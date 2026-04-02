@@ -12,14 +12,14 @@
         - Collections, tables, records
     - Export n imports
         - Collections metadata only
-- RecordExpansionService revise
-    - resolveTargetCollection N+1 on collection lookup
-    - No expand field count limit
-    - expandedRelations as dynamic property 
-    - Field|array type inconsistency
 - Naming conventions
     - clarify in code/docs: `SchemaChangePlan::getAllReservedFields(false)` in unique sync intentionally means base reserved fields only
     - reason: auth reserved fields (for example `email`) must still sync `unique` from single-column unique indexes-
+- feat: Revamp entire QueryFilter and RuleEngine system
+    - unify into single system
+    - fix: relation values rule are somehow failing: `parent_comment.post = post` // failed
+    - determine if null checking is reliable or should use "" empty string checking
+    - removes complex unecessary modules, just adapters, tokenizer, and parser
 - feat: add multi tenant support stancl/tenant
 - feat: add octane support
 - Optimize Record model
