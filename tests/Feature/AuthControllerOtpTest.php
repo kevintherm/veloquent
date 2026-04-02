@@ -66,8 +66,7 @@ it('confirms password reset with valid OTP', function () {
     $response = $this->postJson("/api/collections/{$this->collection->id}/auth/password-reset/confirm", [
         'email' => 'test@example.com',
         'token' => $code,
-        'password' => 'new_password',
-        'password_confirmation' => 'new_password',
+        'new_password' => 'new_password',
     ]);
 
     $response->assertOk();
