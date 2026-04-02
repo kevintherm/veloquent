@@ -57,7 +57,7 @@ class SchemaRecoveryService
         $fieldsForDDL = SchemaChangePlan::stripForDDL($collection->fields ?? []);
         $this->ddlService->createTable($tableName, $fieldsForDDL);
 
-        $desiredIndexes = $this->extractIndexes($collection->indexes ?? []);
+        $desiredIndexes = Index::collection($collection->indexes ?? []);
         $this->indexSyncService->sync($tableName, $desiredIndexes, []);
 
         $job->delete();
@@ -73,18 +73,4 @@ class SchemaRecoveryService
         }
     }
 
-    /**
-     * @return array<int, Index>
-     */
-    private function extractIndexes(mixed $indexes): array
-    {
-        if (is_array($indexes)) {
-            return collect($indexes)
-                ->map(fn (mixed $index) => Index::fromArray((array) $index))
-                ->values()
-                ->all();
-        }
-
-        return [];
-    }
 }

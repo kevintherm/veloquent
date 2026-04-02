@@ -4,6 +4,7 @@ namespace App\Domain\Records\Services;
 
 use App\Domain\Collections\Enums\CollectionFieldType;
 use App\Domain\Collections\Models\Collection;
+use App\Domain\Collections\ValueObjects\Field;
 use App\Domain\QueryCompiler\Exceptions\InvalidRuleExpressionException;
 use App\Domain\QueryCompiler\Exceptions\UnsupportedQueryFeatureException;
 use App\Domain\Records\Models\Record;
@@ -13,9 +14,6 @@ use Illuminate\Support\Facades\Log;
 
 class RecordExpansionService
 {
-    /**
-     * @TODO: Circular relation detection for nested expand queries is not yet implemented.
-     */
     public function expandMany(Collection $sourceCollection, array $records, ?string $expand): void
     {
         $relationFields = $this->parse($sourceCollection, $expand);
@@ -70,11 +68,13 @@ class RecordExpansionService
                     'target_collection_id' => $field['target_collection_id'] ?? null,
                 ]);
                 $resolvedByField[$fieldName] = [];
+
                 continue;
             }
 
             if ($relationIds === []) {
                 $resolvedByField[$fieldName] = [];
+
                 continue;
             }
 
@@ -89,6 +89,7 @@ class RecordExpansionService
                 ->get()
                 ->mapWithKeys(function (Record $targetRecord): array {
                     $resource = new RecordResource($targetRecord);
+
                     return [(string) $targetRecord->getAttribute('id') => $resource->resolve()];
                 })
                 ->all();
@@ -113,7 +114,7 @@ class RecordExpansionService
     }
 
     /**
-     * @return array<string, array<string, mixed>>
+     * @return array<string, array<string, mixed>|Field>
      */
     public function parse(Collection $sourceCollection, ?string $expand): array
     {
@@ -123,9 +124,9 @@ class RecordExpansionService
             return [];
         }
 
-        /** @var array<string, array<string, mixed>> $fieldsByName */
+        /** @var array<string, array<string, mixed>|Field> $fieldsByName */
         $fieldsByName = collect($sourceCollection->fields ?? [])
-            ->keyBy(fn (array $field): string => (string) $field['name'])
+            ->keyBy(fn ($field): string => (string) $field['name'])
             ->all();
 
         $expandFields = collect(explode(',', $expand))
@@ -164,7 +165,7 @@ class RecordExpansionService
     }
 
     /**
-     * @param array<string, mixed> $field
+     * @param  array<string, mixed>  $field
      */
     private function resolveTargetCollection(array $field): ?Collection
     {
