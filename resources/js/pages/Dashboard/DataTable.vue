@@ -269,6 +269,10 @@ const copyRecordId = async (recordId) => {
                                     {{ formatValue(record[column]) }}
                                 </button>
                                 <div v-else-if="isRelationColumn(column, relationFields)" class="flex flex-col gap-1">
+                                    <span v-if="relationFields[column]?.targetCollectionName"
+                                        class="text-xs font-medium text-muted-foreground leading-none">
+                                        {{ relationFields[column].targetCollectionName }}
+                                    </span>
                                     <a v-for="relationId in normalizeRelationIds(record[column])"
                                         :key="`${record.id}-${column}-${relationId}`"
                                         :href="relationRecordUrl(column, relationId, relationFields)" target="_blank"
