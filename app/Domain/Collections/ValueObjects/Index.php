@@ -29,6 +29,40 @@ class Index implements \ArrayAccess, \JsonSerializable
         );
     }
 
+    /**
+     * @return array<int, self>
+     */
+    public static function collection(mixed $indexes): array
+    {
+        if (is_array($indexes)) {
+            return collect($indexes)
+                ->map(function (mixed $index): self {
+                    if ($index instanceof self) {
+                        return $index;
+                    }
+
+                    return self::fromArray((array) $index);
+                })
+                ->values()
+                ->all();
+        }
+
+        if (is_string($indexes) && $indexes !== '') {
+            $decoded = json_decode($indexes, true);
+
+            if (! is_array($decoded)) {
+                return [];
+            }
+
+            return collect($decoded)
+                ->map(fn (mixed $index): self => self::fromArray((array) $index))
+                ->values()
+                ->all();
+        }
+
+        return [];
+    }
+
     public function toArray(): array
     {
         return [

@@ -143,7 +143,7 @@ readonly class CollectionObserver
         $fieldsForDDL = SchemaChangePlan::stripForDDL($collection->fields ?? []);
         $this->ddlService->createTable($tableName, $fieldsForDDL);
 
-        $desiredIndexes = $this->extractIndexes($collection->indexes ?? []);
+        $desiredIndexes = Index::collection($collection->indexes ?? []);
         $effectiveFields = $this->syncFieldUniqueFlags(
             $this->extractFields($collection->fields ?? []),
             $desiredIndexes
@@ -172,7 +172,7 @@ readonly class CollectionObserver
 
         $originalFields = $this->extractFields($collection->getOriginal('fields'));
         $newFields = $this->extractFields($collection->fields ?? []);
-        $desiredIndexes = $this->extractIndexes($collection->indexes ?? []);
+        $desiredIndexes = Index::collection($collection->indexes ?? []);
 
         if ($fieldsWereDirty) {
             $affectedColumns = $this->fieldNamesAffectedByUpdate($originalFields, $newFields);
@@ -265,39 +265,6 @@ readonly class CollectionObserver
         return [];
     }
 
-    /**
-     * @return array<int, Index>
-     */
-    private function extractIndexes(mixed $indexes): array
-    {
-        if (is_array($indexes)) {
-            return collect($indexes)
-                ->map(function (mixed $index): Index {
-                    if ($index instanceof Index) {
-                        return $index;
-                    }
-
-                    return Index::fromArray((array) $index);
-                })
-                ->values()
-                ->all();
-        }
-
-        if (is_string($indexes) && $indexes !== '') {
-            $decoded = json_decode($indexes, true);
-
-            if (! is_array($decoded)) {
-                return [];
-            }
-
-            return collect($decoded)
-                ->map(fn (mixed $index): Index => Index::fromArray((array) $index))
-                ->values()
-                ->all();
-        }
-
-        return [];
-    }
 
     /**
      * @param  array<int, array<string, mixed>>  $beforeFields
