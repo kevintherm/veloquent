@@ -301,6 +301,12 @@ const isRelationNeeded = computed(() => {
 
 const isRelationFetched = ref(false);
 
+const resolveCollectionName = (targetCollectionId) => {
+  if (!targetCollectionId) return null;
+  const match = availableCollections.value.find((c) => c.id === targetCollectionId);
+  return match?.name ?? null;
+};
+
 const fetchCollectionForRelationFields = async () => {
   if (isRelationFetched.value) {
     return;
@@ -1152,7 +1158,9 @@ onMounted(async () => {
                     </div>
                     <div class="text-muted-foreground text-xs truncate">
                       <span v-if="field.min || field.max">min:{{ field.min }} max:{{ field.max }}</span>
-                      <span v-if="field.target_collection_id">rel:{{ field.target_collection_id }}</span>
+                      <span v-if="field.target_collection_id">
+                        rel:{{ resolveCollectionName(field.target_collection_id) ?? field.target_collection_id }}
+                      </span>
                     </div>
                   </div>
                   <div class="flex items-center gap-1">

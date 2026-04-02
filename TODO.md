@@ -2,7 +2,6 @@
 
 - feat: impersonate button for auth collections
 - improv: refactor redundant extractIndexes() methods
-- feat: Store cached target_collection_name for field type relation
 - Setup system variables
     - Rate limit (defer)
     - Trust proxies (defer)
@@ -12,9 +11,6 @@
         - Collections, tables, records
     - Export n imports
         - Collections metadata only
-- Naming conventions
-    - clarify in code/docs: `SchemaChangePlan::getAllReservedFields(false)` in unique sync intentionally means base reserved fields only
-    - reason: auth reserved fields (for example `email`) must still sync `unique` from single-column unique indexes-
 - feat: Revamp entire QueryFilter and RuleEngine system
     - unify into single system
     - fix: relation values rule are somehow failing: `parent_comment.post = post` // failed
