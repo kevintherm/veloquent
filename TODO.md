@@ -1,6 +1,5 @@
 ## TODO
 
-- feat: impersonate button for auth collections
 - improv: refactor redundant extractIndexes() methods
 - Setup system variables
     - Rate limit (defer)
