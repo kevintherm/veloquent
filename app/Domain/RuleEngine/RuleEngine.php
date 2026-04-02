@@ -2,8 +2,8 @@
 
 namespace App\Domain\RuleEngine;
 
-use App\Domain\RuleEngine\Contracts\FieldResolverAdapter;
 use App\Domain\QueryCompiler\Exceptions\InvalidRuleExpressionException;
+use App\Domain\RuleEngine\Contracts\FieldResolverAdapter;
 use Carbon\Carbon;
 
 /**
@@ -14,6 +14,7 @@ use Carbon\Carbon;
  *
  * Expression examples:
  *   user = @request.auth.id
+ *
  *   @request.body.user = @request.auth.id
  *   status = "active" && role != "guest"
  *   author.verified = true
@@ -24,6 +25,7 @@ use Carbon\Carbon;
  * Logical:      &&  ||
  *
  * @-variable prefixes validated during lint():
+ *
  *   @request.auth.*  @request.body.*  @request.param.*  @request.query.*
  */
 class RuleEngine
@@ -37,6 +39,7 @@ class RuleEngine
     ];
 
     private array $tokens = [];
+
     private int $pos = 0;
 
     private array $evaluationContext = [];
@@ -102,6 +105,7 @@ class RuleEngine
     /**
      * Lint (validate) a filter expression without running it.
      * Non-@-prefixed identifiers are validated against the stored $allowedFields.
+     *
      * @-prefixed identifiers are validated against known system variable prefixes.
      *
      * @throws InvalidRuleExpressionException
@@ -199,7 +203,7 @@ class RuleEngine
     private function evaluateCondition(): bool
     {
         $leftToken = $this->consume();
-        if (!in_array($leftToken['type'], ['FIELD', 'SYSVAR'], true)) {
+        if (! in_array($leftToken['type'], ['FIELD', 'SYSVAR'], true)) {
             $this->invalid("Expected field or @-variable on left-hand side, got '{$leftToken['value']}'");
         }
 
@@ -216,7 +220,7 @@ class RuleEngine
             $list = $this->parseListOperand();
             $result = in_array($leftValue, $list, false);
 
-            return $op === 'in' ? $result : !$result;
+            return $op === 'in' ? $result : ! $result;
         }
 
         $rightValue = $this->parseScalarOperand();
@@ -262,7 +266,7 @@ class RuleEngine
     private function dryRunCondition(): void
     {
         $leftToken = $this->consume();
-        if (!in_array($leftToken['type'], ['FIELD', 'SYSVAR'], true)) {
+        if (! in_array($leftToken['type'], ['FIELD', 'SYSVAR'], true)) {
             $this->invalid("Expected field or @-variable on left-hand side, got '{$leftToken['value']}'");
         }
 
@@ -285,7 +289,7 @@ class RuleEngine
     private function dryRunScalarOperand(): void
     {
         $token = $this->consume();
-        if (!in_array($token['type'], ['VALUE', 'DATE_FUNC', 'FIELD', 'SYSVAR'], true)) {
+        if (! in_array($token['type'], ['VALUE', 'DATE_FUNC', 'FIELD', 'SYSVAR'], true)) {
             $this->invalid("Expected value on right-hand side, got '{$token['value']}'");
         }
     }
@@ -302,13 +306,14 @@ class RuleEngine
             }
 
             $token = $this->consume();
-            if (!in_array($token['type'], ['VALUE', 'DATE_FUNC', 'FIELD', 'SYSVAR'], true)) {
+            if (! in_array($token['type'], ['VALUE', 'DATE_FUNC', 'FIELD', 'SYSVAR'], true)) {
                 $this->invalid("Expected list value, got '{$token['value']}'");
             }
             $count++;
 
             if ($this->peek('COMMA')) {
                 $this->consume();
+
                 continue;
             }
 
@@ -349,7 +354,7 @@ class RuleEngine
     {
         $token = $this->consume();
 
-        if (!in_array($token['type'], ['VALUE', 'DATE_FUNC', 'FIELD', 'SYSVAR'], true)) {
+        if (! in_array($token['type'], ['VALUE', 'DATE_FUNC', 'FIELD', 'SYSVAR'], true)) {
             $this->invalid("Expected value token on right-hand side, got '{$token['type']}' ('{$token['value']}')");
         }
 
@@ -380,7 +385,7 @@ class RuleEngine
             }
 
             $token = $this->consume();
-            if (!in_array($token['type'], ['VALUE', 'DATE_FUNC', 'FIELD', 'SYSVAR'], true)) {
+            if (! in_array($token['type'], ['VALUE', 'DATE_FUNC', 'FIELD', 'SYSVAR'], true)) {
                 $this->invalid("Expected list value, got '{$token['type']}' ('{$token['value']}')");
             }
 
@@ -394,6 +399,7 @@ class RuleEngine
 
             if ($this->peek('COMMA')) {
                 $this->consume();
+
                 continue;
             }
 
@@ -413,14 +419,14 @@ class RuleEngine
     protected function applyOperator(mixed $left, string $op, mixed $right): bool
     {
         return match ($op) {
-            '='        => $this->compareEqual($left, $right),
-            '!='       => !$this->compareEqual($left, $right),
-            'like'     => $this->matchesLike($left, $right),
-            'not like' => !$this->matchesLike($left, $right),
-            '?='       => $this->jsonContains($left, $right),
-            '?&'       => $this->jsonHasKey($left, $right),
+            '=' => $this->compareEqual($left, $right),
+            '!=' => ! $this->compareEqual($left, $right),
+            'like' => $this->matchesLike($left, $right),
+            'not like' => ! $this->matchesLike($left, $right),
+            '?=' => $this->jsonContains($left, $right),
+            '?&' => $this->jsonHasKey($left, $right),
             '>', '<', '>=', '<=' => $this->compareOrdered($left, $op, $right),
-            default    => $this->invalid("Unsupported operator '{$op}'"),
+            default => $this->invalid("Unsupported operator '{$op}'"),
         };
     }
 
@@ -451,8 +457,8 @@ class RuleEngine
         }
 
         return match ($op) {
-            '>'  => $left > $right,
-            '<'  => $left < $right,
+            '>' => $left > $right,
+            '<' => $left < $right,
             '>=' => $left >= $right,
             '<=' => $left <= $right,
         };
@@ -466,7 +472,7 @@ class RuleEngine
 
         $subject = (string) $subject;
         $pattern = (string) $pattern;
-        $regex = '/^' . str_replace(['%', '_'], ['.*', '.'], preg_quote($pattern, '/')) . '$/u';
+        $regex = '/^'.str_replace(['%', '_'], ['.*', '.'], preg_quote($pattern, '/')).'$/u';
 
         return preg_match($regex, $subject) === 1;
     }
@@ -543,12 +549,12 @@ class RuleEngine
 
     protected function resolveDateFunction(string $v): Carbon
     {
-        if (!preg_match('/^(\w+)\((\d*)\)$/', $v, $m)) {
+        if (! preg_match('/^(\w+)\((\d*)\)$/', $v, $m)) {
             $this->invalid("Malformed date function: {$v}");
         }
 
         $name = $m[1];
-        $arg  = $m[2] !== '' ? (int) $m[2] : null;
+        $arg = $m[2] !== '' ? (int) $m[2] : null;
 
         if (in_array($name, Tokenizer::getParamDateFunctions(), true)) {
             if ($arg === null) {
@@ -556,13 +562,13 @@ class RuleEngine
             }
 
             return match ($name) {
-                'daysago'      => now()->subDays($arg),
-                'daysfromnow'  => now()->addDays($arg),
-                'weeksago'     => now()->subWeeks($arg),
+                'daysago' => now()->subDays($arg),
+                'daysfromnow' => now()->addDays($arg),
+                'weeksago' => now()->subWeeks($arg),
                 'weeksfromnow' => now()->addWeeks($arg),
-                'monthsago'    => now()->subMonths($arg),
-                'monthsfromnow'=> now()->addMonths($arg),
-                'yearsago'     => now()->subYears($arg),
+                'monthsago' => now()->subMonths($arg),
+                'monthsfromnow' => now()->addMonths($arg),
+                'yearsago' => now()->subYears($arg),
                 'yearsfromnow' => now()->addYears($arg),
             };
         }
@@ -572,28 +578,28 @@ class RuleEngine
         }
 
         return match ($name) {
-            'now'          => now(),
-            'today'        => now()->startOfDay(),
-            'yesterday'    => now()->subDay()->startOfDay(),
-            'tomorrow'     => now()->addDay()->startOfDay(),
-            'thisweek'     => now()->startOfWeek(),
-            'lastweek'     => now()->subWeek()->startOfWeek(),
-            'nextweek'     => now()->addWeek()->startOfWeek(),
-            'thismonth'    => now()->startOfMonth(),
-            'lastmonth'    => now()->subMonth()->startOfMonth(),
-            'nextmonth'    => now()->addMonth()->startOfMonth(),
-            'thisyear'     => now()->startOfYear(),
-            'lastyear'     => now()->subYear()->startOfYear(),
-            'nextyear'     => now()->addYear()->startOfYear(),
-            'startofday'   => now()->startOfDay(),
-            'endofday'     => now()->endOfDay(),
-            'startofweek'  => now()->startOfWeek(),
-            'endofweek'    => now()->endOfWeek(),
+            'now' => now(),
+            'today' => now()->startOfDay(),
+            'yesterday' => now()->subDay()->startOfDay(),
+            'tomorrow' => now()->addDay()->startOfDay(),
+            'thisweek' => now()->startOfWeek(),
+            'lastweek' => now()->subWeek()->startOfWeek(),
+            'nextweek' => now()->addWeek()->startOfWeek(),
+            'thismonth' => now()->startOfMonth(),
+            'lastmonth' => now()->subMonth()->startOfMonth(),
+            'nextmonth' => now()->addMonth()->startOfMonth(),
+            'thisyear' => now()->startOfYear(),
+            'lastyear' => now()->subYear()->startOfYear(),
+            'nextyear' => now()->addYear()->startOfYear(),
+            'startofday' => now()->startOfDay(),
+            'endofday' => now()->endOfDay(),
+            'startofweek' => now()->startOfWeek(),
+            'endofweek' => now()->endOfWeek(),
             'startofmonth' => now()->startOfMonth(),
-            'endofmonth'   => now()->endOfMonth(),
-            'startofyear'  => now()->startOfYear(),
-            'endofyear'    => now()->endOfYear(),
-            default        => $this->invalid("Unknown date function: {$name}"),
+            'endofmonth' => now()->endOfMonth(),
+            'startofyear' => now()->startOfYear(),
+            'endofyear' => now()->endOfYear(),
+            default => $this->invalid("Unknown date function: {$name}"),
         };
     }
 
@@ -608,7 +614,7 @@ class RuleEngine
     protected function consume(): array
     {
         $token = $this->tokens[$this->pos] ?? null;
-        if (!$token) {
+        if (! $token) {
             $this->invalid('Unexpected end of filter string');
         }
         $this->pos++;

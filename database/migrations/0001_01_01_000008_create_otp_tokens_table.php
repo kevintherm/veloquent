@@ -35,29 +35,29 @@ return new class extends Migration
             'fields' => [
                 [
                     'name' => 'collection_id',
-                    'type' => CollectionFieldType::Text
+                    'type' => CollectionFieldType::Text,
                 ],
                 [
                     'name' => 'record_id',
-                    'type' => CollectionFieldType::Text
+                    'type' => CollectionFieldType::Text,
                 ],
                 [
                     'name' => 'token_hash',
-                    'type' => CollectionFieldType::Text
+                    'type' => CollectionFieldType::Text,
                 ],
                 [
                     'name' => 'action',
-                    'type' => CollectionFieldType::Text
+                    'type' => CollectionFieldType::Text,
                 ],
                 [
                     'name' => 'expires_at',
-                    'type' => CollectionFieldType::Datetime
+                    'type' => CollectionFieldType::Datetime,
                 ],
                 [
                     'name' => 'used_at',
-                    'type' => CollectionFieldType::Datetime
+                    'type' => CollectionFieldType::Datetime,
                 ],
-            ]
+            ],
         ]);
     }
 

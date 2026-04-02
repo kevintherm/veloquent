@@ -3,6 +3,7 @@
 namespace App\Infrastructure\Traits;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\ResourceCollection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\HttpFoundation\Response;
@@ -15,7 +16,7 @@ trait ApiResponse
             'message' => $message,
         ];
 
-        if ($data instanceof \Illuminate\Http\Resources\Json\ResourceCollection && $data->resource instanceof LengthAwarePaginator) {
+        if ($data instanceof ResourceCollection && $data->resource instanceof LengthAwarePaginator) {
             $paginator = $data->resource;
             $response['data'] = $data->collection;
             $response['meta'] = [

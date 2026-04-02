@@ -59,6 +59,7 @@ class Tokenizer
     ];
 
     private array $allowedFields;
+
     private bool $allowUnknownFields;
 
     public function __construct(array $allowedFields = [], bool $allowUnknownFields = false)
@@ -83,6 +84,7 @@ class Tokenizer
             // Skip whitespace
             if (ctype_space($src[$i])) {
                 $i++;
+
                 continue;
             }
 
@@ -90,16 +92,19 @@ class Tokenizer
             if ($src[$i] === '(') {
                 $tokens[] = ['type' => 'LPAREN', 'value' => '('];
                 $i++;
+
                 continue;
             }
             if ($src[$i] === ')') {
                 $tokens[] = ['type' => 'RPAREN', 'value' => ')'];
                 $i++;
+
                 continue;
             }
             if ($src[$i] === ',') {
                 $tokens[] = ['type' => 'COMMA', 'value' => ','];
                 $i++;
+
                 continue;
             }
 
@@ -107,11 +112,13 @@ class Tokenizer
             if (substr($src, $i, 2) === '&&') {
                 $tokens[] = ['type' => 'AND', 'value' => '&&'];
                 $i += 2;
+
                 continue;
             }
             if (substr($src, $i, 2) === '||') {
                 $tokens[] = ['type' => 'OR', 'value' => '||'];
                 $i += 2;
+
                 continue;
             }
 
@@ -124,20 +131,22 @@ class Tokenizer
                     if ($src[$j] === '\\' && isset($src[$j + 1])) {
                         $j++;
                         $val .= match ($src[$j]) {
-                            'n'  => "\n",
-                            't'  => "\t",
+                            'n' => "\n",
+                            't' => "\t",
                             '\'' => "'",
-                            '"'  => '"',
+                            '"' => '"',
                             '\\' => '\\',
-                            default => '\\' . $src[$j],
+                            default => '\\'.$src[$j],
                         };
                         $j++;
+
                         continue;
                     }
                     $val .= $src[$j++];
                 }
                 $tokens[] = ['type' => 'VALUE', 'value' => $val];
                 $i = $j + 1;
+
                 continue;
             }
 
@@ -165,6 +174,7 @@ class Tokenizer
                     $num .= $src[$i++];
                 }
                 $tokens[] = ['type' => 'VALUE', 'value' => $num];
+
                 continue;
             }
 
@@ -172,11 +182,12 @@ class Tokenizer
             $word = '';
             $allowDot = true;  // dot-notation for fields
             $allowArrow = true; // -> notation for JSON paths
-            while ($i < $len && !ctype_space($src[$i]) && !in_array($src[$i], ['(', ')', ','], true)) {
+            while ($i < $len && ! ctype_space($src[$i]) && ! in_array($src[$i], ['(', ')', ','], true)) {
                 // Handle -> (JSON path separator — becomes part of the field name)
                 if ($allowArrow && substr($src, $i, 2) === '->') {
                     $word .= '->';
                     $i += 2;
+
                     continue;
                 }
                 // Stop on && or || (logical operators)
@@ -195,6 +206,7 @@ class Tokenizer
             // Value keywords
             if (in_array($lower, self::VALUE_KEYWORDS, true)) {
                 $tokens[] = ['type' => 'VALUE', 'value' => $lower];
+
                 continue;
             }
 
@@ -202,7 +214,8 @@ class Tokenizer
             if (isset($src[$i]) && $src[$i] === '(' && in_array($lower, $allDateFuncs, true)) {
                 $args = $this->captureParenthesized($src, $i, $len);
                 $i += strlen($args);
-                $tokens[] = ['type' => 'DATE_FUNC', 'value' => $lower . $args];
+                $tokens[] = ['type' => 'DATE_FUNC', 'value' => $lower.$args];
+
                 continue;
             }
 
@@ -214,11 +227,12 @@ class Tokenizer
             // @-prefixed system variable
             if (str_starts_with($word, '@')) {
                 $tokens[] = ['type' => 'SYSVAR', 'value' => $word];
+
                 continue;
             }
 
             // Everything else is a FIELD identifier
-            if (!$this->allowUnknownFields && !in_array($word, $this->allowedFields, true)) {
+            if (! $this->allowUnknownFields && ! in_array($word, $this->allowedFields, true)) {
                 $this->invalid("Unknown field or variable: {$word}");
             }
 
@@ -246,6 +260,7 @@ class Tokenizer
                 if ($depth === 0) {
                     break;
                 }
+
                 continue;
             }
             $args .= $src[$i++];

@@ -4,6 +4,7 @@ namespace App\Domain\Collections\Controllers;
 
 use App\Domain\Collections\Actions\CreateCollectionAction;
 use App\Domain\Collections\Actions\DeleteCollectionAction;
+use App\Domain\Collections\Actions\GetCollectionsAction;
 use App\Domain\Collections\Actions\TruncateCollectionAction;
 use App\Domain\Collections\Actions\UpdateCollectionAction;
 use App\Domain\Collections\Models\Collection;
@@ -17,6 +18,7 @@ use Illuminate\Support\Facades\Gate;
 class CollectionController extends ApiController
 {
     public function __construct(
+        private GetCollectionsAction $getCollectionsAction,
         private CreateCollectionAction $createCollectionAction,
         private UpdateCollectionAction $updateCollectionAction,
         private DeleteCollectionAction $deleteCollectionAction,
@@ -27,9 +29,10 @@ class CollectionController extends ApiController
     {
         Gate::authorize('list-collections');
 
-        $filters = $request->input('filter') ?? '';
-        $sort = $request->input('sort') ?? '';
-        $collections = Collection::query()->applySorting($sort)->applyFilter($filters)->get();
+        $collections = $this->getCollectionsAction->execute(
+            $request->input('filter') ?? '',
+            $request->input('sort') ?? ''
+        );
 
         return $this->successResponse($collections);
     }
@@ -76,7 +79,7 @@ class CollectionController extends ApiController
     {
         Gate::authorize('delete-collections', [$collection]);
 
-        $defaultAuthCollection = config('velo.default_auth_collection');
+        $defaultAuthCollection = config('velo.default_auth_collection', 'users');
         if ($collection->name === $defaultAuthCollection) {
             return $this->errorResponse('Cannot delete default auth collection', 400);
         }
@@ -90,7 +93,7 @@ class CollectionController extends ApiController
     {
         Gate::authorize('truncate-collections', $collection);
 
-        $defaultAuthCollection = config('velo.default_auth_collection');
+        $defaultAuthCollection = config('velo.default_auth_collection', 'users');
         if ($collection->name === $defaultAuthCollection) {
             return $this->errorResponse('Cannot truncate default auth collection', 400);
         }
