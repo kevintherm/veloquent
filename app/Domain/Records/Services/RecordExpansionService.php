@@ -4,10 +4,12 @@ namespace App\Domain\Records\Services;
 
 use App\Domain\Collections\Enums\CollectionFieldType;
 use App\Domain\Collections\Models\Collection;
-use App\Domain\Collections\ValueObjects\Field;
 use App\Domain\QueryCompiler\Exceptions\InvalidRuleExpressionException;
 use App\Domain\QueryCompiler\Exceptions\UnsupportedQueryFeatureException;
 use App\Domain\Records\Models\Record;
+use App\Domain\Records\Resources\RecordResource;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class RecordExpansionService
 {
@@ -23,6 +25,18 @@ class RecordExpansionService
         }
 
         $relationIdsByField = [];
+        $targetCollectionIds = [];
+
+        foreach ($relationFields as $field) {
+            if ($id = ($field['target_collection_id'] ?? null)) {
+                $targetCollectionIds[] = $id;
+            }
+        }
+
+        $targetCollectionsById = Collection::query()
+            ->whereIn('id', array_unique($targetCollectionIds))
+            ->get()
+            ->keyBy('id');
 
         foreach ($records as $record) {
             if (! $record instanceof Record) {
@@ -42,24 +56,41 @@ class RecordExpansionService
         }
 
         $resolvedByField = [];
+        $authenticatedUser = Auth::user();
+        $bypassApiRules = $authenticatedUser instanceof Record && $authenticatedUser->isSuperuser();
 
         foreach ($relationFields as $fieldName => $field) {
-            $targetCollection = $this->resolveTargetCollection($field);
+            $targetCollection = $targetCollectionsById->get($field['target_collection_id'] ?? '');
             $relationIds = array_values(array_unique($relationIdsByField[$fieldName] ?? []));
 
-            if ($targetCollection === null || $relationIds === []) {
+            if ($targetCollection === null) {
+                Log::warning('EXPANSION_TARGET_COLLECTION_MISSING', [
+                    'source_collection' => $sourceCollection->id,
+                    'field' => $fieldName,
+                    'target_collection_id' => $field['target_collection_id'] ?? null,
+                ]);
                 $resolvedByField[$fieldName] = [];
-
                 continue;
             }
 
-            $resolvedByField[$fieldName] = Record::of($targetCollection)
-                ->newQuery()
+            if ($relationIds === []) {
+                $resolvedByField[$fieldName] = [];
+                continue;
+            }
+
+            $query = Record::of($targetCollection)->newQuery();
+
+            if (! $bypassApiRules) {
+                $query->applyRule('view');
+            }
+
+            $resolvedByField[$fieldName] = $query
                 ->whereIn('id', $relationIds)
                 ->get()
-                ->mapWithKeys(fn (Record $targetRecord): array => [
-                    (string) $targetRecord->getAttribute('id') => $targetRecord->toArray(),
-                ])
+                ->mapWithKeys(function (Record $targetRecord): array {
+                    $resource = new RecordResource($targetRecord);
+                    return [(string) $targetRecord->getAttribute('id') => $resource->resolve()];
+                })
                 ->all();
         }
 
@@ -81,6 +112,9 @@ class RecordExpansionService
         }
     }
 
+    /**
+     * @return array<string, array<string, mixed>>
+     */
     public function parse(Collection $sourceCollection, ?string $expand): array
     {
         $expand = trim((string) ($expand ?? ''));
@@ -89,8 +123,9 @@ class RecordExpansionService
             return [];
         }
 
+        /** @var array<string, array<string, mixed>> $fieldsByName */
         $fieldsByName = collect($sourceCollection->fields ?? [])
-            ->keyBy(fn (Field|array $field): string => (string) $field['name'])
+            ->keyBy(fn (array $field): string => (string) $field['name'])
             ->all();
 
         $expandFields = collect(explode(',', $expand))
@@ -99,8 +134,10 @@ class RecordExpansionService
             ->unique()
             ->values();
 
-        if ($expandFields->count() > 10) {
-            throw new UnsupportedQueryFeatureException('A maximum of 10 relation expansions are allowed per request.');
+        $maxExpansions = config('velo.records_expand_max', 10);
+
+        if ($expandFields->count() > $maxExpansions) {
+            throw new UnsupportedQueryFeatureException("A maximum of {$maxExpansions} relation expansions are allowed per request.");
         }
 
         $relationFields = [];
@@ -126,8 +163,12 @@ class RecordExpansionService
         return $relationFields;
     }
 
-    private function resolveTargetCollection(Field|array $field): ?Collection
+    /**
+     * @param array<string, mixed> $field
+     */
+    private function resolveTargetCollection(array $field): ?Collection
     {
+        // This method is now shadowed by batch resolution in expandMany but kept for internal parse-time validation if needed.
         $targetCollectionId = $field['target_collection_id'] ?? null;
 
         if (! is_string($targetCollectionId) || $targetCollectionId === '') {
