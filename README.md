@@ -1,6 +1,6 @@
 # Veloquent
 
-Veloquent is an open-source backend skeleton powered by Laravel 12. It provides a robust foundation for building modern applications with features like real-time broadcasting, email management, and advanced database abstractions out of the box.
+Veloquent is an open-source backend skeleton powered by Laravel. It provides standard BaaS features like real-time broadcasting, multi-provider authentication, and a flexible database abstraction layer, all within a developer-friendly ecosystem.
 
 ## Core Features
 
