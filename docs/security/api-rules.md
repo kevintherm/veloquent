@@ -64,6 +64,37 @@ You can access fields of related records using dot notation. For example, if a `
 
 If no rule is defined for an action, the default behavior is to **deny** access (except for superusers, who have full access). To allow public access, you can set a rule to `true`.
 
+---
+
+## Error Handling
+
+Standardized API error responses:
+
+```json
+{
+  "message": "Validation error",
+  "errors": {
+    "email": ["The email has already been taken."]
+  }
+}
+```
+
+### Critical Errors
+
+Some errors include an `error_type` for programmatic handling:
+
+- **`SCHEMA_CORRUPT`** (`409 Conflict`): DB table doesn't match metadata.
+  ```json
+  {
+    "message": "The collection schema is corrupt.",
+    "error_type": "SCHEMA_CORRUPT",
+    "activity": "Read",
+    "collection_id": "01JAB..."
+  }
+  ```
+
+---
+
 ## Next Steps
 
-After securing your data with rules, you're ready to start using the [Records API](records-api.md) to interact with your data.
+After securing your data with rules, you're ready to start using the [Records API](../api-documentation/records-api.md) to interact with your data.

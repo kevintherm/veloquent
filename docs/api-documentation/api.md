@@ -71,6 +71,8 @@ List all collections.
 | Param | Type | Required | Description |
 |---|---|---|---|
 | `filter` | string | no | Filter expression |
+| `sort` | string | no | Sort expression (e.g. `name`, `-created_at`) |
+| `expand` | string | no | Related resources to include |
 
 **Response `data`:** array of [Collection](#collection-object)
 
@@ -109,7 +111,13 @@ Update a collection (both verbs have identical behavior).
 
 Delete a collection. Cannot delete the default auth collection.
 
-**Response `data`:** `[]`
+**Response:**
+```json
+{
+  "message": "Collection deleted successfully",
+  "data": []
+}
+```
 
 ---
 
@@ -133,7 +141,9 @@ List paginated records for a collection.
 **Query params:**
 
 | Param | Type | Required | Default | Description |
-|---|---|---|---|---|
+|--sort` | string | no | — | Sort expression (e.g. `title`, `-created_at`) |
+| `expand` | string | no | — | Related collections to include |
+| `-|---|---|---|---|
 | `filter` | string | no | — | Filter expression |
 | `per_page` | integer | no | 15 | Records per page (min: 1, max default: 500) |
 
@@ -204,7 +214,15 @@ Login and issue an opaque bearer token. No auth required.
 
 ---
 
-### `DELETE /collections/{collection}/auth/logout`
+### `POST /collections/{collection}/auth/impersonate/{recordId}`
+
+Impersonate a record. Available only to Superusers.
+
+**Response `data`:** Same as login response.
+
+---
+
+### `DELETE /collections/{collection}/auth/logout` concepts
 
 Revoke the current token. Requires auth.
 
@@ -300,6 +318,58 @@ Unsubscribe the authenticated user from realtime updates.
 | Field | Type | Example |
 |---|---|---|
 | `status` | string | `unsubscribed` |
+
+---
+
+## Schema Management
+
+### `GET /api/schema/corrupt`
+
+List collections with corrupted schemas (mismatch between DB and metadata).
+
+**Response `data`:** array of objects
+
+---
+
+### `GET /api/schema/orphans`
+
+List database tables without a corresponding collection.
+
+**Response `data`:** array of string (table names)
+
+---
+
+### `DELETE /api/schema/orphans`
+
+Drop all orphan tables.
+
+**Response `data`:** `[]`
+
+---
+
+### `DELETE /api/schema/orphans/{table_name}`
+
+Drop a specific orphan table.
+
+**Response `data`:** `[]`
+
+---
+
+### `POST /api/schema/transfer/export`
+
+Export schema to JSON.
+
+---
+
+### `POST /api/schema/transfer/import`
+
+Import schema from JSON.
+
+---
+
+### `GET /api/schema/transfer/options`
+
+Get available export/import options.
 
 ---
 
