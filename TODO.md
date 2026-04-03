@@ -11,8 +11,6 @@
         - Collections metadata only
 - feat: add multi tenant support stancl/tenant
 - feat: add octane support
-- Optimize Record model
-    - cache collections
 - Testing
 - Documentation
 - Ship it into a package

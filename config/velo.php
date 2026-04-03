@@ -67,12 +67,28 @@ return [
         'name_field_candidates' => ['name', 'username', 'fullname', 'full_name', 'first_name'],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Realtime Configuration
+    |--------------------------------------------------------------------------
+    */
     'realtime' => [
         'bus' => env('VELO_REALTIME_BUS', 'redis'),
         'mode' => env('VELO_REALTIME_MODE', 'persistent'),
         'cron_ttl' => env('VELO_REALTIME_TTL', 55),
         'subscription_ttl' => env('VELO_REALTIME_SUBSCRIPTION_TTL', 120),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Collection Cache TTL
+    |--------------------------------------------------------------------------
+    |
+    | The number of seconds to cache collection metadata.
+    | Set to 0 to cache permanently.
+    |
+    */
+    'collection_cache_ttl' => (int) env('VELO_COLLECTION_CACHE_TTL', 0),
 
     /*
     |--------------------------------------------------------------------------
