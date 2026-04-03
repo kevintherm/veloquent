@@ -6,6 +6,7 @@ use App\Domain\Realtime\Controllers\SubscribeController;
 use App\Domain\Records\Controllers\RecordController;
 use App\Domain\SchemaManagement\Controllers\OrphanTableController;
 use App\Domain\SchemaManagement\Controllers\SchemaRecoveryController;
+use App\Domain\SchemaManagement\Controllers\SchemaTransferController;
 use App\Http\Controllers\EmailTemplateController;
 use App\Http\Controllers\LogViewerController;
 use App\Http\Controllers\OAuthController;
@@ -153,4 +154,10 @@ Route::middleware(['auth:api', SuperuserOnly::class])->group(function () {
     Route::post('/collections/{collection}/oauth-providers', [OAuthProviderController::class, 'store'])->name('oauth-providers.store');
     Route::match(['PUT', 'PATCH'], '/collections/{collection}/oauth-providers/{oauthProvider}', [OAuthProviderController::class, 'update'])->name('oauth-providers.update');
     Route::delete('/collections/{collection}/oauth-providers/{oauthProvider}', [OAuthProviderController::class, 'destroy'])->name('oauth-providers.destroy');
+
+    Route::prefix('schema/transfer')->name('schema.transfer.')->group(function () {
+        Route::get('/options', [SchemaTransferController::class, 'options'])->name('options');
+        Route::post('/export', [SchemaTransferController::class, 'export'])->name('export');
+        Route::post('/import', [SchemaTransferController::class, 'import'])->name('import');
+    });
 });

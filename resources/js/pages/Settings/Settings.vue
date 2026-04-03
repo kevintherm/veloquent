@@ -9,7 +9,8 @@ import {
 import RealtimeTest from "@/pages/Settings/RealtimeTest.vue";
 import ApiTest from "@/pages/Settings/ApiTest.vue";
 import SchemaMaintenance from "@/pages/Settings/SchemaMaintenance.vue";
-import { Database, FlaskConical } from "lucide-vue-next";
+import SchemaTransfer from "@/pages/Settings/SchemaTransfer.vue";
+import { Database, FlaskConical, FileJson } from "lucide-vue-next";
 </script>
 
 <template>
@@ -30,6 +31,10 @@ import { Database, FlaskConical } from "lucide-vue-next";
             <Database class="h-4 w-4" />
             Schema Maintenance
           </TabsTrigger>
+          <TabsTrigger value="schema-transfer" class="gap-2">
+            <FileJson class="h-4 w-4" />
+            Schema Transfer
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="tests" class="space-y-4">
@@ -39,6 +44,10 @@ import { Database, FlaskConical } from "lucide-vue-next";
 
         <TabsContent value="maintenance" class="space-y-4">
           <SchemaMaintenance />
+        </TabsContent>
+
+        <TabsContent value="schema-transfer" class="space-y-4">
+          <SchemaTransfer />
         </TabsContent>
       </Tabs>
     </div>
