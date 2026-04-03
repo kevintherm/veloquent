@@ -1,12 +1,48 @@
-# Veloquent - Open Source Backend powered by Laravel
+# Veloquent
+
+Veloquent is an open-source backend skeleton powered by Laravel 12. It provides a robust foundation for building modern applications with features like real-time broadcasting, email management, and advanced database abstractions out of the box.
+
+## Core Features
+
+- **Real-time Broadcasting**: Native support for horizontal scaling with Reverb and custom workers.
+- **Email System**: Flexible email templating and distribution.
+- **Domain-Driven Design**: Clean architecture separating concerns into clear domains.
+- **First-Class Testing**: Built with Pest PHP for reliable and readable tests.
+
+## Documentation
+
+Comprehensive documentation is available in the `docs` directory:
+
+- [Introduction](docs/getting-started/introduction.md)
+- [Installation Guide](docs/getting-started/installation.md)
+- [Architecture Concepts](docs/architecture-concepts/README.md)
+
+## Installation Quick Start
+
+If you have Docker installed, you can get started in minutes using Laravel Sail:
+
+```bash
+composer install
+./vendor/bin/sail up -d
+./vendor/bin/sail artisan migrate --seed
+
+# In separate terminals
+./vendor/bin/sail artisan realtime:worker
+./vendor/bin/sail artisan queue:work
+```
+
+For more detailed instructions, see the [Installation Guide](docs/getting-started/installation.md).
 
 ## Known Issues
 
-- Circular dependency and cascade on delete will cause infinite loop and crash the server.
+- **Circular Dependencies**: Circular dependency and cascade on delete may cause infinite loops in certain edge cases. Use with caution during high-frequency schema modifications.
 
-## Todo & Roadmap
+## Roadmap & Progress
 
-> Completed todo will be removed from this list.
+Please refer to [TODO.md](TODO.md) for the latest status and upcoming features.
 
-[TODO.md](TODO.md)
+## License
+
+The Veloquent skeleton is open-sourced software licensed under the MIT License.
+
 

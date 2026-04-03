@@ -68,7 +68,7 @@
     <aside id="sidebar" class="hidden md:block w-full md:w-96 border-r-4 border-black/5 shrink-0 sticky top-0 h-screen overflow-y-auto z-40">
         <div class="px-12 py-16 flex justify-center bg-blue-500 border-b-8 border-black">
             <a href="/{{ config('velo.docs.path', 'docs') }}">
-                <div class="bg-white p-6 border-4 border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
+                <div class="bg-white p-6 border-4">
                     <img src="/{{ config('velo.docs.path', 'docs') }}/logo.svg" alt="Velo Logo" class="h-16 w-auto">
                 </div>
             </a>
@@ -141,8 +141,8 @@
                     <p class="font-black uppercase tracking-tighter">Open Source Backend</p>
                 </div>
                 <div class="flex gap-8">
-                    <a href="https://github.com/kevintherm/velophp" class="bg-black text-white px-8 py-4 font-black border-4 border-black hover:bg-white hover:text-black transition-all">GITHUB</a>
-                    <a href="/docs/introduction.md" class="bg-blue-500 text-white px-8 py-4 font-black border-4 border-black hover:bg-black transition-all">ROADMAP</a>
+                    <a href="https://github.com/kevintherm/veloquent" target="_blank" class="bg-black text-white px-8 py-4 font-black border-4 border-black hover:bg-white hover:text-black transition-all">GITHUB</a>
+                    <a href="https://github.com/kevintherm/veloquent/blob/main/TODO.md" target="_blank" class="bg-blue-500 text-white px-8 py-4 font-black border-4 border-black hover:bg-black transition-all">ROADMAP</a>
                 </div>
             </footer>
         </div>

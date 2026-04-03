@@ -2,14 +2,17 @@
     "$schema": "https://getcomposer.org/schema.json",
     "name": "veloquent/veloquent",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "Veloquent is an Open Source Backend that simplifies real-time, database, and auth management for developers.",
     "keywords": [
         "laravel",
+        "veloquent",
+        "backend",
+        "realtime",
         "framework"
     ],
     "license": "MIT",
     "require": {
-        "php": "^8.2",
+        "php": "^8.3",
         "carbon-cli/carbon-cli": "^1.4",
         "laravel/framework": "^12.0",
         "laravel/reverb": "^1.0",
