@@ -70,6 +70,7 @@ readonly class CollectionObserver
 
     public function updated(Collection $collection): void
     {
+        $collection->clearCache();
         $this->endJob($collection);
     }
 
@@ -88,6 +89,7 @@ readonly class CollectionObserver
 
     public function deleted(Collection $collection): void
     {
+        $collection->clearCache();
         $this->endJob($collection);
     }
 

@@ -25,7 +25,9 @@ class RouteServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Route::bind('collection', function ($value) {
-            return Collection::where('id', $value)->orWhere('name', $value)->firstOrFail();
+            return Collection::findByIdCached($value)
+                ?? Collection::findByNameCached($value)
+                ?? abort(404, 'Collection not found');
         });
 
         RateLimiter::for('otp', function (Request $request) {

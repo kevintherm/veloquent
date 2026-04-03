@@ -69,23 +69,7 @@ class Record extends Authenticatable
         $instance->collection = $collection;
         $instance->setTable($collection->getPhysicalTableName());
 
-        $casts = [];
-        foreach ($collection->fields ?? [] as $field) {
-            $fieldName = $field['name'];
-
-            if ($fieldName == 'password' && $collection->type === CollectionType::Auth) {
-                $casts[$fieldName] = 'hashed';
-
-                continue;
-            }
-
-            $cast = CollectionFieldType::tryFrom($field['type'])?->eloquentCast();
-            if ($cast !== null) {
-                $casts[$fieldName] = $cast;
-            }
-        }
-
-        $instance->casts = $casts;
+        $instance->casts = $collection->getCachedCasts();
 
         if ($collection->type === CollectionType::Auth) {
             $instance->hidden = ['password'];
