@@ -91,12 +91,45 @@ Any other `@` prefix is invalid during lint.
 
 ## Date Function Standard
 
+Velo supports dynamic date calculations in expressions. Date functions are evaluated to ISO-8601 strings during processing.
+
+### No-argument Functions
+
+- `now()`, `today()`
+- `yesterday()`, `tomorrow()`
+- `thisweek()`, `lastweek()`, `nextweek()`
+- `thismonth()`, `lastmonth()`, `nextmonth()`
+- `thisyear()`, `lastyear()`, `nextyear()`
+- `startofday()`, `endofday()`
+- `startofweek()`, `endofweek()`
+- `startofmonth()`, `endofmonth()`
+- `startofyear()`, `endofyear()`
+
 ### Functions requiring numeric argument
 
 - `daysago(n)`, `daysfromnow(n)`
 - `weeksago(n)`, `weeksfromnow(n)`
 - `monthsago(n)`, `monthsfromnow(n)`
 - `yearsago(n)`, `yearsfromnow(n)`
+
+---
+
+## Grammar Details
+
+### Escaping
+
+String literals support backslash escaping for quotes:
+- `"He said \"Hello\""`
+- `'It\'s working'`
+
+### JSON Operators
+
+JSON-specific operators (`?=`, `?&`) are supported in both in-memory and SQL modes:
+- `meta->tags ?= "php"` (Check if JSON array contains value)
+- `meta->tags ?& ("php", "laravel")` (Check if JSON array contains all values)
+
+> [!NOTE]
+> When using `?=` and `?&` in SQL mode (via `QueryFilter`), the underlying database must support JSON path operations.
 
 ### Functions without arguments
 

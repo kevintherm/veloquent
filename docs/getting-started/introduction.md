@@ -24,4 +24,4 @@ To get started with Velo, follow the guides in the documentation to learn how to
 
 ## Next Steps
 
-If you're ready to go deeper, you can check out the [Collections](collections.md) systems, how [Schema Transfer](schema-transfer.md) works, and how it all comes together in our [API](api.md) documentation.
+If you're ready to go deeper, you can check out the [Collections](../the-basics/collections.md) systems, how [Schema Management](../the-basics/schema-management.md) works, and how it all comes together in our [API](../api-documentation/api.md) documentation.

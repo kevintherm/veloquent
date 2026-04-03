@@ -46,15 +46,34 @@ Deletes a record from the collection.
 ## Advanced Features
 
 ### Filtering
-The `filter` query parameter allows you to narrow down your results using Velo's rule expression language. See [API Rules](api-rules.md) for more details.
+The `filter` query parameter allows you to narrow down your results using Velo's rule expression language. See [API Rules](../security/api-rules.md) for more details.
 
 ### Sorting
 Sorting is supported on any field defined in the collection, as well as on system fields like `id`, `created_at`, and `updated_at`. Use a hyphen (`-`) for descending order.
 
 ### Field Expansion
-Relation fields can be expanded to include the related record data in the response. For example:
-- `expand=userId`: Includes the related user record in the `expandedRelations` property.
-- `expand=userId,profileId`: Expands multiple relations.
+Relation fields can be expanded to include the related record data in the response.
+
+- **Merging**: Expanded records are merged directly into the record object, replacing the relation ID string.
+- **Security**: The `view` API rule of the target collection is automatically applied to expanded records. If the requester doesn't have `view` access, the field remains a string (the ID) or `null`.
+- **Nested Expansion**: Nested relation expansion (e.g., `user.profile`) is currently not supported.
+- **Limits**: A maximum of 10 relation expansions are allowed per request.
+
+Example:
+`GET /api/collections/posts/records?expand=author`
+
+Response:
+```json
+{
+  "id": "01JAB...",
+  "title": "Hello World",
+  "author": {
+    "id": "01JBC...",
+    "name": "John Doe",
+    "email": "john@example.com"
+  }
+}
+```
 
 ## Next Steps
 

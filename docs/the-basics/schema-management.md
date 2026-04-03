@@ -1,4 +1,33 @@
-# Schema Transfer, Backup, and Import
+# Schema Management & Maintenance
+
+Velo providing tools for schema health, orphan table cleanup, and transferring metadata between environments.
+
+## Health & Recovery
+
+Velo ensures that your database tables stay in sync with your collection metadata.
+
+### `GET /api/schema/corrupt`
+Detects collections where the physical database table does not match the expected schema defined in the `collections` metadata.
+
+### `POST /api/collections/{collection}/recover`
+Attempts to fix a corrupted collection by reapplying the schema changes (DDL) to the database table.
+
+## Orphan Management
+
+Orphan tables are database tables that exist in the database but have no corresponding entry in the Velo `collections` table. This can happen if a collection was manually deleted from the metadata or during a failed migration.
+
+### `GET /api/schema/orphans`
+Lists all detected orphan tables.
+
+### `DELETE /api/schema/orphans`
+Drops all orphan tables from the database. **Use with caution.**
+
+### `DELETE /api/schema/orphans/{table_name}`
+Drops a specific orphan table.
+
+---
+
+## Schema Transfer, Backup, and Import
 
 Velo provides a built-in mechanism to export and import your database schema (collections metadata) and records. This is useful for backups, migrating between environments (e.g., staging to production), or sharing project structures.
 
