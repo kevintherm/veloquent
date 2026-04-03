@@ -4,18 +4,16 @@ Veloquent is an open-source backend skeleton powered by Laravel. It provides sta
 
 ## Core Features
 
+- **Dynamic Collection**: Create your schema on the fly.
+- **Authentication Ready**: Auth collection provide authentication ready-to-use out of the box.
 - **Real-time Broadcasting**: Native support for horizontal scaling with Reverb and custom workers.
-- **Email System**: Flexible email templating and distribution.
-- **Domain-Driven Design**: Clean architecture separating concerns into clear domains.
-- **First-Class Testing**: Built with Pest PHP for reliable and readable tests.
 
 ## Documentation
 
 Comprehensive documentation is available in the `docs` directory:
 
 - [Introduction](docs/getting-started/introduction.md)
-- [Installation Guide](docs/getting-started/installation.md)
-- [Architecture Concepts](docs/architecture-concepts/README.md)
+- [Installation Guide](docs/getting-started/quickstart.md)
 
 ## Installation Quick Start
 
