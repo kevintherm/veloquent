@@ -54,8 +54,9 @@ Sorting is supported on any field defined in the collection, as well as on syste
 ### Field Expansion
 Relation fields can be expanded to include the related record data in the response.
 
-- **Merging**: Expanded records are merged directly into the record object, replacing the relation ID string.
-- **Security**: The `view` API rule of the target collection is automatically applied to expanded records. If the requester doesn't have `view` access, the field remains a string (the ID) or `null`.
+- **Preserve FK**: The original relation key remains at the top level of the record, and expanded objects are returned inside an `expand` object.
+- **Security**: The `view` API rule of the target collection is automatically applied to expanded records. If the requester doesn't have `view` access, the expanded record is set to `null` in `expand`, while the top-level foreign key remains unchanged.
+- **Missing records**: If the related record cannot be found, the expanded entry is also set to `null` in `expand`.
 - **Nested Expansion**: Nested relation expansion (e.g., `user.profile`) is currently not supported.
 - **Limits**: A maximum of 10 relation expansions are allowed per request.
 

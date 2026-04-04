@@ -41,8 +41,12 @@ class RecordResource extends JsonResource
             // it will be overwritten by expansion logic below if expanded
         }
 
-        foreach (($this->resource->expandedRelations ?? []) as $fieldName => $expandedValue) {
-            $data[$fieldName] = $expandedValue;
+        if (! empty($this->resource->expandedRelations)) {
+            $data['expand'] = [];
+
+            foreach ($this->resource->expandedRelations as $fieldName => $expandedValue) {
+                $data['expand'][$fieldName] = $expandedValue;
+            }
         }
 
         return $data;

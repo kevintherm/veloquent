@@ -47,12 +47,14 @@ list           := '(' scalar ( ',' scalar )* ')'
 - JSON operators: `?=`, `?&`
 - Logical operators: `&&`, `||`
 
+Note: `&&` and `||` are accepted syntax and are normalized to `AND` and `OR` before parsing.
+
 Null checks are expressed as:
 
 - `field = null`
 - `field != null`
-
-`is null` and `is not null` are not part of this grammar.
+- `field is null`
+- `field is not null`
 
 ## Operand Standards
 
@@ -73,6 +75,7 @@ Left side is restricted to `FIELD` or `SYSVAR` in RuleEngine grammar.
 - `FIELD` resolves from context via `data_get(context, fieldPath)`
 - `SYSVAR` resolves from context via `data_get(context, substr(name, 1))`
 - Missing values resolve to `null`
+- When comparing relation IDs in an in-memory rule, use explicit ID paths such as `post = parent_comment.post.id` instead of `post = parent_comment.post`.
 
 ### Adapter Resolution Order
 

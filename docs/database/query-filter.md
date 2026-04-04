@@ -21,6 +21,7 @@ This page is the canonical standard for QueryFilter behavior.
 
 SQL mode is the default for QueryFilter.
 It enforces SQL-safe grammar and compiles to query builder calls.
+The parser also accepts `&&` and `||` as aliases for `AND` and `OR`; these are normalized before validation.
 
 ### In-memory lint mode (`lint(..., true)`)
 
@@ -127,6 +128,8 @@ QueryFilter supports field adapters through `QueryFieldAdapter`.
 
 - `field = null` compiles to `whereNull(field)`
 - `field != null` compiles to `whereNotNull(field)`
+- `field is null` compiles to `whereNull(field)`
+- `field is not null` compiles to `whereNotNull(field)`
 - All scalar-to-scalar SQL comparisons use positional bindings, not interpolated values
 
 ## Error Standard

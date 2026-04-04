@@ -45,6 +45,16 @@ Velo supports a wide range of operators for building rules:
 | `in`, `not in` | Check if a value exists in a list (e.g., `status in ("active", "pending")`). |
 | `is null`, `is not null` | Check for null values. |
 
+### Relation ID comparisons
+
+When comparing related record IDs, use an explicit ID path on the related object. For example:
+
+```text
+user = @request.auth.id && (parent_comment = null || post = parent_comment.post.id)
+```
+
+In runtime rule context, a path such as `parent_comment.post` may resolve to a hydrated related object or array, so using `.id` is required when matching scalar relation IDs.
+
 ### System References (`@request`)
 
 Rules can reference the current request context using the `@request` prefix:
@@ -59,6 +69,9 @@ Rules can reference the current request context using the `@request` prefix:
 
 You can access fields of related records using dot notation. For example, if a `posts` collection has a `userId` relation field pointing to `users`, you can write:
 - `userId.active = true`: Only posts whose user is active are visible.
+
+When a related record is expanded in API output, the foreign key remains at the top level and the expanded payload appears under `expand`.
+If the expanded record is blocked by the target collection's `view` rule or the related record cannot be found, the `expand` entry is explicitly `null`.
 
 ## Default Behavior
 
