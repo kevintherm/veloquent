@@ -161,10 +161,10 @@ it('expands single relation as object', function () {
     $profile = Record::of($profiles)->create(['name' => 'Jane']);
     Record::of($articles)->create(['title' => 'Hello', 'author' => $profile->id]);
 
-    getJson("/api/collections/{$articles->id}/records?expand=author")
-        ->assertSuccessful()
-        ->assertJsonPath('data.0.author.id', $profile->id)
-        ->assertJsonPath('data.0.author.name', 'Jane');
+    $response = getJson("/api/collections/{$articles->id}/records?expand=author");
+    $response->assertSuccessful()
+        ->assertJsonPath('data.0.expand.author.id', $profile->id)
+        ->assertJsonPath('data.0.expand.author.name', 'Jane');
 });
 
 it('blocks nested expansion with a safe 501 error', function () {

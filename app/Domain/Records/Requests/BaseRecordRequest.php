@@ -108,6 +108,10 @@ abstract class BaseRecordRequest extends FormRequest
                     }
                 };
 
+                if ($intervene) {
+                    $intervene($fieldName, $fieldRules);
+                }
+
                 $rules[$fieldName] = $fieldRules;
 
                 continue;
