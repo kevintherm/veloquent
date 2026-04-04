@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "106918bb00cabb3e2a2e6e9258425abe",
+    "content-hash": "ff496693884317a2f0a10ffa50ed64c6",
     "packages": [
         {
             "name": "brick/math",
@@ -1355,6 +1355,47 @@
                 }
             ],
             "time": "2025-08-22T14:27:06+00:00"
+        },
+        {
+            "name": "kevintherm/exprc",
+            "version": "v0.0.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/kevintherm/exprc.git",
+                "reference": "1cb51671abfe37e75f1ec82814b7f4a09bcf1f0a"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/kevintherm/exprc/zipball/1cb51671abfe37e75f1ec82814b7f4a09bcf1f0a",
+                "reference": "1cb51671abfe37e75f1ec82814b7f4a09bcf1f0a",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.2"
+            },
+            "require-dev": {
+                "illuminate/database": "^10.0 || ^11.0 || ^12.0",
+                "phpunit/phpunit": "^10.5"
+            },
+            "suggest": {
+                "illuminate/database": "Use QueryBuilderEvaluator to apply rules directly to Laravel query builders."
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Kevintherm\\Exprc\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Convert expression string to in-memory evaluation, SQL syntax, or something else.",
+            "support": {
+                "issues": "https://github.com/kevintherm/exprc/issues",
+                "source": "https://github.com/kevintherm/exprc/tree/v0.0.2"
+            },
+            "time": "2026-04-04T09:14:05+00:00"
         },
         {
             "name": "laravel/framework",
@@ -11166,7 +11207,7 @@
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
-        "php": "^8.5"
+        "php": "^8.3"
     },
     "platform-dev": {},
     "plugin-api-version": "2.9.0"

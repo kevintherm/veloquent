@@ -33,7 +33,7 @@ it('enforces view rules on expanded records', function () {
             [
                 'name' => 'target',
                 'type' => CollectionFieldType::Relation->value,
-                'target_collection_id' => $targetCollection->id
+                'target_collection_id' => $targetCollection->id,
             ],
         ],
         'api_rules' => ['view' => '', 'list' => ''],
@@ -48,9 +48,11 @@ it('enforces view rules on expanded records', function () {
     getJson("/api/collections/{$sourceCollection->id}/records?expand=target")
         ->assertSuccessful()
         ->assertJsonPath('data.0.title', 'Allowed')
-        ->assertJsonPath('data.0.target.id', $allowed->id)
+        ->assertJsonPath('data.0.target', $allowed->id)
+        ->assertJsonPath('data.0.expand.target.id', $allowed->id)
         ->assertJsonPath('data.1.title', 'Denied')
-        ->assertJsonPath('data.1.target', null);
+        ->assertJsonPath('data.1.target', $denied->id)
+        ->assertJsonPath('data.1.expand.target', null);
 });
 
 it('redacts sensitive fields in expanded auth collections', function () {
@@ -72,7 +74,7 @@ it('redacts sensitive fields in expanded auth collections', function () {
             [
                 'name' => 'target',
                 'type' => CollectionFieldType::Relation->value,
-                'target_collection_id' => $authCollection->id
+                'target_collection_id' => $authCollection->id,
             ],
         ],
         'api_rules' => ['view' => '', 'list' => ''],
@@ -87,8 +89,9 @@ it('redacts sensitive fields in expanded auth collections', function () {
 
     getJson("/api/collections/{$sourceCollection->id}/records?expand=target")
         ->assertSuccessful()
-        ->assertJsonPath('data.0.target.id', $user->id)
-        ->assertJsonMissing(['data.0.target.email']);
+        ->assertJsonPath('data.0.target', $user->id)
+        ->assertJsonPath('data.0.expand.target.id', $user->id)
+        ->assertJsonMissing(['data.0.expand.target.email']);
 });
 
 it('logs a warning and returns null when expansion target collection is missing', function () {
@@ -100,7 +103,7 @@ it('logs a warning and returns null when expansion target collection is missing'
             [
                 'name' => 'target',
                 'type' => CollectionFieldType::Relation->value,
-                'target_collection_id' => 'non-existent-id'
+                'target_collection_id' => 'non-existent-id',
             ],
         ],
         'api_rules' => ['view' => '', 'list' => ''],
@@ -108,7 +111,7 @@ it('logs a warning and returns null when expansion target collection is missing'
 
     Log::shouldReceive('warning')
         ->once()
-        ->with('EXPANSION_TARGET_COLLECTION_MISSING', \Mockery::on(function ($data) use ($sourceCollection) {
+        ->with('EXPANSION_TARGET_COLLECTION_MISSING', Mockery::on(function ($data) use ($sourceCollection) {
             return $data['source_collection'] === $sourceCollection->id
                 && $data['field'] === 'target'
                 && $data['target_collection_id'] === 'non-existent-id';
@@ -118,5 +121,6 @@ it('logs a warning and returns null when expansion target collection is missing'
 
     getJson("/api/collections/{$sourceCollection->id}/records?expand=target")
         ->assertSuccessful()
-        ->assertJsonPath('data.0.target', null);
+        ->assertJsonPath('data.0.target', 'some-id')
+        ->assertJsonPath('data.0.expand.target', null);
 });

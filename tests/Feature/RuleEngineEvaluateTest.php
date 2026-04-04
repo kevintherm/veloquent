@@ -44,6 +44,14 @@ it('evaluates null equality with = null syntax', function () {
     expect($engine->evaluate('field != null', ['field' => null]))->toBeFalse();
 });
 
+it('evaluates sysvar is not null', function () {
+    $engine = RuleEngine::make();
+    $context = ['request' => ['auth' => ['id' => 42]]];
+
+    expect($engine->evaluate('@request.auth.id IS NOT NULL', $context))->toBeTrue();
+    expect($engine->evaluate('@request.auth.id IS NULL', $context))->toBeFalse();
+});
+
 it('evaluates a missing field as null', function () {
     $engine = RuleEngine::make();
     expect($engine->evaluate('unknown = null', []))->toBeTrue();

@@ -34,10 +34,16 @@ it('accepts @-variable on the LHS in lint (RuleEngine allows symmetric)', functi
     expect(fn () => $engine->lint('@request.auth.id = user'))->not->toThrow(InvalidRuleExpressionException::class);
 });
 
-it('rejects the old is null operator', function () {
+it('accepts is null operator', function () {
     $engine = RuleEngine::make(['id']);
     expect(fn () => $engine->lint('id is null'))
-        ->toThrow(InvalidRuleExpressionException::class);
+        ->not->toThrow(InvalidRuleExpressionException::class);
+});
+
+it('accepts is not null operator', function () {
+    $engine = RuleEngine::make(['id']);
+    expect(fn () => $engine->lint('id is not null'))
+        ->not->toThrow(InvalidRuleExpressionException::class);
 });
 
 it('accepts = null as the null check', function () {

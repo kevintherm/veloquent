@@ -60,16 +60,12 @@ class AuthController extends ApiController
         return $this->tokenResponse($tokenData, Response::HTTP_OK);
     }
 
-    public function user(Collection $collection): JsonResponse
+    public function user(): JsonResponse
     {
-        if ($collection->type !== CollectionType::Auth) {
-            return $this->errorResponse('This collection does not support authentication.', Response::HTTP_FORBIDDEN);
-        }
-
         /** @var Record|null $user */
         $user = Auth::user();
 
-        if (! $user || ! $this->userMatchesCollection($user, $collection)) {
+        if (! $user) {
             return $this->errorResponse('User not authenticated.', Response::HTTP_UNAUTHORIZED);
         }
 
