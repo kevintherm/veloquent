@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/highlightjs-copy/dist/highlightjs-copy.min.css" />
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif;background-color: #ffffff;background-image: radial-gradient(circle at 1px 1px, rgba(0,0,0,0.08) 1.5px, transparent 0);background-size: 25px 25px;color: #000;}
 
@@ -22,11 +23,15 @@
         .content-area h1 { font-size: 4rem; font-weight: 900; margin-bottom: 2rem; text-transform: uppercase; letter-spacing: -0.0125em; line-height: 1; }
         .content-area h2 { font-size: 2.25rem; font-weight: 900; margin-top: 4rem; margin-bottom: 1.5rem; text-transform: uppercase; border-bottom: 8px solid #000; padding-bottom: 1rem; }
         .content-area h3 { font-size: 1.5rem; font-weight: 800; margin-top: 2.5rem; margin-bottom: 1rem; text-transform: uppercase; }
+        .content-area h4 { font-size: 1.25rem; font-weight: 700; margin-top: 2.5rem; margin-bottom: 1rem; text-transform: uppercase; }
         .content-area p { font-size: 1.25rem; font-weight: 500; line-height: 1.6; margin-bottom: 1.5rem; color: rgba(0,0,0,0.8); }
         
         .content-area ul { list-style: none; margin-bottom: 2.5rem; padding: 0; }
+        .content-area ol { list-style: none; margin-bottom: 2.5rem; padding: 0; }
         .content-area ul li { position: relative; padding-left: 2.5rem; font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem; }
         .content-area ul li::before { content: ''; position: absolute; left: 0; top: 0.5rem; width: 1.25rem; height: 1.25rem; background: #3b82f6; border: 2px solid #000; }
+        .content-area ol li { position: relative; padding-left: 2.5rem; font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem; }
+        .content-area ol li::before { content: ''; position: absolute; left: 0; top: 0.5rem; width: 1.25rem; height: 1.25rem; background: #3b82f6; border: 2px solid #000; }
         
         .content-area a { color: #2563eb; font-weight: 800; border-bottom: 4px solid #3b82f6; text-decoration: none; transition: all 0.2s; }
         .content-area a:hover { background: #3b82f6; color: #fff; }
@@ -150,8 +155,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/languages/dart.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/languages/http.min.js"></script>
+    <script src="https://unpkg.com/highlightjs-copy/dist/highlightjs-copy.min.js"></script> 
     <script>
         document.addEventListener('DOMContentLoaded', (event) => {
+            hljs.addPlugin(new CopyButtonPlugin());
+            
             document.querySelectorAll('pre code').forEach((el) => {
                 hljs.highlightElement(el);
             });

@@ -8,13 +8,25 @@ This guide will walk you through setting up the Veloquentbackend and integrating
 
 To run Velo, you need the following installed:
 
-- **PHP 8.5** or higher
-- **Composer** for dependency management
-- **Docker** (Recommended for Sail) or a local web server with MariaDB/MySQL
+- **PHP 8.3+**
+- **Composer**
+- **Docker** (Optional)
 
 ### Getting Started with Laravel Sail
 
 The easiest way to get started is by using Laravel Sail, a light-weight command-line interface for interacting with Veloquent's default Docker development environment.
+
+#### 0. Install Veloquent
+
+Using composer:
+```bash
+composer create-project veloquent/veloquent app-name
+```
+
+Or, git clone the repository:
+```bash
+git clone https://github.com/kevintherm/veloquent
+```
 
 #### 1. Install Dependencies
 Run the following command to install the required PHP packages:
