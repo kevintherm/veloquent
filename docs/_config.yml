@@ -4,7 +4,7 @@ description: The Open Source Laravel Backend. PHP Nature. Cheap Hosting. Infinit
 theme: jekyll-theme-cayman # Using a standard nice theme as a placeholder, but will recommend "Just the Docs" for search
 
 # Site settings
-baseurl: "" # the subpath of your site, e.g. /blog
+baseurl: "/veloquent" # the subpath of your site, e.g. /blog
 url: "https://kevintherm.github.io" # the base hostname & protocol for your site
 
 # Build settings
