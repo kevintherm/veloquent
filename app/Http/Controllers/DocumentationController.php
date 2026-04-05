@@ -11,7 +11,7 @@ class DocumentationController extends Controller
 {
     public function __construct(protected DocsManager $docsManager) {}
 
-    public function show(Request $request, string $file = 'getting-started/introduction')
+    public function show(Request $request, string $file = 'index.html')
     {
         // Strip .md if present to handle both link formats
         $file = Str::replaceLast('.md', '', $file);
