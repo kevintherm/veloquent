@@ -109,13 +109,13 @@ class LogsServiceProvider extends ServiceProvider
 
             Log::info('HTTP_REQUEST', [
                 'method' => $request->method(),
+                'url' => $request->fullUrl(),
+                'status' => $response->getStatusCode(),
+                'ip' => $request->ip(),
                 'headers' => collect($request->headers->all())
                     ->except(['authorization', 'cookie', 'x-xsrf-token'])
                     ->map(fn ($v) => $v[0] ?? $v)
                     ->toArray(),
-                'url' => $request->fullUrl(),
-                'status' => $response->getStatusCode(),
-                'ip' => $request->ip(),
                 'user' => $request->user()?->id,
                 'payload' => $payload,
                 'duration' => defined('LARAVEL_START') ? floor((microtime(true) - LARAVEL_START) * 1000) : null,
