@@ -6,7 +6,7 @@
     <title>{{ $title ?? 'Documentation' }} - Velo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif;background-color: #ffffff;background-image: radial-gradient(circle at 1px 1px, rgba(0,0,0,0.08) 1.5px, transparent 0);background-size: 25px 25px;color: #000;}
 
@@ -15,11 +15,9 @@
         
         /* Markdown Styling Overrides */
         .content-area h1, .content-area h2, .content-area h3 { position: relative; }
-        .heading-permalink { position: absolute;left: -2.5rem; top: 50%;transform: translateY(-50%);color: #3b82f6 !important; border: none !important; opacity: 0; transition: all 0.2s; font-size: 0.8em;font-weight: 900;text-decoration: none !important;}
+        .heading-permalink { position: absolute;left: -2rem; top: 50%;transform: translateY(-50%);color: #3b82f6 !important; border: none !important; font-size: 0.8em;font-weight: 900;text-decoration: none !important;}
         .heading-permalink:hover { color: #fff !important;background: #3b82f6; }
-        .content-area h1:hover .heading-permalink, 
-        .content-area h2:hover .heading-permalink, 
-        .content-area h3:hover .heading-permalink { opacity: 1; left: -2rem; }
+        .content-area h1 .heading-permalink { left: -4rem; }
 
         .content-area h1 { font-size: 4rem; font-weight: 900; margin-bottom: 2rem; text-transform: uppercase; letter-spacing: -0.0125em; line-height: 1; }
         .content-area h2 { font-size: 2.25rem; font-weight: 900; margin-top: 4rem; margin-bottom: 1.5rem; text-transform: uppercase; border-bottom: 8px solid #000; padding-bottom: 1rem; }
@@ -42,6 +40,7 @@
         .content-area code:not(pre code) { background: rgba(59,130,246,0.1); padding: 0.25rem 0.5rem; border: 2px solid #000; font-size: 0.875rem; font-weight: 800; }
         .content-area pre { border: 4px solid #000; box-shadow: 12px 12px 0px 0px #000; margin-bottom: 2.5rem; overflow: hidden; }
         .content-area pre code { padding: 2rem !important; background: #0d1117 !important; display: block; }
+        .content-area pre code.hljs { font-weight: 500 !important; }
 
         /* Sidebar Styling */
         #sidebar { background-color: #fff; color: #000; }
@@ -69,7 +68,7 @@
         <div class="px-12 py-16 flex justify-center bg-blue-500 border-b-8 border-black">
             <a href="/{{ config('velo.docs.path', 'docs') }}">
                 <div class="bg-white p-6 border-4">
-                    <img src="/{{ config('velo.docs.path', 'docs') }}/logo.svg" alt="Velo Logo" class="h-16 w-auto">
+                    <img src="/{{ config('velo.docs.path', 'docs') }}/logo.svg" alt="VeloquentLogo" class="h-16 w-auto">
                 </div>
             </a>
         </div>
@@ -149,6 +148,8 @@
     </main>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/languages/dart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.11.1/build/languages/http.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', (event) => {
             document.querySelectorAll('pre code').forEach((el) => {

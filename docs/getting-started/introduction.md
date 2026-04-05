@@ -1,10 +1,10 @@
-# Introduction to Velo
+# Introduction to VeloquentPHP
 
-Velo is an open source backend built with Laravel to utilize Laravel's robust ecosystem and PHP's nature of hostability. It simplifies the development of modern web and mobile applications by handling your database, authentication, and real-time needs out of the box.
+Veloquent is an open source backend built with Laravel to utilize Laravel's robust ecosystem and PHP's nature of hostability. It simplifies the development of modern web and mobile applications by handling your database, authentication, and real-time needs out of the box.
 
 ## Core Philosophy
 
-Velo is built to be:
+Veloquent is built to be:
 - **Fast**: Utilizing Laravel's robust ecosystem for maximum performance.
 - **Flexible**: Easily define and manage your data structures with dynamic collections and fields.
 - **Secure**: Robust access control with powerful expression-based rules.
@@ -24,4 +24,4 @@ To get started with Velo, follow the guides in the documentation to learn how to
 
 ## Next Steps
 
-If you're ready to go deeper, you can check out the [Collections](../the-basics/collections.md) systems, how [Schema Management](../the-basics/schema-management.md) works, and how it all comes together in our [API](../api-documentation/api.md) documentation.
+If you're ready to go deeper, you can check out the [Collections](../the-basics/collections.md) systems, how [Schema Management](../the-basics/schema-management.md) works, and start [Working with Records](../the-basics/records.md).

@@ -1,6 +1,6 @@
 # API Rules & Access Control
 
-Velo provides powerful, expression-based access control to secure your data at the collection level. You can define rules for various actions, ensuring that only authorized users or requests can access or modify your records.
+Veloquent provides powerful, expression-based access control to secure your data at the collection level. You can define rules for various actions, ensuring that only authorized users or requests can access or modify your records.
 
 ## Action Rules
 
@@ -33,7 +33,7 @@ The behavior of bare variables (variables without a prefix) depends on the actio
 
 ### Common Operators
 
-Velo supports a wide range of operators for building rules:
+Veloquentsupports a wide range of operators for building rules:
 
 | Operator | Description |
 |---|---|
@@ -110,4 +110,4 @@ Some errors include an `error_type` for programmatic handling:
 
 ## Next Steps
 
-After securing your data with rules, you're ready to start using the [Records API](../api-documentation/records-api.md) to interact with your data.
+After securing your data with rules, you're ready to start using the [Records API](../the-basics/records.md) to interact with your data.
