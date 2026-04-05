@@ -3,7 +3,7 @@
 - Testing
 - Documentation
     - Quickstart
-    - Separate internal implementation with usage
+    - Add SDK code snippets
     - Remove redundant docs e.g Records API and API
 - Ship it into a package
 
