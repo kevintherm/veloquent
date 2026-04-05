@@ -1,0 +1,33 @@
+# Jekyll configuration
+title: Veloquent
+description: The Open Source Laravel Backend. PHP Nature. Cheap Hosting. Infinite Options.
+theme: jekyll-theme-cayman # Using a standard nice theme as a placeholder, but will recommend "Just the Docs" for search
+
+# Site settings
+baseurl: "" # the subpath of your site, e.g. /blog
+url: "https://kevintherm.github.io" # the base hostname & protocol for your site
+
+# Build settings
+markdown: kramdown
+remote_theme: pmarsceill/just-the-docs # This theme has excellent built-in search
+
+# Just the Docs settings
+search_enabled: true
+aux_links:
+  "Veloquent on GitHub":
+    - https://github.com/kevintherm/veloquent
+
+# Collections / Navigation
+nav_sort: uppercase
+
+# Plugins
+plugins:
+  - jekyll-remote-theme
+  - jekyll-seo-tag
+
+# Defaults
+defaults:
+  - scope:
+      path: "" # an empty string here means all files in the project
+    values:
+      layout: "default"
