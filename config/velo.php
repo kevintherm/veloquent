@@ -73,8 +73,8 @@ return [
     |--------------------------------------------------------------------------
     */
     'realtime' => [
-        'bus' => env('VELO_REALTIME_BUS', 'redis'),
-        'mode' => env('VELO_REALTIME_MODE', 'persistent'),
+        'bus' => env('VELO_REALTIME_BUS', 'redis'), // redis, filesystem
+        'mode' => env('VELO_REALTIME_MODE', 'persistent'), // persistent, cron
         'cron_ttl' => env('VELO_REALTIME_TTL', 55),
         'subscription_ttl' => env('VELO_REALTIME_SUBSCRIPTION_TTL', 120),
     ],

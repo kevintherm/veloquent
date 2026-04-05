@@ -25,7 +25,7 @@ const handleCancel = () => {
 <template>
     <div
         v-if="selectedRecords.length > 0"
-        class="fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-6 px-6 py-3 text-foreground shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300 z-50"
+        class="fixed bottom-8 bg-background left-1/2 -translate-x-1/2 flex items-center gap-6 px-6 py-3 text-foreground shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300 z-50"
     >
         <span class="text-sm font-semibold whitespace-nowrap">{{
                 selectedRecords.length
