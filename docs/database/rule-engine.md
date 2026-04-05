@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The RuleEngine is the in-memory evaluator for Velo filter expressions.
+The RuleEngine is the in-memory evaluator for Veloquentfilter expressions.
 It validates and evaluates rule strings against a PHP array context.
 
 This page is the canonical standard for RuleEngine behavior.
@@ -94,7 +94,7 @@ Any other `@` prefix is invalid during lint.
 
 ## Date Function Standard
 
-Velo supports dynamic date calculations in expressions. Date functions are evaluated to ISO-8601 strings during processing.
+Veloquentsupports dynamic date calculations in expressions. Date functions are evaluated to ISO-8601 strings during processing.
 
 ### No-argument Functions
 

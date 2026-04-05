@@ -2,7 +2,7 @@
 
 ## Purpose
 
-QueryFilter is the SQL compiler for Velo filter expressions.
+QueryFilter is the SQL compiler for Veloquentfilter expressions.
 It extends RuleEngine tokenization and linting concepts, then compiles conditions into Eloquent query builder clauses.
 
 This page is the canonical standard for QueryFilter behavior.

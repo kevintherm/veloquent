@@ -1,10 +1,10 @@
 # Real-time Subscriptions
 
-Velo allows you to build reactive applications by providing real-time updates for your records via WebSockets. Integration with Laravel Reverb ensures high-performance broadcasting of events whenever data changes.
+Veloquentallows you to build reactive applications by providing real-time updates for your records via WebSockets. Integration with Laravel Reverb ensures high-performance broadcasting of events whenever data changes.
 
 ## How it Works
 
-When a record is created, updated, or deleted, Velo automatically broadcasts a message to the relevant collection channel. Clients can subscribe to these channels to receive live updates without polling the API.
+When a record is created, updated, or deleted, Veloquentautomatically broadcasts a message to the relevant collection channel. Clients can subscribe to these channels to receive live updates without polling the API.
 
 ### Evaluation & Security
 
@@ -16,40 +16,132 @@ Realtime synchronization is governed by the same [API Rules](../security/api-rul
 
 ## Subscribing to Updates
 
-To start receiving updates, you must first subscribe to a collection using the API.
+To start receiving updates, you must first subscribe to a collection. The SDK handles subscription management automatically, but you can also interact directly via the API.
 
-### Subscribe Endpoint
-`POST /api/collections/{collection}/subscribe`
+### JavaScript SDK
 
-**Optional Filter:**
-You can provide a `filter` expression in the request body to only receive updates for records that match specific criteria (e.g., `status = "active"`).
+```javascript
+import { configureEcho } from '@laravel/echo-vue';
+
+// Configure Echo (Laravel WebSocket library)
+const echo = configureEcho({
+  broadcaster: 'reverb',
+  key: import.meta.env.VITE_REVERB_APP_KEY,
+  wsHost: import.meta.env.VITE_REVERB_HOST,
+  wsPort: import.meta.env.VITE_REVERB_PORT,
+  forceTLS: import.meta.env.VITE_REVERB_SCHEME === 'https'
+});
+
+// Subscribe to a collection and listen for events
+const subscription = echo
+  .private(`collections.posts`)
+  .subscribe()
+  .listen('.record.created', (event) => {
+    console.log('New record:', event.record);
+  })
+  .listen('.record.updated', (event) => {
+    console.log('Updated record:', event.record);
+  })
+  .listen('.record.deleted', (event) => {
+    console.log('Deleted record:', event.record);
+  });
+
+// Leave the channel when done
+echo.leave('collections.posts');
+```
+
+### Dart SDK
+
+```dart
+import 'package:veloquent_sdk/veloquent_sdk.dart';
+
+// Configure Pusher Channels adapter
+final realtimeAdapter = PusherChannelsAdapter(
+  cluster: 'mt1',
+  key: pusherKey,
+  authEndpoint: 'https://your-api.com/api/pusher/auth',
+);
+
+final sdk = Veloquent(
+  apiUrl: 'https://your-api.com',
+  realtime: realtimeAdapter,
+);
+
+// Subscribe to collection events
+sdk.realtime.subscribe('posts', (event, payload) {
+  print('Event: $event');
+  print('Record: ${payload['record']}');
+});
+
+// Alternatively, subscribe with a filter
+sdk.realtime.subscribe('posts', (event, payload) {
+  print('Event: $event');
+}, filter: 'status = "published"');
+```
+
+### REST API - Manual Subscription
+
+If using plain REST API, first subscribe to get a channel name:
+
+```http
+POST /api/collections/posts/subscribe
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "filter": "status = \"active\""
+}
+```
 
 **Response:**
-The API returns a unique `channel` name (ULID-based) and an `expires_at` timestamp.
+```json
+{
+  "message": "Success",
+  "data": {
+    "channel": "01JAB...private.posts",
+    "expires_at": "2024-01-15T10:02:00Z"
+  }
+}
+```
 
+Then connect via WebSocket or Laravel Echo:
+
+```javascript
+window.Echo.private('01JAB...private.posts')
+    .listen('.record.created', (e) => {
+        console.log('New record:', e.record);
+    })
+    .listen('.record.updated', (e) => {
+        console.log('Updated record:', e.record);
+    })
+    .listen('.record.deleted', (e) => {
+        console.log('Deleted record:', e.record);
+    });
+```
+
+**Subscription Metadata:**
 - **TTL**: Subscriptions are temporary (default: 120 seconds).
 - **Auto-Refresh**: Clients should periodically re-subscribe to maintain a continuous connection.
 - **Garbage Collection**: Expired subscriptions are pruned automatically via the `realtime:prune` scheduler command.
 
 ## Receiving Events
 
-Once subscribed, your client will receive events for record changes in the collection. Typical events include:
-- `create`: New record added.
-- `update`: Existing record modified.
-- `delete`: Record removed.
+Once subscribed, your client receives real-time events for record changes. Typical events include:
+- `record.created`: New record added.
+- `record.updated`: Existing record modified.
+- `record.deleted`: Record removed.
 
-## Client Integration
-
-Velo is designed to work seamlessly with **Laravel Echo**. You can listen for events on the provided channel:
-
-```javascript
-window.Echo.private(subscription.channel)
-    .listen('.record.created', (e) => {
-        console.log('New record:', e.record);
-    })
-    .listen('.record.updated', (e) => {
-        console.log('Updated record:', e.record);
-    });
+Event payloads include the full record data plus metadata:
+```json
+{
+  "record": {
+    "id": "01JABCDEF123456789",
+    "title": "Updated Title",
+    "status": "published",
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:45:00Z"
+  }
+}
 ```
 
 ## Unsubscribing
@@ -59,4 +151,4 @@ To stop receiving updates, use the unsubscribe endpoint:
 
 ## Next Steps
 
-Now that you've covered all the core features, check the [API Reference](../api-documentation/api.md) for a complete technical deep dive.
+Now that you've covered all the core features, explore [Records Management](../the-basics/records.md) or learn how to secure your data with [API Rules](../security/api-rules.md).

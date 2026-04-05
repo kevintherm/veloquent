@@ -1,10 +1,10 @@
 # Collections & Fields
 
-Collections are the core building blocks of your Velo application. They represent the data structures (tables) in your database and define the schema for your records.
+Collections are the core building blocks of your Veloquentapplication. They represent the data structures (tables) in your database and define the schema for your records.
 
 ## Collection Types
 
-Velo supports two main types of collections:
+Veloquentsupports two main types of collections:
 - **Base Collections**: Standard tables for storing any kind of data.
 - **Auth Collections**: Specialized collections for user authentication. These collections include built-in fields for managing users and support standard and OAuth login flows.
 
@@ -17,7 +17,7 @@ Collections can be marked as `is_system`. These collections have additional prot
 
 ## Fields
 
-Each collection is made up of fields that define the structure of your records. Velo supports a variety of rich field types:
+Each collection is made up of fields that define the structure of your records. Veloquentsupports a variety of rich field types:
 
 | Type | Description |
 |---|---|
@@ -33,7 +33,7 @@ Each collection is made up of fields that define the structure of your records. 
 
 ## Managing Collections
 
-You can create, update, and delete collections via the Velo dashboard or through the REST API. When you create or update a collection, Velo automatically manages the underlying database schema for you, including:
+You can create, update, and delete collections via the Veloquentdashboard or through the REST API. When you create or update a collection, Veloquentautomatically manages the underlying database schema for you, including:
 - Creating or renaming tables.
 - Adding, renaming, or deleting columns.
 - Synchronizing unique and non-unique indexes.
@@ -47,7 +47,7 @@ Relation fields allow you to create powerful connections between your data. When
 
 ### Performance & Caching
 
-Velo uses an internal caching layer for collection metadata to minimize database overhead:
+Veloquentuses an internal caching layer for collection metadata to minimize database overhead:
 - **`findByIdCached` / `findByNameCached`**: Models are cached based on the `velo.collection_cache_ttl` configuration.
 - **Cache Invalidation**: Caches are automatically cleared when a collection is updated or renamed.
 

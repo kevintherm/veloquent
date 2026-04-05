@@ -9,6 +9,7 @@ use League\CommonMark\Environment\Environment;
 use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;
 use League\CommonMark\Extension\GithubFlavoredMarkdownExtension;
 use League\CommonMark\Extension\HeadingPermalink\HeadingPermalinkExtension;
+use League\CommonMark\Extension\Attributes\AttributesExtension;
 use League\CommonMark\MarkdownConverter;
 
 class DocsManager
@@ -37,6 +38,7 @@ class DocsManager
         $environment->addExtension(new CommonMarkCoreExtension);
         $environment->addExtension(new GithubFlavoredMarkdownExtension);
         $environment->addExtension(new HeadingPermalinkExtension);
+        $environment->addExtension(new AttributesExtension);
 
         return new MarkdownConverter($environment);
     }
