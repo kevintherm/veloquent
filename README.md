@@ -29,7 +29,7 @@ composer install
 ./vendor/bin/sail artisan queue:work
 ```
 
-For more detailed instructions, see the [Installation Guide](docs/getting-started/installation.md).
+For more detailed instructions, see the [Installation Guide](docs/getting-started/quickstart.md).
 
 ## Known Issues
 

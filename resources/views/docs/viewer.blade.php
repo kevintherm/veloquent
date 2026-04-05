@@ -27,7 +27,7 @@
         .content-area p { font-size: 1.25rem; font-weight: 500; line-height: 1.6; margin-bottom: 1.5rem; color: rgba(0,0,0,0.8); }
         
         .content-area ul { list-style: none; margin-bottom: 2.5rem; padding: 0; }
-        .content-area ol { list-style: none; margin-bottom: 2.5rem; padding: 0; }
+        .content-area ol { margin-bottom: 2.5rem; padding: 0; }
         .content-area ul li { position: relative; padding-left: 2.5rem; font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem; }
         .content-area ul li::before { content: ''; position: absolute; left: 0; top: 0.5rem; width: 1.25rem; height: 1.25rem; background: #3b82f6; border: 2px solid #000; }
         .content-area ol li { position: relative; padding-left: 2.5rem; font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem; }
@@ -108,7 +108,7 @@
     <main class="grow p-8 md:p-24 overflow-x-hidden">
         <div class="max-w-4xl mx-auto">
             <div class="mb-20 flex items-center gap-8">
-                <div class="bg-blue-500 text-white px-6 py-3 font-black uppercase tracking-widest border-4 border-black">1.0 DOC_TYPE: {{ isset($search_results) ? 'SEARCH_QUERY' : 'SYSTEM_REFERENCE' }}</div>
+                <div class="bg-blue-500 text-white px-6 py-3 font-black uppercase tracking-widest border-4 border-black">{{ config('velo.version', '1.0.0') }} DOC_TYPE: {{ isset($search_results) ? 'SEARCH_QUERY' : 'SYSTEM_REFERENCE' }}</div>
                 <div class="h-2 bg-black grow"></div>
             </div>
 

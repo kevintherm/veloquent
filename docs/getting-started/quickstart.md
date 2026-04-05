@@ -77,7 +77,7 @@ If you prefer not to use Docker, follow these steps:
 1. **Serve the Application**: Run `php artisan serve` or configure Nginx/Apache.
 2. **Database**: Create a database and update the `DB_*` variables in your `.env` file.
 3. **Migrations**: Run `php artisan migrate --seed`.
-4. **Environment**: Ensure you have PHP 8.5+ with the necessary extensions.
+4. **Environment**: Ensure you have PHP with the necessary extensions.
 
 ---
 
