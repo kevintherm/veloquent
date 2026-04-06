@@ -1,5 +1,6 @@
 ## TODO
 
+- fix: ApiTest did not include bearer token when provided
 - Ship it into a package
 
 ## Roadmap

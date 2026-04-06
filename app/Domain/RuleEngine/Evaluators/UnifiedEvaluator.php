@@ -113,9 +113,7 @@ class UnifiedEvaluator implements EvaluatorInterface, VisitorInterface
 
     public function visitNullComparisonNode(NullComparisonNode $node): mixed
     {
-        $field = $this->resolver->resolve($node->field);
-        $method = $node->isNot ? 'whereNotNull' : 'whereNull';
-        $this->builder->{$method}($field);
+        $this->applyNullComparison($this->builder, $node->field, $node->isNot, 'and');
 
         return null;
     }
@@ -134,9 +132,7 @@ class UnifiedEvaluator implements EvaluatorInterface, VisitorInterface
         }
 
         if ($node instanceof NullComparisonNode) {
-            $field = $this->resolver->resolve($node->field);
-            $method = $node->isNot ? ($boolean === 'or' ? 'orWhereNotNull' : 'whereNotNull') : ($boolean === 'or' ? 'orWhereNull' : 'whereNull');
-            $builder->{$method}($field);
+            $this->applyNullComparison($builder, $node->field, $node->isNot, $boolean);
 
             return;
         }
@@ -216,6 +212,12 @@ class UnifiedEvaluator implements EvaluatorInterface, VisitorInterface
             return;
         }
 
+        if ($leftIsSysvar && ! $rightIsSysvar && ! $rightIsField) {
+            $this->applyLiteralComparison($builder, $operator, $leftValue, $rightValue, $boolean);
+
+            return;
+        }
+
         if (! $leftIsSysvar && ! $rightIsSysvar && ! $rightIsField) {
             $this->applyScalarComparison($builder, $this->resolver->resolve($field), $operator, $rightValue, $boolean);
 
@@ -239,6 +241,24 @@ class UnifiedEvaluator implements EvaluatorInterface, VisitorInterface
 
         $method = $boolean === 'or' ? 'orWhere' : 'where';
         $builder->{$method}($field, $sqlOperator, $value);
+    }
+
+    private function applyNullComparison(object $builder, string $field, bool $isNot, string $boolean): void
+    {
+        if ($this->isSysvar($field)) {
+            $method = $boolean === 'or' ? 'orWhereRaw' : 'whereRaw';
+            $sql = $isNot ? '? IS NOT NULL' : '? IS NULL';
+            $builder->{$method}($sql, [$this->getSysvarValue($field)]);
+
+            return;
+        }
+
+        $resolvedField = $this->resolver->resolve($field);
+        $method = $isNot
+            ? ($boolean === 'or' ? 'orWhereNotNull' : 'whereNotNull')
+            : ($boolean === 'or' ? 'orWhereNull' : 'whereNull');
+
+        $builder->{$method}($resolvedField);
     }
 
     private function applyLiteralComparison(object $builder, string $operator, mixed $left, mixed $right, string $boolean): void
