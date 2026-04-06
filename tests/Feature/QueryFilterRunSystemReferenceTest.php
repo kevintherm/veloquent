@@ -86,3 +86,69 @@ it('compiles two @request operands into a bound literal SQL comparison', functio
     expect($sql)->toContain('? = ?')
         ->and($query->getBindings())->toBe([21, 21]);
 });
+
+it('compiles sysvar on the left with a literal value into bound SQL comparison', function () {
+    $context = makeSqlRuleContext();
+    $query = Collection::query();
+
+    QueryFilter::for($query, ['id'])->run('@request.auth.id = "value"', $context);
+
+    $sql = strtolower($query->toSql());
+
+    expect($sql)->toContain('? = ?')
+        ->and($sql)->not->toContain('__sysvar__')
+        ->and($query->getBindings())->toBe([21, 'value']);
+});
+
+it('compiles sysvar on the left with a literal value and not-equals into bound SQL comparison', function () {
+    $context = makeSqlRuleContext();
+    $query = Collection::query();
+
+    QueryFilter::for($query, ['id'])->run('@request.auth.id != "value"', $context);
+
+    $sql = strtolower($query->toSql());
+
+    expect($sql)->toContain('? != ?')
+        ->and($sql)->not->toContain('__sysvar__')
+        ->and($query->getBindings())->toBe([21, 'value']);
+});
+
+it('compiles sysvar is not null into a bound SQL null comparison', function () {
+    $context = makeSqlRuleContext();
+    $query = Collection::query();
+
+    QueryFilter::for($query, ['id'])->run('@request.auth.id IS NOT NULL', $context);
+
+    $sql = strtolower($query->toSql());
+
+    expect($sql)->toContain('? is not null')
+        ->and($sql)->not->toContain('__sysvar__')
+        ->and($query->getBindings())->toBe([21]);
+});
+
+it('compiles sysvar is null into a bound SQL null comparison', function () {
+    $context = makeSqlRuleContext();
+    $query = Collection::query();
+
+    QueryFilter::for($query, ['id'])->run('@request.auth.id IS NULL', $context);
+
+    $sql = strtolower($query->toSql());
+
+    expect($sql)->toContain('? is null')
+        ->and($sql)->not->toContain('__sysvar__')
+        ->and($query->getBindings())->toBe([21]);
+});
+
+it('compiles grouped sysvar null comparison using bound SQL in logical expressions', function () {
+    $context = makeSqlRuleContext();
+    $query = Collection::query();
+
+    QueryFilter::for($query, ['id'])->run('id = 1 OR @request.auth.id IS NOT NULL', $context);
+
+    $sql = strtolower($query->toSql());
+
+    expect($sql)->toContain('? is not null')
+        ->and($sql)->not->toContain('__sysvar__')
+        ->and($query->getBindings())->toContain(1)
+        ->and($query->getBindings())->toContain(21);
+});
