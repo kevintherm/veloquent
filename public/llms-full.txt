@@ -1,0 +1,1715 @@
+# Veloquent Full Documentation Context
+
+This file contains the complete documentation for Veloquent, compiled into a single document for AI consumption.
+Generated on: 2026-04-07 22:58:33
+
+--- FILE: docs/database/query-filter.md ---
+# QueryFilter Standard
+
+## Purpose
+
+QueryFilter is the SQL compiler for Veloquentfilter expressions.
+It extends RuleEngine tokenization and linting concepts, then compiles conditions into Eloquent query builder clauses.
+
+This page is the canonical standard for QueryFilter behavior.
+
+## Public API
+
+- `QueryFilter::for(Builder $query, array $allowedFields): static`
+- `withQueryFieldAdapter(QueryFieldAdapter $adapter): static`
+- `withRelationJoinResolver(RelationJoinResolver $resolver): static`
+- `lint(?string $filter, bool $inMemory = false): void`
+- `run(string $filter, array $context = []): Builder`
+
+## Mode Standards
+
+### SQL mode (`lint(..., false)` and `run(...)`)
+
+SQL mode is the default for QueryFilter.
+It enforces SQL-safe grammar and compiles to query builder calls.
+The parser also accepts `&&` and `||` as aliases for `AND` and `OR`; these are normalized before validation.
+
+### In-memory lint mode (`lint(..., true)`)
+
+Delegates lint validation to RuleEngine in-memory grammar.
+Use this mode for rule types that are evaluated in memory.
+
+## SQL Grammar Standard
+
+### Scalar token classes
+
+For scalar comparisons, either side may be one of:
+
+- `FIELD`
+- `SYSVAR`
+- `VALUE`
+- `DATE_FUNC`
+
+### Reversible operators
+
+The reversible operator set is:
+
+- `=`
+- `!=`
+- `>`
+- `<`
+- `>=`
+- `<=`
+
+These operators support symmetric operand order in SQL mode.
+
+### Non-reversible scalar operators
+
+`like` and `not like` are not reversible in SQL mode.
+Standard rule for these operators:
+
+- Left side must be `FIELD`
+- Right side must not be `FIELD`
+
+### List operators
+
+For `in` and `not in` in SQL mode:
+
+- Left side must be `FIELD`
+- Right side must be a parenthesized list of scalar values
+
+### JSON operators
+
+For `?=` and `?&` in SQL mode:
+
+- Left side must be `FIELD` or `SYSVAR`
+- Left side must resolve to a JSON-path capable field (for example using `->` notation)
+- Right side must be a scalar token
+
+## SQL Normalization Standard
+
+For reversible operators, QueryFilter normalizes operands to valid SQL builder calls.
+
+### Case matrix
+
+- `FIELD op FIELD`
+  - Compiles to `whereColumn` or `orWhereColumn`
+- `FIELD op SCALAR`
+  - Compiles to `where(field, op, value)`
+- `SCALAR op FIELD`
+  - Flips to `FIELD op SCALAR`
+  - Inverts ordered operators:
+    - `>` becomes `<`
+    - `<` becomes `>`
+    - `>=` becomes `<=`
+    - `<=` becomes `>=`
+- `SCALAR op SCALAR`
+  - Compiles to bound literal SQL comparison using `whereRaw('? op ?', [...])`
+
+This includes expressions such as:
+
+- `@request.auth.id = id`
+- `5 > score`
+- `id = updated_at`
+- `@request.body.user = @request.auth.id`
+
+## Context and System Variable Standard
+
+`SYSVAR` values are resolved from context with:
+
+- path stripping: `@request.auth.id` -> `request.auth.id`
+- retrieval: `data_get(context, path)`
+
+If reference resolution is disabled, system variables remain raw names.
+
+## Adapter Standard
+
+QueryFilter supports field adapters through `QueryFieldAdapter`.
+
+### Built-in adapters
+
+- `RelationJoinAdapter`
+  - Handles relation dot paths such as `author.verified`
+  - Resolves joined column paths via `RelationJoinResolver`
+- `JsonFieldAdapter`
+  - Handles JSON paths such as `meta->theme`
+  - Applies JSON contains and has-key operations
+
+## Null and Binding Standard
+
+- `field = null` compiles to `whereNull(field)`
+- `field != null` compiles to `whereNotNull(field)`
+- `field is null` compiles to `whereNull(field)`
+- `field is not null` compiles to `whereNotNull(field)`
+- All scalar-to-scalar SQL comparisons use positional bindings, not interpolated values
+
+## Error Standard
+
+Invalid grammar or unsupported operand shape throws `InvalidRuleExpressionException`.
+
+## Canonical Examples
+
+```text
+id = @request.auth.id
+@request.auth.id = id
+5 > score
+id = updated_at
+@request.body.user = @request.auth.id
+status like "%active%"
+id in (1, 2, 3)
+meta->tags ?= "laravel"
+meta->settings ?& "theme"
+```
+
+## Related Standards
+
+- RuleEngine in-memory standard: `docs/rule-engine/rule-engine.md`
+- API rule usage context: `docs/api-rules.md`
+
+
+--- FILE: docs/database/rule-engine.md ---
+# Rule Engine Standard
+
+## Purpose
+
+The RuleEngine is the in-memory evaluator for Veloquentfilter expressions.
+It validates and evaluates rule strings against a PHP array context.
+
+This page is the canonical standard for RuleEngine behavior.
+
+## Public API
+
+- `RuleEngine::make(array $allowedFields = [])`
+- `withAllowedFields(array $allowedFields): static`
+- `addFieldResolverAdapter(FieldResolverAdapter $adapter): static`
+- `lint(string $filter, bool $inMemory = true): void`
+- `evaluate(string $filter, array $context = []): bool`
+
+## Expression Grammar
+
+RuleEngine uses a recursive descent parser over tokenized input.
+
+```text
+expression     := orExpr
+orExpr         := andExpr ( OR andExpr )*
+andExpr        := primary ( AND primary )*
+primary        := '(' expression ')' | condition
+condition      := lhs OP rhs
+lhs            := FIELD | SYSVAR
+rhs            := scalar | list
+scalar         := VALUE | DATE_FUNC | FIELD | SYSVAR
+list           := '(' scalar ( ',' scalar )* ')'
+```
+
+## Token Types
+
+- `FIELD`: plain identifier, such as `status`, `author.verified`, `meta->tags`
+- `SYSVAR`: `@`-prefixed variable, such as `@request.auth.id`
+- `VALUE`: literal (`string`, number, `true`, `false`, `null`)
+- `DATE_FUNC`: date helper call (`today()`, `daysago(7)`, etc.)
+- `OP`: comparison operator
+- `AND`, `OR`, `LPAREN`, `RPAREN`, `COMMA`
+
+## Supported Operators
+
+- Scalar operators: `=`, `!=`, `>`, `<`, `>=`, `<=`, `like`, `not like`
+- List operators: `in`, `not in`
+- JSON operators: `?=`, `?&`
+- Logical operators: `&&`, `||`
+
+Note: `&&` and `||` are accepted syntax and are normalized to `AND` and `OR` before parsing.
+
+Null checks are expressed as:
+
+- `field = null`
+- `field != null`
+- `field is null`
+- `field is not null`
+
+## Operand Standards
+
+### Symmetry
+
+RuleEngine supports symmetric field and system-variable comparisons:
+
+- `field op @sysvar`
+- `@sysvar op field`
+- `field op field`
+- `@sysvar op @sysvar`
+
+Literal values are standard on the right side.
+Left side is restricted to `FIELD` or `SYSVAR` in RuleEngine grammar.
+
+### Context Resolution
+
+- `FIELD` resolves from context via `data_get(context, fieldPath)`
+- `SYSVAR` resolves from context via `data_get(context, substr(name, 1))`
+- Missing values resolve to `null`
+- When comparing relation IDs in an in-memory rule, use explicit ID paths such as `post = parent_comment.post.id` instead of `post = parent_comment.post`.
+
+### Adapter Resolution Order
+
+When adapters are registered, RuleEngine checks adapters first, then fallback resolution.
+
+## System Variable Prefix Standard
+
+Allowed prefixes:
+
+- `@request.auth.`
+- `@request.body.`
+- `@request.param.`
+- `@request.query.`
+
+Any other `@` prefix is invalid during lint.
+
+## Date Function Standard
+
+Veloquentsupports dynamic date calculations in expressions. Date functions are evaluated to ISO-8601 strings during processing.
+
+### No-argument Functions
+
+- `now()`, `today()`
+- `yesterday()`, `tomorrow()`
+- `thisweek()`, `lastweek()`, `nextweek()`
+- `thismonth()`, `lastmonth()`, `nextmonth()`
+- `thisyear()`, `lastyear()`, `nextyear()`
+- `startofday()`, `endofday()`
+- `startofweek()`, `endofweek()`
+- `startofmonth()`, `endofmonth()`
+- `startofyear()`, `endofyear()`
+
+### Functions requiring numeric argument
+
+- `daysago(n)`, `daysfromnow(n)`
+- `weeksago(n)`, `weeksfromnow(n)`
+- `monthsago(n)`, `monthsfromnow(n)`
+- `yearsago(n)`, `yearsfromnow(n)`
+
+---
+
+## Grammar Details
+
+### Escaping
+
+String literals support backslash escaping for quotes:
+- `"He said \"Hello\""`
+- `'It\'s working'`
+
+### JSON Operators
+
+JSON-specific operators (`?=`, `?&`) are supported in both in-memory and SQL modes:
+- `meta->tags ?= "php"` (Check if JSON array contains value)
+- `meta->tags ?& ("php", "laravel")` (Check if JSON array contains all values)
+
+> [!NOTE]
+> When using `?=` and `?&` in SQL mode (via `QueryFilter`), the underlying database must support JSON path operations.
+
+### Functions without arguments
+
+- `now()`, `today()`, `yesterday()`, `tomorrow()`
+- `thisweek()`, `lastweek()`, `nextweek()`
+- `thismonth()`, `lastmonth()`, `nextmonth()`
+- `thisyear()`, `lastyear()`, `nextyear()`
+- `startofday()`, `endofday()`
+- `startofweek()`, `endofweek()`
+- `startofmonth()`, `endofmonth()`
+- `startofyear()`, `endofyear()`
+
+## Equality and Ordering Semantics
+
+- Carbon operands are compared by Unix timestamp
+- If either side is `null`, `=` uses strict null equality and `!=` is its inverse
+- `like` and `not like` use SQL-like wildcard semantics (`%`, `_`)
+- `?=` checks JSON array containment
+- `?&` checks JSON object key existence
+
+## Lint vs Evaluate
+
+### Lint
+
+- Validates field names against `allowedFields`
+- Validates system-variable prefixes
+- Validates grammar only
+- Throws `InvalidRuleExpressionException` on invalid expressions
+
+### Evaluate
+
+- Tokenizes with unknown fields allowed
+- Resolves values against runtime context
+- Returns `bool`
+
+## Canonical Examples
+
+```text
+status = "active"
+@request.auth.id = owner_id
+owner_id = @request.auth.id
+@request.body.id = @request.auth.id
+role in ("admin", "editor")
+created_at >= daysago(30)
+settings ?& "theme"
+metadata->tags ?= "php"
+```
+
+## Related Standards
+
+- QueryFilter SQL standard: `docs/rule-engine/query-filter.md`
+- API rule usage context: `docs/api-rules.md`
+
+
+--- FILE: docs/getting-started/introduction.md ---
+---
+layout: default
+title: Introduction
+nav_order: 1
+has_children: false
+---
+
+# Introduction to VeloquentPHP
+
+Veloquent is an open source backend built with Laravel to utilize Laravel's robust ecosystem and PHP's nature of hostability. It simplifies the development of modern web and mobile applications by handling your database, authentication, and real-time needs out of the box.
+
+## Core Philosophy
+
+Veloquent is built to be:
+- **Fast**: Utilizing Laravel's robust ecosystem for maximum performance.
+- **Flexible**: Easily define and manage your data structures with dynamic collections and fields.
+- **Secure**: Robust access control with powerful expression-based rules.
+- **Reactive**: Real-time updates with Pusher protocol via Laravel Reverb or Pusher itself.
+
+## Key Features
+
+- **Dynamic Collections**: Create and manage your database tables through a simple UI or API.
+- **Rich Field Types**: Support for a variety of field types, including Text, Number, Boolean, Datetime, Email, and Relation.
+- **Expression-based Rules**: Secure your data with granular access control using human-readable rules.
+- **User Management**: Built-in authentication for your users with support for standard and OAuth flows.
+- **Real-time Subscriptions**: Build reactive applications with ease using WebSockets.
+
+## Getting Started
+
+To get started with Velo, follow the guides in the documentation to learn how to create your first collection and start interacting with your data.
+
+## Next Steps
+
+If you're ready to go deeper, you can check out the [Collections](../the-basics/collections.md) systems, how [Schema Management](../the-basics/schema-management.md) works, and start [Working with Records](../the-basics/records.md).
+
+--- FILE: docs/getting-started/quickstart.md ---
+# Getting Started
+
+This guide will walk you through setting up the Veloquentbackend and integrating with your client application.
+
+## Server Setup
+
+### Prerequisites
+
+To run Velo, you need the following installed:
+
+- **PHP 8.3+**
+- **Composer**
+- **Docker** (Optional)
+
+### Getting Started with Laravel Sail
+
+The easiest way to get started is by using Laravel Sail, a light-weight command-line interface for interacting with Veloquent's default Docker development environment.
+
+#### 0. Install Veloquent
+
+Using composer:
+```bash
+composer create-project veloquent/veloquent app-name
+```
+
+Or, git clone the repository:
+```bash
+git clone https://github.com/kevintherm/veloquent
+```
+
+#### 1. Install Dependencies
+Run the following command to install the required PHP packages:
+```bash
+composer install
+```
+
+#### 2. Configure Environment
+Copy the example environment file and generate an application key:
+```bash
+cp .env.example .env
+php artisan key:generate
+```
+
+#### 3. Start the Environment
+Launch the Docker containers in the background:
+```bash
+./vendor/bin/sail up -d
+```
+
+#### 4. Database Setup
+Run migrations and seed the database with initial data:
+```bash
+./vendor/bin/sail artisan migrate --seed
+```
+
+### Core Background Workers
+
+Veloquentrelies on long-running processes to handle real-time events and asynchronous tasks. Ensure these are running to use all features:
+
+#### 1. Real-time Worker
+The `realtime:worker` handles subscription management and broadcasting. Without it, real-time updates won't function.
+```bash
+./vendor/bin/sail artisan realtime:worker
+```
+*Note: In production environments, it is recommended to run this command under a process monitor like Supervisor.*
+
+#### 2. Queue Worker
+Standard Laravel queues are used for emails and other tasks.
+```bash
+./vendor/bin/sail artisan queue:work
+```
+
+### Manual Installation (No Docker)
+
+If you prefer not to use Docker, follow these steps:
+
+1. **Serve the Application**: Run `php artisan serve` or configure Nginx/Apache.
+2. **Database**: Create a database and update the `DB_*` variables in your `.env` file.
+3. **Migrations**: Run `php artisan migrate --seed`.
+4. **Environment**: Ensure you have PHP with the necessary extensions.
+
+---
+
+## Client Setup
+
+### Install the SDK
+
+Install the Veloquent SDK for your platform:
+
+**JavaScript/TypeScript (npm):**
+```bash
+npm install @veloquent/sdk
+# or
+yarn add @veloquent/sdk
+```
+
+**Dart/Flutter (pub):**
+```bash
+flutter pub add veloquent_sdk
+```
+
+### Initialize the SDK
+
+**JavaScript:**
+```javascript
+import Veloquent from '@veloquent/sdk';
+import { createFetchAdapter } from '@veloquent/sdk/adapters/http';
+import { createLocalStorageAdapter } from '@veloquent/sdk/adapters/storage';
+
+const sdk = new Veloquent({
+  apiUrl: 'http://localhost:8000',
+  http: createFetchAdapter(),
+  storage: createLocalStorageAdapter()
+});
+```
+
+**Dart/Flutter:**
+```dart
+import 'package:veloquent_sdk/veloquent_sdk.dart';
+
+final sdk = Veloquent(
+  apiUrl: Uri.parse('http://localhost:8000'),
+  http: createFetchAdapter(),
+  storage: await createLocalStorageAdapter(),
+);
+```
+
+### Authenticate
+
+Log in a user to get an authentication token:
+
+**JavaScript:**
+```javascript
+try {
+  const { token } = await sdk.auth.login('users', 'user@example.com', 'password');
+  console.log('Logged in successfully');
+} catch (error) {
+  console.error('Login failed:', error.message);
+}
+```
+
+**Dart/Flutter:**
+```dart
+try {
+  final authData = await sdk.auth.login('users', 'user@example.com', 'password');
+  print('Logged in successfully');
+} catch (error) {
+  print('Login failed: $error');
+}
+```
+
+### Perform CRUD Operations
+
+Now you can start working with your data. See the [Records guide](../the-basics/records.md) for detailed examples of listing, creating, updating, and deleting records.
+
+**JavaScript:**
+```javascript
+// List records
+const posts = await sdk.records.list('posts', { sort: '-created_at' });
+
+// Create a record
+const newPost = await sdk.records.create('posts', {
+  title: 'My First Post',
+  content: 'Hello, World!'
+});
+
+// Get a specific record
+const post = await sdk.records.get('posts', newPost.id);
+
+// Update a record
+const updated = await sdk.records.update('posts', newPost.id, {
+  status: 'published'
+});
+
+// Delete a record
+await sdk.records.delete('posts', newPost.id);
+```
+
+**Dart/Flutter:**
+```dart
+// List records
+final posts = await sdk.records.list('posts', sort: '-created_at');
+
+// Create a record
+final newPost = await sdk.records.create('posts', {
+  'title': 'My First Post',
+  'content': 'Hello, World!'
+});
+
+// Get a specific record
+final post = await sdk.records.get('posts', newPost.id);
+
+// Update a record
+final updated = await sdk.records.update('posts', newPost.id, {
+  'status': 'published'
+});
+
+// Delete a record
+await sdk.records.delete('posts', newPost.id);
+```
+
+---
+
+## Next Steps
+
+- Explore the [Records API](../the-basics/records.md) for advanced querying, filtering, and sorting
+- Learn about [Authentication](../security/authentication.md) and user management
+- Set up [Real-time Subscriptions](../realtime/realtime.md) for live data updates
+- Secure your data with [API Rules](../security/api-rules.md)
+
+
+--- FILE: docs/index.md ---
+---
+layout: default
+title: Home
+nav_order: 1
+has_children: true
+description: "Veloquent - The Open Source Laravel Backend"
+permalink: /
+---
+
+# Veloquent
+
+Veloquent is an open-source backend skeleton powered by Laravel. It provides standard BaaS features like real-time broadcasting, multi-provider authentication, and a flexible database abstraction layer, all within a developer-friendly ecosystem.
+
+## Core Features
+
+- **Dynamic Collection**: Create your schema on the fly.
+- **Authentication Ready**: Auth collection provide authentication ready-to-use out of the box.
+- **Real-time Broadcasting**: Native support for horizontal scaling with Reverb and custom workers.
+
+## Documentation
+
+Comprehensive documentation is available in the `docs` directory:
+
+- [Introduction](getting-started/introduction.md)
+- [Installation Guide](getting-started/quickstart.md)
+
+## Installation Quick Start
+
+If you have Docker installed, you can get started in minutes using Laravel Sail:
+
+```bash
+composer install
+./vendor/bin/sail up -d
+./vendor/bin/sail artisan migrate --seed
+
+# In separate terminals
+./vendor/bin/sail artisan realtime:worker
+./vendor/bin/sail artisan queue:work
+```
+
+For more detailed instructions, see the [Installation Guide](getting-started/quickstart.md).
+
+## Known Issues
+
+- **Circular Dependencies**: Circular dependency and cascade on delete may cause infinite loops in certain edge cases. Use with caution during high-frequency schema modifications.
+
+## Roadmap & Progress
+
+Please refer to [TODO.md](https://github.com/kevintherm/veloquent/blob/main/TODO.md) for the latest status and upcoming features.
+
+## License
+
+The Veloquent skeleton is open-sourced software licensed under the MIT License.
+
+
+
+
+--- FILE: docs/realtime/realtime.md ---
+# Real-time Subscriptions
+
+Veloquentallows you to build reactive applications by providing real-time updates for your records via WebSockets. Integration with Laravel Reverb ensures high-performance broadcasting of events whenever data changes.
+
+## How it Works
+
+When a record is created, updated, or deleted, Veloquentautomatically broadcasts a message to the relevant collection channel. Clients can subscribe to these channels to receive live updates without polling the API.
+
+### Evaluation & Security
+
+Realtime synchronization is governed by the same [API Rules](../security/api-rules.md) as the REST API:
+
+- **Sub-second Fan-out**: The `php artisan realtime:worker` process listens for record change events and matches them against active subscriptions.
+- **Dynamic Permission Check**: Every update is re-evaluated against the subscriber's `view` rules in real-time. If a subscriber no longer has access to a record, no broadcast is sent to their channel.
+- **Requirement**: The `php artisan realtime:worker` command must be running (either via Supervisor or a persistent process) for real-time features to function.
+
+## Subscribing to Updates
+
+To start receiving updates, you must first subscribe to a collection. The SDK handles subscription management automatically, but you can also interact directly via the API.
+
+### JavaScript SDK
+
+```javascript
+import { configureEcho } from '@laravel/echo-vue';
+
+// Configure Echo (Laravel WebSocket library)
+const echo = configureEcho({
+  broadcaster: 'reverb',
+  key: import.meta.env.VITE_REVERB_APP_KEY,
+  wsHost: import.meta.env.VITE_REVERB_HOST,
+  wsPort: import.meta.env.VITE_REVERB_PORT,
+  forceTLS: import.meta.env.VITE_REVERB_SCHEME === 'https'
+});
+
+// Subscribe to a collection and listen for events
+const subscription = echo
+  .private(`collections.posts`)
+  .subscribe()
+  .listen('.record.created', (event) => {
+    console.log('New record:', event.record);
+  })
+  .listen('.record.updated', (event) => {
+    console.log('Updated record:', event.record);
+  })
+  .listen('.record.deleted', (event) => {
+    console.log('Deleted record:', event.record);
+  });
+
+// Leave the channel when done
+echo.leave('collections.posts');
+```
+
+### Dart SDK
+
+```dart
+import 'package:veloquent_sdk/veloquent_sdk.dart';
+
+// Configure Pusher Channels adapter
+final realtimeAdapter = PusherChannelsAdapter(
+  cluster: 'mt1',
+  key: pusherKey,
+  authEndpoint: 'https://your-api.com/api/pusher/auth',
+);
+
+final sdk = Veloquent(
+  apiUrl: 'https://your-api.com',
+  realtime: realtimeAdapter,
+);
+
+// Subscribe to collection events
+sdk.realtime.subscribe('posts', (event, payload) {
+  print('Event: $event');
+  print('Record: ${payload['record']}');
+});
+
+// Alternatively, subscribe with a filter
+sdk.realtime.subscribe('posts', (event, payload) {
+  print('Event: $event');
+}, filter: 'status = "published"');
+```
+
+### REST API - Manual Subscription
+
+If using plain REST API, first subscribe to get a channel name:
+
+```http
+POST /api/collections/posts/subscribe
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "filter": "status = \"active\""
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Success",
+  "data": {
+    "channel": "01JAB...private.posts",
+    "expires_at": "2024-01-15T10:02:00Z"
+  }
+}
+```
+
+Then connect via WebSocket or Laravel Echo:
+
+```javascript
+window.Echo.private('01JAB...private.posts')
+    .listen('.record.created', (e) => {
+        console.log('New record:', e.record);
+    })
+    .listen('.record.updated', (e) => {
+        console.log('Updated record:', e.record);
+    })
+    .listen('.record.deleted', (e) => {
+        console.log('Deleted record:', e.record);
+    });
+```
+
+**Subscription Metadata:**
+- **TTL**: Subscriptions are temporary (default: 120 seconds).
+- **Auto-Refresh**: Clients should periodically re-subscribe to maintain a continuous connection.
+- **Garbage Collection**: Expired subscriptions are pruned automatically via the `realtime:prune` scheduler command.
+
+## Receiving Events
+
+Once subscribed, your client receives real-time events for record changes. Typical events include:
+- `record.created`: New record added.
+- `record.updated`: Existing record modified.
+- `record.deleted`: Record removed.
+
+Event payloads include the full record data plus metadata:
+```json
+{
+  "record": {
+    "id": "01JABCDEF123456789",
+    "title": "Updated Title",
+    "status": "published",
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:45:00Z"
+  }
+}
+```
+
+## Unsubscribing
+
+To stop receiving updates, use the unsubscribe endpoint:
+`DELETE /api/collections/{collection}/subscribe`
+
+## Next Steps
+
+Now that you've covered all the core features, explore [Records Management](../the-basics/records.md) or learn how to secure your data with [API Rules](../security/api-rules.md).
+
+
+--- FILE: docs/security/api-rules.md ---
+# API Rules & Access Control
+
+Veloquent provides powerful, expression-based access control to secure your data at the collection level. You can define rules for various actions, ensuring that only authorized users or requests can access or modify your records.
+
+## Action Rules
+
+Each collection can have rules for the following actions:
+- **`list`**: Controls which records are returned in a paginated list.
+- **`view`**: Controls whether a single record can be retrieved.
+- **`create`**: Controls who can create new records in the collection.
+- **`update`**: Controls who can modify existing records.
+- **`delete`**: Controls who can delete records.
+- **`manage`**: (Auth collections only) Controls direct updates to sensitive fields like `email` or `password`.
+
+## Rule Expressions
+
+Rules are written in a custom, human-readable expression language. For example:
+- `active = true`: Only records where the `active` field is true are visible.
+- `@request.auth.id = creator_id`: Only the user who created the record can access it.
+- `@request.auth.isAdmin = true`: Only admins can perform the action.
+
+### Evaluation Constraints
+
+- **SQL Evaluation**: SQL mode supports symmetric scalar comparisons for reversible operators (`=`, `!=`, `>`, `<`, `>=`, `<=`), including `field op value`, `value op field`, `field op field`, and `@request op @request`. Non-reversible operators (`like`, `not like`) require a field on the left side. See `docs/rule-engine/query-filter.md`.
+- **Memory Evaluation**: In-memory evaluation supports symmetric field and `@` variable comparisons and broader context resolution with `@request.body`, `@request.auth`, and `@request.query`. See `docs/rule-engine/rule-engine.md`.
+
+### Contextual Variables
+
+The behavior of bare variables (variables without a prefix) depends on the action being performed:
+
+- **On Create**: Bare variables (e.g., `name`) refer to the incoming payload in `@request.body`.
+- **On Update**: Bare variables refer to the **existing** record's values, while `@request.body` explicitly refers to the incoming payload. This allows you to compare current and new values (e.g., `@request.body.status != status`).
+
+### Common Operators
+
+Veloquentsupports a wide range of operators for building rules:
+
+| Operator | Description |
+|---|---|
+| `=`, `!=` | Equals, Does not equal. |
+| `>`, `<` | Greater than, Less than. |
+| `>=`, `<=` | Greater than or equal, Less than or equal. |
+| `&&`, `||` | Logical AND, Logical OR. |
+| `like`, `not like` | SQL LIKE pattern matching (e.g., `name like "%john%"`). |
+| `in`, `not in` | Check if a value exists in a list (e.g., `status in ("active", "pending")`). |
+| `is null`, `is not null` | Check for null values. |
+
+### Relation ID comparisons
+
+When comparing related record IDs, use an explicit ID path on the related object. For example:
+
+```text
+user = @request.auth.id && (parent_comment = null || post = parent_comment.post.id)
+```
+
+In runtime rule context, a path such as `parent_comment.post` may resolve to a hydrated related object or array, so using `.id` is required when matching scalar relation IDs.
+
+### System References (`@request`)
+
+Rules can reference the current request context using the `@request` prefix:
+
+| Reference | Description |
+|---|---|
+| `@request.auth.*` | Access fields of the authenticated user (e.g., `@request.auth.id`, `@request.auth.email`). |
+| `@request.body.*` | Access fields from the incoming request body (useful for `create` and `update` rules). |
+| `@request.query.*` | Access query parameters from the request. |
+
+### Relation Joins
+
+You can access fields of related records using dot notation. For example, if a `posts` collection has a `userId` relation field pointing to `users`, you can write:
+- `userId.active = true`: Only posts whose user is active are visible.
+
+When a related record is expanded in API output, the foreign key remains at the top level and the expanded payload appears under `expand`.
+If the expanded record is blocked by the target collection's `view` rule or the related record cannot be found, the `expand` entry is explicitly `null`.
+
+## Default Behavior
+
+If no rule is defined for an action, the default behavior is to **deny** access (except for superusers, who have full access). To allow public access, you can set a rule to `true`.
+
+---
+
+## Error Handling
+
+Standardized API error responses:
+
+```json
+{
+  "message": "Validation error",
+  "errors": {
+    "email": ["The email has already been taken."]
+  }
+}
+```
+
+### Critical Errors
+
+Some errors include an `error_type` for programmatic handling:
+
+- **`SCHEMA_CORRUPT`** (`409 Conflict`): DB table doesn't match metadata.
+  ```json
+  {
+    "message": "The collection schema is corrupt.",
+    "error_type": "SCHEMA_CORRUPT",
+    "activity": "Read",
+    "collection_id": "01JAB..."
+  }
+  ```
+
+---
+
+## Next Steps
+
+After securing your data with rules, you're ready to start using the [Records API](../the-basics/records.md) to interact with your data.
+
+
+--- FILE: docs/security/authentication.md ---
+# Authentication & User Management
+
+Veloquent provides a complete suite of authentication and user management features built-in to your auth collections. You can easily manage users, secure your API, and handle common auth flows like email verification and password reset.
+
+## Auth Collections
+
+An auth collection is a specialized type of collection that includes built-in fields for managing users, such as `email`, `password`, `verified`, and more.
+
+## Standard Login
+
+Veloquentsupports standard email and password authentication. When a user logs in, the system issues a persisted, stateful opaque bearer token (a 64-character hex string). This token must be included in the `Authorization` header for subsequent requests.
+
+**JavaScript SDK:**
+```javascript
+const authData = await sdk.auth.login('users', 'user@example.com', 'password123');
+console.log(authData.token); // Automatically stored
+console.log(authData.expires_in);
+```
+
+**Dart SDK:**
+```dart
+final authData = await sdk.auth.login('users', 'user@example.com', 'password123');
+print(authData['token']); // Automatically stored
+print(authData['expires_in']);
+```
+
+**REST API:**
+```http
+POST /api/collections/users/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Success",
+  "data": {
+    "token": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6",
+    "expires_in": 3600,
+    "collection_name": "users"
+  }
+}
+```
+
+### Bearer Token Authentication
+Include the token in the `Authorization` header for subsequent requests:
+
+```http
+Authorization: Bearer a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6
+```
+
+### Configuration
+
+Customize token behavior in your `.env` file:
+
+- **`TOKEN_AUTH_TTL`**: Lifetime of tokens in minutes (default: `60`).
+- **`TOKEN_AUTH_MAX_ACTIVE`**: Limit the number of active tokens per record. When a new token is issued, older ones are revoked (default: `0`, meaning no limit).
+
+---
+
+## Superusers
+
+Superusers are administrative accounts created during the onboarding process. They have the following capabilities:
+
+- **Bypass API Rules**: Superusers can access, create, update, and delete any record or collection regardless of defined `api_rules`.
+- **Administrative Access**: Access to system logs, schema management, and email template configuration.
+- **Impersonation**: Authenticate as any record in any collection.
+
+### Impersonate a User
+
+Superusers can authenticate as any record in the system by using the impersonate endpoint. This is useful for testing, user support, or administrative debugging.
+
+**JavaScript SDK:**
+```javascript
+const authData = await sdk.auth.impersonate('users', '01JABCDEF123456789');
+console.log(authData.token); // Superuser now authenticated as the target user
+```
+
+**Dart SDK:**
+```dart
+final authData = await sdk.auth.impersonate('users', '01JABCDEF123456789');
+print(authData['token']); // Superuser now authenticated as the target user
+```
+
+**REST API:**
+```http
+POST /api/collections/users/auth/impersonate/01JABCDEF123456789
+Authorization: Bearer <superuser-token>
+```
+
+---
+
+## Get Current User
+
+Retrieve the currently authenticated user. You can call this without a collection parameter to get user data without collection-specific verification.
+
+**JavaScript SDK:**
+```javascript
+// Without collection (calls /api/user)
+const user = await sdk.auth.me();
+console.log(user.id);
+console.log(user.email);
+
+// With collection (verifies token belongs to that collection)
+const userInCollection = await sdk.auth.me('users');
+console.log(userInCollection.id);
+```
+
+**Dart SDK:**
+```dart
+// Without collection (calls /api/user)
+final user = await sdk.auth.me();
+print(user['id']);
+print(user['email']);
+
+// With collection (verifies token belongs to that collection)
+final userInCollection = await sdk.auth.me('users');
+print(userInCollection['id']);
+```
+
+**REST API:**
+```http
+GET /api/user
+Authorization: Bearer <token>
+```
+
+Or with collection verification:
+```http
+GET /api/collections/users/auth/me
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+{
+  "message": "Success",
+  "data": {
+    "id": "01JABCDEF987654321",
+    "email": "user@example.com",
+    "verified": true,
+    "created_at": "2024-01-10T15:30:00Z",
+    "updated_at": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+## Logout
+
+Revoke the current authentication token.
+
+**JavaScript SDK:**
+```javascript
+await sdk.auth.logout('users');
+console.log('Logged out successfully');
+```
+
+**Dart SDK:**
+```dart
+await sdk.auth.logout('users');
+print('Logged out successfully');
+```
+
+**REST API:**
+```http
+DELETE /api/collections/users/auth/logout
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+{
+  "message": "Success",
+  "data": null
+}
+```
+
+## Logout All Sessions
+
+Revoke all active tokens for the authenticated user. This is useful for security-sensitive operations like password changes.
+
+**JavaScript SDK:**
+```javascript
+await sdk.auth.logoutAll('users');
+console.log('All sessions logged out');
+```
+
+**Dart SDK:**
+```dart
+await sdk.auth.logoutAll('users');
+print('All sessions logged out');
+```
+
+**REST API:**
+```http
+DELETE /api/collections/users/auth/logout-all
+Authorization: Bearer <token>
+```
+
+## User Management
+
+Veloquentincludes built-in support for common user management tasks:
+
+### OTP Verification
+
+All authentication flows (Email Verification, Password Reset, Email Change) utilize one-time password (OTP) codes:
+
+1.  **Request Flow**: Dispatch a queued job (`SendOtpJob`) to send the code (e.g., `123456`) via email templates.
+2.  **Confirmation Flow**: Consume the code via a `/confirm` endpoint.
+3.  **Invalidation**: Previous unused codes for the same action are automatically invalidated when a new code is issued.
+
+### Email Verification
+You can request an email verification code and confirm it to mark a user as verified.
+
+### Password Reset
+Securely handle password resets via email verification codes.
+
+### Email Change
+A secure, two-step process for updating a user's email address with verification at the new address.
+
+## OAuth (Social Login)
+
+Veloquent integrates with Laravel Socialite to provide easy social logins (e.g., Google, GitHub). OAuth flows are managed via the `/api/oauth2` endpoints, allowing you to redirect users to a provider and exchange the callback for a Veloquentauth token. Providers can be configured via the `OAuthProviderController` and associated endpoints.
+
+## Next Steps
+
+After managing your users, you can build reactive applications using [Real-time Subscriptions](../realtime/realtime.md).
+
+
+--- FILE: docs/the-basics/collections.md ---
+# Collections & Fields
+
+Collections are the core building blocks of your Veloquentapplication. They represent the data structures (tables) in your database and define the schema for your records.
+
+## Collection Types
+
+Veloquentsupports two main types of collections:
+- **Base Collections**: Standard tables for storing any kind of data.
+- **Auth Collections**: Specialized collections for user authentication. These collections include built-in fields for managing users and support standard and OAuth login flows.
+
+### System Protection
+
+Collections can be marked as `is_system`. These collections have additional protection:
+- **Locked Deletion**: Cannot be deleted via the standard API.
+- **Restricted Modification**: Certain core fields cannot be renamed or dropped to ensure application stability.
+- **Auth Lock**: The default authentication collection is always a system collection.
+
+## Fields
+
+Each collection is made up of fields that define the structure of your records. Veloquentsupports a variety of rich field types:
+
+| Type | Description |
+|---|---|
+| `text` | Single line string (max 255 chars). |
+| `longtext` | Multi-line text for longer content. |
+| `number` | Floating point or integer numeric value. |
+| `boolean` | True/False value. |
+| `datetime` | Date and time value. |
+| `email` | Validated email address. |
+| `url` | Validated URL. |
+| `json` | Arbitrary JSON data. |
+| `relation` | Link to a record in another collection. |
+
+## Managing Collections
+
+You can create, update, and delete collections via the Veloquentdashboard or through the REST API. When you create or update a collection, Veloquentautomatically manages the underlying database schema for you, including:
+- Creating or renaming tables.
+- Adding, renaming, or deleting columns.
+- Synchronizing unique and non-unique indexes.
+
+### Relation Fields
+
+Relation fields allow you to create powerful connections between your data. When defining a relation field, you can specify:
+- **Collection**: The target collection to link to.
+- **Max Select**: The maximum number of records that can be linked.
+- **Cascade on Delete**: Toggle whether to automatically delete related records when a record is deleted.
+
+### Performance & Caching
+
+Veloquentuses an internal caching layer for collection metadata to minimize database overhead:
+- **`findByIdCached` / `findByNameCached`**: Models are cached based on the `velo.collection_cache_ttl` configuration.
+- **Cache Invalidation**: Caches are automatically cleared when a collection is updated or renamed.
+
+## Next Steps
+
+Once you've defined your collections and fields, the next step is to secure your data with [API Rules](../security/api-rules.md).
+
+
+--- FILE: docs/the-basics/records.md ---
+# Working with Records
+
+Records are the data entries within your collections. This guide covers how to interact with records using the Veloquent SDKs and REST API.
+
+## Overview
+
+Each record is a JSON object that contains:
+- All fields defined in your collection schema
+- System metadata: `id` (ULID), `created_at`, `updated_at`
+- Automatically validated against your collection's field definitions
+- Secured by your collection's API rules
+
+## List Records
+
+Retrieve a paginated list of records from a collection with optional filtering, sorting, and expansion.
+
+**JavaScript SDK:**
+```javascript
+const records = await sdk.records.list('posts', {
+  filter: 'status = "published"',
+  sort: '-created_at',
+  per_page: 10,
+  expand: 'author'
+});
+
+// Access records and pagination metadata
+records.forEach(record => {
+  console.log(record.id, record.title);
+});
+console.log(records.meta); // { current_page, last_page, total, ... }
+```
+
+**Dart SDK:**
+```dart
+final result = await sdk.records.list('posts',
+  filter: 'status = "published"',
+  sort: '-created_at',
+  perPage: 10,
+  expand: 'author'
+);
+
+// Access records and metadata
+for (var record in result.data) {
+  print('${record.id}: ${record.get('title')}');
+}
+print(result.meta); // pagination metadata
+```
+
+**REST API:**
+```http
+GET /api/collections/posts/records?filter=status="published"&sort=-created_at&per_page=10&expand=author
+Authorization: Bearer <token>
+```
+
+**Query Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `filter` | string | Filter expression using rule syntax (e.g., `status = "published"`) |
+| `sort` | string | Comma-separated fields to sort by; prefix with `-` for descending (e.g., `-created_at,name`) |
+| `per_page` | integer | Records per page (default: 15) |
+| `page` | integer | Page number (default: 1) |
+| `expand` | string | Comma-separated relation fields to expand (e.g., `author,tags`) |
+
+**Response:**
+```json
+{
+  "message": "Success",
+  "data": [
+    {
+      "id": "01JABCDEF123456789",
+      "title": "First Post",
+      "status": "published",
+      "author": "01JABCDEF987654321",
+      "expand": {
+        "author": {
+          "id": "01JABCDEF987654321",
+          "name": "John Doe"
+        }
+      },
+      "created_at": "2024-01-15T10:30:00Z",
+      "updated_at": "2024-01-15T10:30:00Z"
+    }
+  ],
+  "meta": {
+    "current_page": 1,
+    "last_page": 5,
+    "per_page": 10,
+    "total": 42,
+    "from": 1,
+    "to": 10,
+    "has_more_pages": true
+  }
+}
+```
+
+## Get Single Record
+
+Retrieve a specific record by its ID.
+
+**JavaScript SDK:**
+```javascript
+const record = await sdk.records.get('posts', '01JABCDEF123456789', {
+  expand: 'author'
+});
+
+console.log(record.title);
+console.log(record.expand.author); // Expanded relation
+```
+
+**Dart SDK:**
+```dart
+final record = await sdk.records.get('posts', '01JABCDEF123456789',
+  expand: 'author'
+);
+
+print(record.get('title'));
+print(record.get('expand')); // Expanded relation
+```
+
+**REST API:**
+```http
+GET /api/collections/posts/records/01JABCDEF123456789?expand=author
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+{
+  "message": "Success",
+  "data": {
+    "id": "01JABCDEF123456789",
+    "title": "First Post",
+    "status": "published",
+    "author": "01JABCDEF987654321",
+    "expand": {
+      "author": {
+        "id": "01JABCDEF987654321",
+        "name": "John Doe"
+      }
+    },
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+## Create Record
+
+Create a new record in a collection. Field validation and casting are applied automatically based on your collection schema.
+
+**JavaScript SDK:**
+```javascript
+const newRecord = await sdk.records.create('posts', {
+  title: 'My New Post',
+  content: 'This is the content of my post.',
+  status: 'draft',
+  author: 'user-id-here'
+});
+
+console.log(newRecord.id); // Newly assigned ULID
+console.log(newRecord.created_at);
+```
+
+**Dart SDK:**
+```dart
+final newRecord = await sdk.records.create('posts', {
+  'title': 'My New Post',
+  'content': 'This is the content of my post.',
+  'status': 'draft',
+  'author': 'user-id-here'
+});
+
+print(newRecord.id); // Newly assigned ULID
+print(newRecord.get('created_at'));
+```
+
+**REST API:**
+```http
+POST /api/collections/posts/records
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "title": "My New Post",
+  "content": "This is the content of my post.",
+  "status": "draft",
+  "author": "user-id-here"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Success",
+  "data": {
+    "id": "01JABCDEF123456789",
+    "title": "My New Post",
+    "content": "This is the content of my post.",
+    "status": "draft",
+    "author": "user-id-here",
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+## Update Record
+
+Update specific fields of an existing record. Only provided fields are modified.
+
+**JavaScript SDK:**
+```javascript
+const updated = await sdk.records.update('posts', '01JABCDEF123456789', {
+  status: 'published',
+  updated_by: 'user-id-here'
+});
+
+console.log(updated.status); // 'published'
+console.log(updated.title); // Unchanged fields remain
+```
+
+**Dart SDK:**
+```dart
+final updated = await sdk.records.update('posts', '01JABCDEF123456789', {
+  'status': 'published',
+  'updated_by': 'user-id-here'
+});
+
+print(updated.get('status')); // 'published'
+print(updated.get('title')); // Unchanged fields remain
+```
+
+**REST API:**
+```http
+PATCH /api/collections/posts/records/01JABCDEF123456789
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "status": "published",
+  "updated_by": "user-id-here"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Success",
+  "data": {
+    "id": "01JABCDEF123456789",
+    "title": "My New Post",
+    "content": "This is the content of my post.",
+    "status": "published",
+    "author": "user-id-here",
+    "updated_by": "user-id-here",
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T11:45:00Z"
+  }
+}
+```
+
+## Delete Record
+
+Permanently delete a record from a collection.
+
+**JavaScript SDK:**
+```javascript
+await sdk.records.delete('posts', '01JABCDEF123456789');
+console.log('Record deleted successfully');
+```
+
+**Dart SDK:**
+```dart
+await sdk.records.delete('posts', '01JABCDEF123456789');
+print('Record deleted successfully');
+```
+
+**REST API:**
+```http
+DELETE /api/collections/posts/records/01JABCDEF123456789
+Authorization: Bearer <token>
+```
+
+**Response:**
+```json
+{
+  "message": "Success",
+  "data": null
+}
+```
+
+## Advanced Features
+
+### Filtering
+
+The `filter` parameter uses Veloquent's expression-based rule syntax to narrow down results. For detailed information on filter syntax, see [API Rules](../security/api-rules.md).
+
+**Examples:**
+- `status = "published"` - Exact match
+- `created_at > "2024-01-01"` - Date comparison
+- `active = true AND verified = true` - Logical operators
+- `NOT deleted` - Negation
+- `email LIKE "%@example.com"` - Pattern matching
+
+### Sorting
+
+Results can be sorted by any field in your collection, as well as system fields (`id`, `created_at`, `updated_at`). Prefix field names with `-` for descending order.
+
+**Examples:**
+- `sort: '-created_at'` - Newest first
+- `sort: 'name,-age'` - By name ascending, then age descending
+
+### Field Expansion
+
+Relation fields can be expanded to include the full related record data in a nested `expand` object, while the foreign key ID remains at the top level of the record.
+
+**Expansion Behavior:**
+- **Foreign Key at Top Level**: The original relation ID (foreign key) remains at the top level of the record (e.g., `\"author\": \"01JBC...\"`)
+- **Expanded Data in Object**: When you pass `expand=author`, the full record is included in the `expand` object (e.g., `\"expand\": {\"author\": {...}}`)
+- **Security Applied**: The target collection's `view` API rules are applied to expanded records
+- **Null on Denied**: If access is denied, the expanded record is `null` but the FK remains visible at the top level
+- **Missing Records**: If the related record doesn't exist, the expanded entry is `null` in the expand object
+- **Maximum Expansions**: Up to 10 relation expansions per request
+
+**Example Response with Expansion:**
+```json
+{
+  "id": "01JAB...",
+  "title": "Post Title",
+  "author": "01JBC...",
+  "expand": {
+    "author": {
+      "id": "01JBC...",
+      "name": "John Doe",
+      "email": "john@example.com"
+    }
+  },
+  "created_at": "2024-01-15T10:30:00Z"
+}
+```
+
+## Error Handling
+
+### SDK Error Handling
+
+**JavaScript:**
+```javascript
+import { SdkError } from '@veloquent/sdk';
+
+try {
+  const record = await sdk.records.get('posts', 'invalid-id');
+} catch (error) {
+  if (error instanceof SdkError) {
+    console.error('Status:', error.status); // e.g., 404, 403
+    console.error('Message:', error.message);
+    console.error('Errors:', error.errors); // Validation errors
+  }
+}
+```
+
+**Dart:**
+```dart
+import 'package:veloquent_sdk/veloquent_sdk.dart';
+
+try {
+  final record = await sdk.records.get('posts', 'invalid-id');
+} catch (error) {
+  if (error is SdkError) {
+    print('Status: ${error.status}'); // e.g., 404, 403
+    print('Message: ${error.message}');
+    print('Errors: ${error.errors}'); // Validation errors
+  }
+}
+```
+
+### Common Status Codes
+
+| Status | Meaning |
+|--------|---------|
+| `200` | Success |
+| `201` | Created |
+| `400` | Bad request / Invalid filter syntax |
+| `401` | Unauthenticated / Invalid token |
+| `403` | Forbidden / API rules deny access |
+| `404` | Record or collection not found |
+| `422` | Validation failed |
+
+## Next Steps
+
+- Learn about [Real-time Subscriptions](../realtime/realtime.md) to receive live updates
+- Secure your data with [API Rules](../security/api-rules.md)
+- Understand [Authentication](../security/authentication.md) for user management
+
+
+--- FILE: docs/the-basics/schema-management.md ---
+# Schema Management & Maintenance
+
+Veloquent providing tools for schema health, orphan table cleanup, and transferring metadata between environments.
+
+## Health & Recovery
+
+Veloquent ensures that your database tables stay in sync with your collection metadata.
+
+### `GET /api/schema/corrupt`
+Detects collections where the physical database table does not match the expected schema defined in the `collections` metadata.
+
+### `POST /api/collections/{collection}/recover`
+Attempts to fix a corrupted collection by reapplying the schema changes (DDL) to the database table.
+
+## Orphan Management
+
+Orphan tables are database tables that exist in the database but have no corresponding entry in the Veloquent `collections` table. This can happen if a collection was manually deleted from the metadata or during a failed migration.
+
+### `GET /api/schema/orphans`
+Lists all detected orphan tables.
+
+### `DELETE /api/schema/orphans`
+Drops all orphan tables from the database. **Use with caution.**
+
+### `DELETE /api/schema/orphans/{table_name}`
+Drops a specific orphan table.
+
+---
+
+## Schema Transfer, Backup, and Import
+
+Veloquent provides a built-in mechanism to export and import your database schema (collections metadata) and records. This is useful for backups, migrating between environments (e.g., staging to production), or sharing project structures.
+
+## Overview
+
+The Schema Transfer feature is exposed via the API and is restricted to **Superusers**. It covers:
+
+- **Metadata Export**: Exporting collection definitions, fields, API rules, and indexes.
+- **Full Backup**: Exporting both metadata and all records in selected collections.
+- **System Tables**: Transferring core system data like superusers, email templates, and OAuth providers.
+- **Import with Conflict Resolution**: Restoring data with options to skip or overwrite existing records.
+
+## Exporting Data
+
+You can export data by sending a `POST` request to `/api/schema/transfer/export`.
+
+### Options
+
+| Field | Type | Description |
+|---|---|---|
+| `collections` | array | Names of user-defined collections to export. |
+| `system_tables` | array | Names of system tables to export (e.g., `superusers`, `email_templates`). |
+| `include_records` | boolean | Whether to include all records in the export (default: `true`). |
+
+> [!TIP]
+> To perform a **metadata-only export**, set `include_records` to `false`. This is ideal for sharing your project structure without exposing sensitive data.
+
+## Importing Data
+
+To import data, send a `POST` request to `/api/schema/transfer/import` with the JSON payload received from an export.
+
+### Request Body
+
+| Field | Type | Description |
+|---|---|---|
+| `payload` | array | The JSON payload from the export. |
+| `conflict` | string | Conflict strategy: `skip` (default) or `overwrite`. |
+
+## Important Considerations
+
+### *Stale Relation Data
+Relation fields store references to other records (often by ID). When importing records into a new environment, **relation fields will contain stale data** if the referenced records' IDs have changed or do not exist in the target environment. You must manually verify and update these relations after the import is complete.
+
+### *System Collections & Transactions
+Importing **system collections** (e.g., `superusers`, `collections`) does **not use database transactions**.
+- If an error occurs (e.g., a SQL unique constraint violation), the process will stop immediately and throw an error.
+- **Example**: If you import a `superusers` row with an email that already exists (like the default superuser email), it will cause a unique constraint error. Ensure you have handled unique fields before importing.
+
+### User Collections & Transactions
+Unlike system tables, imports for **user-defined collections** are wrapped in database transactions per table. If an error occurs during the import of a specific collection's records, the changes for that collection will be rolled back.
+
+## API Reference
+
+### `GET /api/schema/transfer/options`
+Returns a list of available collections and allowed system tables for export.
+
+### `POST /api/schema/transfer/export`
+Generates a JSON export payload.
+
+### `POST /api/schema/transfer/import`
+Imports a JSON payload. Requires `payload` (array) and optional `conflict` (string, `skip`|`overwrite`) in the request body.
+
+

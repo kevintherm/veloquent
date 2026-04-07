@@ -1,0 +1,35 @@
+# Veloquent: The Laravel-First Backend-as-a-Service
+
+Veloquent is an open-source, highly extensible Backend-as-a-Service (BaaS) framework built on the rock-solid foundation of **Laravel 12**. It gives you the high-level productivity of a BaaS with the infinite flexibility of the PHP ecosystem.
+
+## The Vision: Stop Re-building, Start Creating
+Veloquent is designed for developers who love the "all-in-one" convenience of modern BaaS platforms but refuse to be locked into proprietary cloud services or limited by "magic" binaries. We bring the full expressive power of Eloquent, the scalability of Laravel Reverb, and the elegance of Vue 3 to your self-hosted infrastructure.
+
+## Targeted Alternatives
+- **A Supabase / Firebase Alternative**: For those who want a self-hosted, SQL-first, and highly customizable alternative to the cloud giants.
+- **An Appwrite / PocketBase Alternative**: Built for the PHP developer. Unlike PocketBase's single-binary approach, Veloquent provides a standard, robust Laravel application structure that you can scale horizontally, modify deeply, and deploy anywhere Docker runs.
+
+## Core Superpowers
+- **Dynamic Schema Engine**: Define collections and fields on-the-fly via the API. No migrations or deployments required for rapid prototyping.
+- **Real-time by Default**: Built-in integration with **Laravel Reverb**. Open a WebSocket and listen for database events instantly with native horizontal scaling capabilities.
+- **Sophisticated Auth**: Pre-configured Superuser and User collections. Support for OAuth via **Socialite** and token-based security out of the box.
+- **Rule Engine**: A powerful server-side validation and access control layer to ensure your data is always safe, regardless of the client.
+- **Testable**: Full compatibility with **Pest 4**, making your backend logic as robust as it is fast.
+
+## The Stack
+- **Languages**: PHP 8.5+, JavaScript/TypeScript.
+- **Backend**: Laravel 12 (The world's most popular PHP framework).
+- **Broadcasting**: Laravel Reverb (WebSockets).
+- **Frontend**: Vue 3 (Composition API) + Tailwind CSS 4.
+- **Environment**: Dockerized via Laravel Sail for local development bliss.
+
+## Technical Knowledge Base
+Dive into the implementation details via the repository's markdown documentation:
+- [Introduction & Philosophy](docs/getting-started/introduction.md)
+- [Zero-to-Hero Quickstart](docs/getting-started/quickstart.md)
+- [The Schema Lifecycle](docs/the-basics/schema-management.md)
+- [Mastering Real-time Streams](docs/realtime/realtime.md)
+- [Security & Access Control](docs/security/api-rules.md)
+
+## Community & Growth
+Veloquent is built to be the "Velo" (Speed) for your "Eloquent" (Expression). We are gaining traction by proving that a modern BaaS doesn't need to be a black box—it just needs to be Laravel.

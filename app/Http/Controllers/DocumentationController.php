@@ -13,7 +13,6 @@ class DocumentationController extends Controller
 
     public function show(Request $request, string $file = 'index.html')
     {
-        // Strip .md if present to handle both link formats
         $file = Str::replaceLast('.md', '', $file);
 
         $path = base_path("docs/{$file}.md");
@@ -28,6 +27,11 @@ class DocumentationController extends Controller
         }
 
         $rawContent = str_replace(["\r\n", "\r"], "\n", File::get($path));
+
+        if (Str::endsWith($request->getRequestUri(), '.md') || $request->query('raw')) {
+            return response($rawContent, 200, ['Content-Type' => 'text/markdown']);
+        }
+
         $converter = $this->docsManager->getConverter();
 
         return view('docs.viewer', [
