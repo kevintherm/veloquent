@@ -2,7 +2,6 @@
 
 use App\Domain\Realtime\Providers\RealtimeServiceProvider;
 use App\Providers\AppServiceProvider;
-use App\Providers\DocumentationServiceProvider;
 use App\Providers\LogsServiceProvider;
 use App\Providers\RouteServiceProvider;
 
@@ -11,5 +10,4 @@ return [
     RouteServiceProvider::class,
     RealtimeServiceProvider::class,
     LogsServiceProvider::class,
-    DocumentationServiceProvider::class,
 ];

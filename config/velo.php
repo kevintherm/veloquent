@@ -1,9 +1,9 @@
 <?php
 
 return [
-    
+
     'version' => '0.8.3',
-    
+
     /*
     |--------------------------------------------------------------------------
     | Collection Prefix
@@ -100,15 +100,5 @@ return [
     */
     'logs' => [
         'slow_query_threshold' => (int) env('VELO_LOGS_SLOW_QUERY_THRESHOLD', 1000),
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Documentation Configuration
-    |--------------------------------------------------------------------------
-    */
-    'docs' => [
-        'enabled' => (bool) env('VELO_DOCS_ENABLED', false),
-        'path' => env('VELO_DOCS_PATH', 'docs'),
     ],
 ];
