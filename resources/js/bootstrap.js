@@ -10,15 +10,15 @@ window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 window.axios.defaults.withCredentials = true;
 window.axios.defaults.withXSRFToken = true;
 
-applyAuthHeader(window.axios);
-
 window.axios.interceptors.request.use((config) => {
+	if (config.headers?.Authorization) {
+		return config;
+	}
+
 	const token = getAuthToken();
 
 	if (token) {
 		config.headers.Authorization = `Bearer ${token}`;
-	} else if (config.headers?.Authorization) {
-		delete config.headers.Authorization;
 	}
 
 	return config;
