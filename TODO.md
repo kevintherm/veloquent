@@ -1,6 +1,5 @@
 ## TODO
 
-- File field admin panel file input update
 - Add multi tenant support stancl/tenant
 - Battle Testing
 - Ship
