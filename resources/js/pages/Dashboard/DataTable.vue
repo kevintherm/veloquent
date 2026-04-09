@@ -19,7 +19,9 @@ import {
     TableCell,
     Checkbox,
     Dialog,
-    DialogContent
+    DialogContent,
+    DialogTitle,
+    DialogDescription
 } from "@/components/ui";
 import {
     Pagination,
@@ -682,8 +684,10 @@ const copyRecordId = async (recordId) => {
     </Card>
 
     <Dialog :open="!!activePreview" @update:open="(val) => !val && (activePreview = null)">
-        <DialogContent class="max-w-[90vw] max-h-[90vh] p-0 overflow-hidden bg-transparent border-none shadow-none  flex items-center justify-center">
+        <DialogContent class="max-w-[90vw] max-h-[90vh] p-0 overflow-hidden bg-transparent border-none shadow-none flex items-center justify-center">
             <template v-if="activePreview">
+                <DialogTitle class="sr-only">Image Preview</DialogTitle>
+                <DialogDescription class="sr-only">Viewing {{ activePreview.name ?? activePreview.path }}</DialogDescription>
                 <div class="relative flex items-center justify-center w-full h-full p-12">
                      <button 
                         type="button"
