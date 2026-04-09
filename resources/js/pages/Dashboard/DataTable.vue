@@ -293,9 +293,18 @@ const filePreviewUrl = (metadata) => {
 
 const handleImageLoad = (event, metadata) => {
     const info = resolveFileSourceUrl(metadata);
-    if (info && info.protected) {
+    if (!info) {
+        return;
+    }
+
+    const currentSrc = String(event.target.src);
+    if (currentSrc.startsWith("blob:")) {
+        return;
+    }
+
+    if (info.protected) {
         loadProtectedImage(event, info.url);
-    } else if (info) {
+    } else if (currentSrc !== info.url) {
         event.target.src = info.url;
     }
 };
@@ -398,6 +407,38 @@ const fileCount = (value) => {
 
 const additionalFileCount = (value) => {
     return Math.max(0, fileCount(value) - 1);
+};
+
+const nameFieldCandidates = ["name", "username", "fullname", "full_name", "first_name", "email"];
+
+const findNameField = (fields) => {
+    if (!Array.isArray(fields)) {
+        return null;
+    }
+
+    return nameFieldCandidates.find((candidate) =>
+        fields.some((f) => f.name === candidate)
+    );
+};
+
+const getRelationLabel = (record, column, relationId, relationFields) => {
+    const fieldMeta = relationFields?.[column];
+    const expanded = record.expand?.[column];
+
+    if (expanded) {
+        const target = Array.isArray(expanded)
+            ? expanded.find((e) => String(e.id) === String(relationId))
+            : (String(expanded.id) === String(relationId) ? expanded : null);
+
+        if (target) {
+            const nameField = findNameField(fieldMeta?.targetCollectionFields);
+            if (nameField && target[nameField]) {
+                return String(target[nameField]);
+            }
+        }
+    }
+
+    return String(relationId);
 };
 
 const normalizeRelationIds = (value) => {
@@ -541,17 +582,20 @@ const copyRecordId = async (recordId) => {
                                     {{ formatValue(record[column]) }}
                                 </button>
                                 <div v-else-if="isRelationColumn(column, relationFields)" class="flex flex-col gap-1">
-                                    <span v-if="relationFields[column]?.targetCollectionName"
-                                        class="text-xs font-medium text-muted-foreground leading-none">
-                                        {{ relationFields[column].targetCollectionName }}
-                                    </span>
                                     <a v-for="relationId in normalizeRelationIds(record[column])"
                                         :key="`${record.id}-${column}-${relationId}`"
                                         :href="relationRecordUrl(column, relationId, relationFields)" target="_blank"
                                         rel="noopener noreferrer"
-                                        class="font-mono text-xs text-primary underline underline-offset-2 truncate"
+                                        class="group flex items-center gap-1.5 font-mono text-xs text-primary underline underline-offset-2 truncate"
                                         :title="relationLinkTitle(column, relationFields)" @click.stop>
-                                        {{ relationId }}
+                                        <template v-if="findNameField(relationFields[column]?.targetCollectionFields) && record.expand?.[column]">
+                                            {{ getRelationLabel(record, column, relationId, relationFields) }}
+                                        </template>
+                                        <template v-else>
+                                            <component :is="resolveCollectionFieldTypeIcon('relation')"
+                                                class="h-3 w-3 text-muted-foreground" />
+                                            <span>{{ relationFields[column]?.targetCollectionName || 'Record' }} ({{ relationId }})</span>
+                                        </template>
                                     </a>
                                     <span v-if="normalizeRelationIds(record[column]).length === 0">-</span>
                                 </div>

@@ -83,6 +83,8 @@ const fetchRecords = async () => {
         ? (sortDirection.value === "desc" ? `-${sortBy.value}` : sortBy.value)
         : null;
 
+    const expand = Object.keys(relationFieldsMeta.value).join(",");
+
     try {
         const response = await axios.get(`/api/collections/${activeCollection.value.name}/records`, {
             params: {
@@ -90,6 +92,7 @@ const fetchRecords = async () => {
                 per_page: itemsPerPage,
                 filter: query,
                 sort,
+                expand,
             },
         });
 
@@ -182,6 +185,7 @@ const relationFieldsMeta = computed(() => {
         carry[field.name] = {
             targetCollectionId: field.target_collection_id ?? null,
             targetCollectionName: targetCollection?.name ?? null,
+            targetCollectionFields: targetCollection?.fields ?? [],
         };
 
         return carry;
