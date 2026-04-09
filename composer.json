@@ -14,11 +14,8 @@
     "require": {
         "php": "^8.3",
         "carbon-cli/carbon-cli": "^1.4",
-        "kevintherm/exprc": "^0.0.2",
         "laravel/framework": "^12.0",
-        "laravel/reverb": "^1.0",
         "laravel/sanctum": "^4.0",
-        "laravel/socialite": "^5.26",
         "laravel/tinker": "^2.10.1"
     },
     "require-dev": {

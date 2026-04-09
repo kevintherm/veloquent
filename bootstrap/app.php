@@ -1,15 +1,11 @@
 <?php
 
-use App\Domain\SchemaManagement\Exceptions\SchemaCorruptException;
-use App\Http\Middleware\TokenAuthMiddleware;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull;
-use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -22,24 +18,8 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
-    ->withBroadcasting(
-        __DIR__.'/../routes/channels.php',
-        [
-            'prefix' => 'api',
-            'middleware' => [TokenAuthMiddleware::class],
-        ]
-    )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->throttleWithRedis();
-        $middleware->append(TokenAuthMiddleware::class);
-        $middleware->redirectGuestsTo(function (Request $request): ?string {
-            if ($request->is('api/*') || $request->expectsJson()) {
-                return null;
-            }
-
-            return '/';
-        });
-        $middleware->remove(ConvertEmptyStringsToNull::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (Throwable $e, $request) {
@@ -50,15 +30,6 @@ return Application::configure(basePath: dirname(__DIR__))
                         'errors' => $errors,
                     ], $code);
                 };
-
-                if ($e instanceof SchemaCorruptException) {
-                    return response()->json([
-                        'message' => $e->getMessage(),
-                        'error_type' => 'SCHEMA_CORRUPT',
-                        'activity' => $e->activity->value,
-                        'collection_id' => $e->collectionId,
-                    ], 409);
-                }
 
                 if ($e instanceof ValidationException) {
                     return $errorResponse('Validation error', Response::HTTP_UNPROCESSABLE_ENTITY, $e->errors());
