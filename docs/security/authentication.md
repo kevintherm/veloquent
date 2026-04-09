@@ -61,6 +61,21 @@ Customize token behavior in your `.env` file:
 - **`TOKEN_AUTH_TTL`**: Lifetime of tokens in minutes (default: `60`).
 - **`TOKEN_AUTH_MAX_ACTIVE`**: Limit the number of active tokens per record. When a new token is issued, older ones are revoked (default: `0`, meaning no limit).
 
+### Protected File Requests
+
+Protected file fields are served by an authenticated proxy route and require the same bearer token flow.
+
+```http
+GET /api/collections/{collection}/records/{record}/files/{field}?path={encoded-storage-path}
+Authorization: Bearer <token>
+```
+
+Use the `url` returned in record file metadata and send the token in the `Authorization` header.
+
+#### Browser Note
+
+When the browser cannot attach custom headers to a direct media URL, request the file using `fetch` with `Authorization: Bearer <token>`, then render/open the returned blob URL.
+
 ---
 
 ## Superusers
