@@ -3,6 +3,7 @@ import {
     ArrowDown,
     ArrowUp,
     ArrowUpDown,
+    X,
 } from "lucide-vue-next";
 import { toast } from "vue-sonner";
 import { resolveCollectionFieldTypeIcon } from "@/lib/collectionFieldTypeIcons";
@@ -17,6 +18,8 @@ import {
     TableHead,
     TableCell,
     Checkbox,
+    Dialog,
+    DialogContent
 } from "@/components/ui";
 import {
     Pagination,
@@ -166,6 +169,7 @@ const revokeObjectURLs = () => {
 };
 
 const objectUrls = ref(new Map());
+const activePreview = ref(null);
 
 onUnmounted(() => {
     if (observer) {
@@ -269,6 +273,10 @@ const primaryFileForDisplay = (value) => {
     return firstImageFile(value) ?? firstFile(value);
 };
 
+const displayFilesForDataTable = (value) => {
+    return normalizeFileMetadataList(value).slice(0, 3);
+};
+
 const fileDisplayName = (value) => {
     const file = primaryFileForDisplay(value);
 
@@ -279,12 +287,12 @@ const fileDisplayName = (value) => {
     return String(file.name ?? file.path ?? "-");
 };
 
-const filePreviewUrl = (value) => {
-    return filePreviewInfo(value)?.url;
+const filePreviewUrl = (metadata) => {
+    return resolveFileSourceUrl(metadata)?.url;
 };
 
-const handleImageLoad = (event, value) => {
-    const info = filePreviewInfo(value);
+const handleImageLoad = (event, metadata) => {
+    const info = resolveFileSourceUrl(metadata);
     if (info && info.protected) {
         loadProtectedImage(event, info.url);
     } else if (info) {
@@ -298,11 +306,16 @@ const handleIntersection = (entries) => {
             const img = entry.target;
             const recordId = img.dataset.recordId;
             const column = img.dataset.column;
+            const fileIndex = parseInt(img.dataset.fileIndex ?? "0");
 
             // Find the record and column value
             const record = props.records.find((r) => String(r.id) === recordId);
             if (record && record[column]) {
-                handleImageLoad({ target: img }, record[column]);
+                const files = normalizeFileMetadataList(record[column]);
+                const file = files[fileIndex];
+                if (file) {
+                    handleImageLoad({ target: img }, file);
+                }
             }
 
             if (observer) {
@@ -314,10 +327,11 @@ const handleIntersection = (entries) => {
 
 let observer = null;
 
-const imageRef = (el, recordId, column) => {
+const imageRef = (el, recordId, column, fileIndex = 0) => {
     if (el) {
         el.dataset.recordId = recordId;
         el.dataset.column = column;
+        el.dataset.fileIndex = String(fileIndex);
         if (!observer) {
             observer = new IntersectionObserver(handleIntersection, {
                 rootMargin: "50px",
@@ -330,6 +344,11 @@ const imageRef = (el, recordId, column) => {
 const openProtectedFile = async (value) => {
     const info = filePreviewInfo(value);
     if (!info) {
+        return;
+    }
+
+    if (isImageFile(primaryFileForDisplay(value))) {
+        activePreview.value = value;
         return;
     }
 
@@ -358,8 +377,19 @@ const openProtectedFile = async (value) => {
     }
 };
 
-const filePreviewAlt = (value) => {
-    return String(primaryFileForDisplay(value)?.name ?? "Image preview");
+const handlePreviewClick = (metadata) => {
+    if (isImageFile(metadata)) {
+        activePreview.value = metadata;
+    } else {
+        const info = resolveFileSourceUrl(metadata);
+        if (info) {
+            window.open(info.url, "_blank");
+        }
+    }
+};
+
+const filePreviewAlt = (metadata) => {
+    return String(metadata?.name ?? "Image preview");
 };
 
 const fileCount = (value) => {
@@ -525,24 +555,26 @@ const copyRecordId = async (recordId) => {
                                     </a>
                                     <span v-if="normalizeRelationIds(record[column]).length === 0">-</span>
                                 </div>
-                                <div v-else-if="isFileColumn(column, columnTypes)" class="flex items-center gap-3 min-w-0">
-                                    <template v-if="firstImageFile(record[column])">
-                                        <a v-if="filePreviewInfo(record[column])?.protected" href="javascript:void(0)"
-                                            class="shrink-0" @click.stop="openProtectedFile(record[column])">
-                                            <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
-                                                :ref="(el) => imageRef(el, String(record.id), column)"
-                                                :alt="filePreviewAlt(record[column])"
-                                                class="h-12 w-12 rounded-md border bg-muted object-cover" />
-                                        </a>
-                                        <a v-else-if="filePreviewUrl(record[column])"
-                                            :href="filePreviewUrl(record[column])" target="_blank"
-                                            rel="noopener noreferrer" class="shrink-0" @click.stop>
-                                            <img :src="filePreviewUrl(record[column])"
-                                                :alt="filePreviewAlt(record[column])"
-                                                class="h-12 w-12 rounded-md border bg-muted object-cover"
-                                                loading="lazy" />
-                                        </a>
+                                <div v-else-if="isFileColumn(column, columnTypes)" class="flex items-center gap-1.5 min-w-0">
+                                    <template v-for="(file, index) in displayFilesForDataTable(record[column])" :key="file.path">
+                                        <div v-if="isImageFile(file)" class="relative group shrink-0">
+                                            <a href="javascript:void(0)"
+                                                class="shrink-0" @click.stop="handlePreviewClick(file)">
+                                                <img v-if="resolveFileSourceUrl(file)?.protected" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+                                                    :ref="(el) => imageRef(el, String(record.id), column, index)"
+                                                    :alt="filePreviewAlt(file)"
+                                                    class="h-10 w-10 rounded-md border bg-muted object-cover hover:ring-2 hover:ring-primary/50 transition-all" />
+                                                <img v-else-if="filePreviewUrl(file)"
+                                                    :src="filePreviewUrl(file)"
+                                                    :alt="filePreviewAlt(file)"
+                                                    class="h-10 w-10 rounded-md border bg-muted object-cover hover:ring-2 hover:ring-primary/50 transition-all"
+                                                    loading="lazy" />
+                                            </a>
+                                        </div>
                                     </template>
+                                    <span v-if="fileCount(record[column]) > 3" class="text-[10px] font-bold text-muted-foreground whitespace-nowrap bg-muted px-1.5 py-0.5 rounded-sm">
+                                        +{{ fileCount(record[column]) - 3 }}
+                                    </span>
                                 </div>
                                 <span v-else class="line-clamp-2">
                                     {{ formatValue(record[column]) }}
@@ -604,4 +636,33 @@ const copyRecordId = async (recordId) => {
             </Pagination>
         </div>
     </Card>
+
+    <Dialog :open="!!activePreview" @update:open="(val) => !val && (activePreview = null)">
+        <DialogContent class="max-w-[90vw] max-h-[90vh] p-0 overflow-hidden bg-transparent border-none shadow-none  flex items-center justify-center">
+            <template v-if="activePreview">
+                <div class="relative flex items-center justify-center w-full h-full p-12">
+                     <button 
+                        type="button"
+                        class="fixed top-6 right-6 z-[60] rounded-full bg-white/10 p-3 text-white backdrop-blur-md transition-all hover:bg-white/20 hover:scale-110 active:scale-95 ring-1 ring-white/20"
+                        @click="activePreview = null"
+                    >
+                        <X class="h-6 w-6" />
+                        <span class="sr-only">Close</span>
+                    </button>
+
+                    <img
+                        :src="objectUrls.get(resolveFileSourceUrl(activePreview)?.url) || filePreviewUrl(activePreview)"
+                        :alt="filePreviewAlt(activePreview)"
+                        class="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl bg-black/20 animate-in zoom-in-95 duration-300"
+                        @load="(e) => handleImageLoad(e, activePreview)"
+                    />
+                    <div class="absolute bottom-6 left-0 right-0 text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div class="inline-block bg-black/60 px-4 py-2 rounded-full backdrop-blur-md ring-1 ring-white/10 shadow-xl">
+                            <p class="text-white text-sm font-semibold tracking-wide">{{ activePreview.name ?? activePreview.path }}</p>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </DialogContent>
+    </Dialog>
 </template>

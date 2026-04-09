@@ -55,6 +55,8 @@ const relationOptions = ref({});
 const relationLoading = ref({});
 const relationErrors = ref({});
 const fileSelections = ref({});
+const fileAppends = ref({});
+const fileDeletions = ref({});
 const relationDialogState = ref({
   open: false,
   fieldName: null,
@@ -201,6 +203,8 @@ const initializeFormState = () => {
   formState.value = nextState;
   fieldErrors.value = {};
   fileSelections.value = {};
+  fileAppends.value = {};
+  fileDeletions.value = {};
 };
 
 const normalizeRelationSelection = (value) => {
@@ -527,7 +531,12 @@ const fileSelectionSummary = (field) => {
   const selected = selectedFileNames(field);
 
   if (selected.length > 0) {
-    return `Selected: ${selected.join(", ")}`;
+    return `Will replace with: ${selected.join(", ")}`;
+  }
+
+  const appended = (fileAppends.value[field?.name] ?? []).map((f) => f.name);
+  if (appended.length > 0) {
+    return `Will append: ${appended.join(", ")}`;
   }
 
   const existing = existingFileNames(field);
@@ -543,7 +552,48 @@ const handleFileInputChange = (field, event) => {
   const files = Array.from(event?.target?.files ?? []);
 
   fileSelections.value[field.name] = files;
+  fileAppends.value[field.name] = [];
+  fileDeletions.value[field.name] = [];
   modifyRecord();
+};
+
+const handleFileAppendChange = (field, event) => {
+  const files = Array.from(event?.target?.files ?? []);
+
+  if (!fileAppends.value[field.name]) {
+    fileAppends.value[field.name] = [];
+  }
+
+  fileAppends.value[field.name].push(...files);
+  modifyRecord();
+};
+
+const removeAppendedFile = (field, index) => {
+  if (fileAppends.value[field.name]) {
+    fileAppends.value[field.name].splice(index, 1);
+    modifyRecord();
+  }
+};
+
+const toggleFileDeletion = (field, file) => {
+  const fieldName = field.name;
+  if (!fileDeletions.value[fieldName]) {
+    fileDeletions.value[fieldName] = [];
+  }
+
+  const path = file.path;
+  const index = fileDeletions.value[fieldName].indexOf(path);
+
+  if (index > -1) {
+    fileDeletions.value[fieldName].splice(index, 1);
+  } else {
+    fileDeletions.value[fieldName].push(path);
+  }
+  modifyRecord();
+};
+
+const isFileMarkedForDeletion = (field, file) => {
+  return (fileDeletions.value[field.name] ?? []).includes(file.path);
 };
 
 const hasFilePayload = (payload) => {
@@ -694,11 +744,23 @@ const buildPayload = () => {
 
     if (field.type === "file") {
       const selectedFiles = fileSelections.value[field.name] ?? [];
+      const appendedFiles = fileAppends.value[field.name] ?? [];
+      const deletedFiles = fileDeletions.value[field.name] ?? [];
 
       if (selectedFiles.length > 0) {
         payload[field.name] = field.multiple ? selectedFiles : selectedFiles[0];
-      } else if (!isUpdating.value) {
-        payload[field.name] = null;
+      } else {
+        if (appendedFiles.length > 0) {
+          payload[`${field.name}+`] = appendedFiles;
+        }
+
+        if (deletedFiles.length > 0) {
+          payload[`${field.name}-`] = deletedFiles;
+        }
+
+        if (!isUpdating.value) {
+          payload[field.name] = null;
+        }
       }
 
       continue;
@@ -715,13 +777,18 @@ const applyValidationErrors = (errors) => {
   const nextErrors = {};
 
   for (const [field, messages] of Object.entries(errors ?? {})) {
+    let targetField = field;
+    if (field.endsWith("+") || field.endsWith("-")) {
+      targetField = field.slice(0, -1);
+    }
+
     if (Array.isArray(messages) && messages.length) {
-      nextErrors[field] = messages[0];
+      nextErrors[targetField] = messages[0];
       continue;
     }
 
     if (typeof messages === "string" && messages.length) {
-      nextErrors[field] = messages;
+      nextErrors[targetField] = messages;
     }
   }
 
@@ -943,7 +1010,7 @@ onMounted(async () => {
 
 <template>
   <Sheet :open="internalOpen" @update:open="(isOpen) => { if (!isOpen) requestClose(); }">
-    <SheetContent side="right" class="sm:max-w-md overflow-hidden">
+    <SheetContent side="right" class="sm:max-w-xl md:max-w-2xl overflow-hidden">
       <SheetHeader>
         <SheetTitle>{{ isUpdating ? 'Edit' : 'Add' }} {{ fetchedCollection?.name ?? 'Collection' }} Record</SheetTitle>
         <SheetDescription>
@@ -976,14 +1043,66 @@ onMounted(async () => {
             <TiptapEditor v-else-if="field.type === 'richtext'" v-model="formState[field.name]"
               :placeholder="`Write ${displayFieldName(field.name)}...`" @update:model-value="modifyRecord" />
 
-            <div v-else-if="field.type === 'file'" class="space-y-2">
-              <Input
-                :id="`field-${sheetId}-${field.name}`"
-                type="file"
-                :multiple="Boolean(field.multiple)"
-                :disabled="isDisabledField(field)"
-                @change="(event) => handleFileInputChange(field, event)"
-              />
+            <div v-else-if="field.type === 'file'" class="space-y-4">
+              <div v-if="normalizeFileMetadataList(formState[field.name]).length > 0" class="space-y-2">
+                <p class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Current Files</p>
+                <div class="grid gap-2">
+                  <div v-for="file in normalizeFileMetadataList(formState[field.name])" :key="file.path"
+                    class="flex items-center justify-between rounded-md border p-2 text-sm"
+                    :class="isFileMarkedForDeletion(field, file) ? 'bg-destructive/10 border-destructive/20 opacity-70' : 'bg-muted/30'">
+                    <div class="flex items-center gap-2 min-w-0">
+                      <component :is="resolveCollectionFieldTypeIcon(field.type)" class="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <span class="truncate font-medium">{{ file.name ?? file.path }}</span>
+                      <span v-if="isFileMarkedForDeletion(field, file)" class="text-[10px] font-bold text-destructive uppercase">Deleting</span>
+                    </div>
+                    <Button variant="ghost" size="icon" class="h-7 w-7" 
+                      :class="isFileMarkedForDeletion(field, file) ? 'text-primary' : 'text-destructive'"
+                      type="button"
+                      @click="toggleFileDeletion(field, file)">
+                      <X v-if="isFileMarkedForDeletion(field, file)" class="h-4 w-4" />
+                      <Trash2 v-else class="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="fileAppends[field.name]?.length > 0" class="space-y-2">
+                <p class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Pending Uploads</p>
+                <div class="grid gap-2">
+                  <div v-for="(file, index) in fileAppends[field.name]" :key="index"
+                    class="flex items-center justify-between rounded-md border border-dashed bg-primary/5 p-2 text-sm">
+                    <div class="flex items-center gap-2 min-w-0">
+                      <Plus class="h-4 w-4 shrink-0 text-primary" />
+                      <span class="truncate font-medium">{{ file.name }}</span>
+                    </div>
+                    <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground" type="button" @click="removeAppendedFile(field, index)">
+                      <X class="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="grid gap-2">
+                <div v-if="isUpdating && field.multiple" class="flex items-center gap-2">
+                  <Button variant="outline" size="sm" class="w-full relative cursor-pointer" type="button">
+                    <Plus class="h-4 w-4 mr-2" />
+                    Add Files
+                    <input type="file" multiple class="absolute inset-0 opacity-0 cursor-pointer" @change="(event) => handleFileAppendChange(field, event)" />
+                  </Button>
+                  <Button variant="ghost" size="sm" class="relative cursor-pointer" type="button">
+                    Replace
+                    <input type="file" :multiple="Boolean(field.multiple)" class="absolute inset-0 opacity-0 cursor-pointer" @change="(event) => handleFileInputChange(field, event)" />
+                  </Button>
+                </div>
+                <Input v-else
+                  :id="`field-${sheetId}-${field.name}`"
+                  type="file"
+                  :multiple="Boolean(field.multiple)"
+                  :disabled="isDisabledField(field)"
+                  @change="(event) => handleFileInputChange(field, event)"
+                />
+              </div>
+
               <p class="text-xs text-muted-foreground">
                 {{ fileSelectionSummary(field) }}
               </p>
