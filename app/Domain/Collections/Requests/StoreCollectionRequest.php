@@ -97,8 +97,33 @@ class StoreCollectionRequest extends FormRequest
                 if ($fieldType === CollectionFieldType::Relation) {
                     $this->validateRelationFieldDefinition($validator, $index, $field);
                 }
+
+                if ($fieldType === CollectionFieldType::File) {
+                    $this->validateFileFieldDefinition($validator, $index, $field);
+                }
             }
         });
+    }
+
+    private function validateFileFieldDefinition(Validator $validator, int $index, array $field): void
+    {
+        $multiple = (bool) ($field['multiple'] ?? false);
+        $min = array_key_exists('min', $field) && $field['min'] !== null ? (int) $field['min'] : null;
+        $max = array_key_exists('max', $field) && $field['max'] !== null ? (int) $field['max'] : null;
+
+        if ($min !== null && $max !== null && $min > $max) {
+            $validator->errors()->add("fields.{$index}.min", 'The minimum file count cannot be greater than the maximum file count.');
+        }
+
+        if (! $multiple) {
+            if ($min !== null && $min > 1) {
+                $validator->errors()->add("fields.{$index}.min", 'Single file fields cannot have min greater than 1.');
+            }
+
+            if ($max !== null && $max > 1) {
+                $validator->errors()->add("fields.{$index}.max", 'Single file fields cannot have max greater than 1.');
+            }
+        }
     }
 
     private function validateRelationFieldDefinition(Validator $validator, int $index, array $field): void

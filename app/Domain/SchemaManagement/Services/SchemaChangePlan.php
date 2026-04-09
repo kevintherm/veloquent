@@ -276,11 +276,13 @@ final class SchemaChangePlan
     {
         $type = CollectionFieldType::from($field['type']);
 
-        return [
+        return collect([
             ...$type->defaultShape(),
             ...$field,
             'type' => $type->value,
-        ];
+        ])
+            ->only($type->allowedProperties())
+            ->all();
     }
 
     private static function normalizeInputField(array|Field $field): array

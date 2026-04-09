@@ -4,6 +4,7 @@ use App\Domain\Auth\Controllers\AuthController;
 use App\Domain\Collections\Controllers\CollectionController;
 use App\Domain\Realtime\Controllers\SubscribeController;
 use App\Domain\Records\Controllers\RecordController;
+use App\Domain\Records\Controllers\RecordFileController;
 use App\Domain\SchemaManagement\Controllers\OrphanTableController;
 use App\Domain\SchemaManagement\Controllers\SchemaRecoveryController;
 use App\Domain\SchemaManagement\Controllers\SchemaTransferController;
@@ -46,6 +47,7 @@ Route::prefix('collections')->group(function () {
 Route::prefix('collections/{collection}/records')->group(function () {
     Route::get('/', [RecordController::class, 'index'])->name('records.index');
     Route::post('/', [RecordController::class, 'store'])->name('records.store');
+    Route::get('/{record}/files/{field}', [RecordFileController::class, 'show'])->middleware('auth:api')->name('records.files.show');
     Route::get('/{record}', [RecordController::class, 'show'])->name('records.show');
     Route::match(['PUT', 'PATCH'], '/{record}', [RecordController::class, 'update'])->name('records.update');
     Route::delete('/{record}', [RecordController::class, 'destroy'])->name('records.destroy');

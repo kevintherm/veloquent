@@ -28,7 +28,8 @@ import {
     PaginationNext,
     PaginationPrevious,
 } from "@/components/ui/pagination";
-import { computed, watchEffect } from "vue";
+import { computed, watchEffect, ref, onMounted, onUnmounted } from "vue";
+import { getAuthToken } from "@/lib/tokenAuth";
 
 const props = defineProps({
     records: {
@@ -86,9 +87,14 @@ defineEmits(['toggle-all', 'toggle-record', 'change-page', 'open-record', 'sort'
 const skeletonRows = computed(() => props.records.length > 0 ? props.records.length : 8);
 
 const datetimeTypes = new Set(["timestamp", "datetime", "date"]);
+const imageExtensions = new Set(["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg", "avif"]);
 
 const isDatetimeColumn = (column, columnTypes) => {
     return datetimeTypes.has(columnTypes?.[column]);
+};
+
+const isFileColumn = (column, columnTypes) => {
+    return columnTypes?.[column] === "file";
 };
 
 const formatDatetimeParts = (value) => {
@@ -128,6 +134,240 @@ const formatValue = (value) => {
     }
 
     return String(value);
+};
+
+const normalizeFileMetadataList = (value) => {
+    if (value === null || value === undefined || value === "") {
+        return [];
+    }
+
+    if (Array.isArray(value)) {
+        return value.filter((item) => item && typeof item === "object");
+    }
+
+    if (value && typeof value === "object") {
+        return [value];
+    }
+
+    return [];
+};
+
+const normalizeStoragePathForUrl = (path) => {
+    return String(path)
+        .split("/")
+        .filter((segment) => segment.length > 0)
+        .map((segment) => encodeURIComponent(segment))
+        .join("/");
+};
+
+const revokeObjectURLs = () => {
+    objectUrls.value.forEach((url) => URL.revokeObjectURL(url));
+    objectUrls.value.clear();
+};
+
+const objectUrls = ref(new Map());
+
+onUnmounted(() => {
+    if (observer) {
+        observer.disconnect();
+    }
+    revokeObjectURLs();
+});
+
+const loadProtectedImage = async (event, url) => {
+    if (objectUrls.value.has(url)) {
+        event.target.src = objectUrls.value.get(url);
+        return;
+    }
+
+    try {
+        const response = await fetch(url, {
+            headers: {
+                Authorization: `Bearer ${getAuthToken()}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to load image: ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        objectUrls.value.set(url, objectUrl);
+        event.target.src = objectUrl;
+    } catch (error) {
+        console.error("Error loading protected image:", error);
+        // Fallback or leave as is (broken image)
+    }
+};
+
+const resolveFileSourceUrl = (metadata) => {
+    if (!metadata || typeof metadata !== "object") {
+        return null;
+    }
+
+    const protectedFile = Boolean(metadata.protected ?? false);
+
+    const url = String(metadata.url ?? "").trim();
+    if (url !== "") {
+        return { url, protected: protectedFile };
+    }
+
+    const path = String(metadata.path ?? "").trim();
+    if (path === "") {
+        return null;
+    }
+
+    if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("/")) {
+        return { url: path, protected: protectedFile };
+    }
+
+    return {
+        url: `/storage/${normalizeStoragePathForUrl(path)}`,
+        protected: protectedFile
+    };
+};
+
+const filePreviewInfo = (value) => {
+    return resolveFileSourceUrl(primaryFileForDisplay(value));
+};
+
+const resolveFileExtension = (metadata) => {
+    const explicitExtension = String(metadata?.extension ?? "").trim().toLowerCase();
+    if (explicitExtension !== "") {
+        return explicitExtension;
+    }
+
+    const nameOrPath = String(metadata?.name ?? metadata?.path ?? "").trim().toLowerCase();
+    const segments = nameOrPath.split(".");
+
+    if (segments.length <= 1) {
+        return "";
+    }
+
+    return segments.at(-1) ?? "";
+};
+
+const isImageFile = (metadata) => {
+    const mime = String(metadata?.mime ?? "").trim().toLowerCase();
+    if (mime.startsWith("image/")) {
+        return true;
+    }
+
+    return imageExtensions.has(resolveFileExtension(metadata));
+};
+
+const firstImageFile = (value) => {
+    return normalizeFileMetadataList(value).find((item) => isImageFile(item)) ?? null;
+};
+
+const firstFile = (value) => {
+    return normalizeFileMetadataList(value)[0] ?? null;
+};
+
+const primaryFileForDisplay = (value) => {
+    return firstImageFile(value) ?? firstFile(value);
+};
+
+const fileDisplayName = (value) => {
+    const file = primaryFileForDisplay(value);
+
+    if (!file) {
+        return "-";
+    }
+
+    return String(file.name ?? file.path ?? "-");
+};
+
+const filePreviewUrl = (value) => {
+    return filePreviewInfo(value)?.url;
+};
+
+const handleImageLoad = (event, value) => {
+    const info = filePreviewInfo(value);
+    if (info && info.protected) {
+        loadProtectedImage(event, info.url);
+    } else if (info) {
+        event.target.src = info.url;
+    }
+};
+
+const handleIntersection = (entries) => {
+    entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+            const img = entry.target;
+            const recordId = img.dataset.recordId;
+            const column = img.dataset.column;
+
+            // Find the record and column value
+            const record = props.records.find((r) => String(r.id) === recordId);
+            if (record && record[column]) {
+                handleImageLoad({ target: img }, record[column]);
+            }
+
+            if (observer) {
+                observer.unobserve(img);
+            }
+        }
+    });
+};
+
+let observer = null;
+
+const imageRef = (el, recordId, column) => {
+    if (el) {
+        el.dataset.recordId = recordId;
+        el.dataset.column = column;
+        if (!observer) {
+            observer = new IntersectionObserver(handleIntersection, {
+                rootMargin: "50px",
+            });
+        }
+        observer.observe(el);
+    }
+};
+
+const openProtectedFile = async (value) => {
+    const info = filePreviewInfo(value);
+    if (!info) {
+        return;
+    }
+
+    if (objectUrls.value.has(info.url)) {
+        window.open(objectUrls.value.get(info.url), "_blank");
+        return;
+    }
+
+    try {
+        const response = await fetch(info.url, {
+            headers: {
+                Authorization: `Bearer ${getAuthToken()}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to load file: ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        objectUrls.value.set(info.url, objectUrl);
+        window.open(objectUrl, "_blank");
+    } catch (error) {
+        console.error("Error opening protected file:", error);
+    }
+};
+
+const filePreviewAlt = (value) => {
+    return String(primaryFileForDisplay(value)?.name ?? "Image preview");
+};
+
+const fileCount = (value) => {
+    return normalizeFileMetadataList(value).length;
+};
+
+const additionalFileCount = (value) => {
+    return Math.max(0, fileCount(value) - 1);
 };
 
 const normalizeRelationIds = (value) => {
@@ -190,6 +430,8 @@ const resolveColumnWidthClass = (column, columnTypes) => {
             return "min-w-80";
         case "relation":
             return "min-w-48";
+        case "file":
+            return "min-w-64";
         default:
             return "min-w-48";
     }
@@ -282,6 +524,25 @@ const copyRecordId = async (recordId) => {
                                         {{ relationId }}
                                     </a>
                                     <span v-if="normalizeRelationIds(record[column]).length === 0">-</span>
+                                </div>
+                                <div v-else-if="isFileColumn(column, columnTypes)" class="flex items-center gap-3 min-w-0">
+                                    <template v-if="firstImageFile(record[column])">
+                                        <a v-if="filePreviewInfo(record[column])?.protected" href="javascript:void(0)"
+                                            class="shrink-0" @click.stop="openProtectedFile(record[column])">
+                                            <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+                                                :ref="(el) => imageRef(el, String(record.id), column)"
+                                                :alt="filePreviewAlt(record[column])"
+                                                class="h-12 w-12 rounded-md border bg-muted object-cover" />
+                                        </a>
+                                        <a v-else-if="filePreviewUrl(record[column])"
+                                            :href="filePreviewUrl(record[column])" target="_blank"
+                                            rel="noopener noreferrer" class="shrink-0" @click.stop>
+                                            <img :src="filePreviewUrl(record[column])"
+                                                :alt="filePreviewAlt(record[column])"
+                                                class="h-12 w-12 rounded-md border bg-muted object-cover"
+                                                loading="lazy" />
+                                        </a>
+                                    </template>
                                 </div>
                                 <span v-else class="line-clamp-2">
                                     {{ formatValue(record[column]) }}

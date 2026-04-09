@@ -66,6 +66,16 @@ abstract class BaseRecordRequest extends FormRequest
                 $fieldRules[] = $uniqueRule;
             }
 
+            if ($fieldType === CollectionFieldType::File) {
+                if ($intervene) {
+                    $intervene($fieldName, $fieldRules);
+                }
+
+                $rules[$fieldName] = $fieldRules;
+
+                continue;
+            }
+
             if (isset($field['min']) && $field['min']) {
                 $fieldRules[] = 'min:'.$field['min'];
             }

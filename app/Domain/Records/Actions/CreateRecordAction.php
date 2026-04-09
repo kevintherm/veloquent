@@ -6,15 +6,18 @@ use App\Domain\Collections\Models\Collection;
 use App\Domain\QueryCompiler\Services\QueryFilter;
 use App\Domain\Records\Models\Record;
 use App\Domain\Records\Services\CreateRuleContextBuilder;
+use App\Domain\Records\Services\FileFieldProcessor;
 use App\Domain\Records\Services\RelationIntegrityService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Throwable;
 
 class CreateRecordAction
 {
     public function __construct(
         private readonly RelationIntegrityService $relationIntegrityService,
+        private readonly FileFieldProcessor $fileFieldProcessor,
     ) {}
 
     public function execute(Collection $collection, array $data): Record
@@ -50,6 +53,18 @@ class CreateRecordAction
 
         $this->relationIntegrityService->validateRelationIds($collection->fields ?? [], $data);
 
-        return Record::of($collection)->create($data);
+        $fileProcessing = $this->fileFieldProcessor->processForCreate(
+            $collection,
+            $data,
+            request(),
+        );
+
+        try {
+            return Record::of($collection)->create($fileProcessing['data']);
+        } catch (Throwable $exception) {
+            $this->fileFieldProcessor->deletePaths($fileProcessing['stored_paths']);
+
+            throw $exception;
+        }
     }
 }

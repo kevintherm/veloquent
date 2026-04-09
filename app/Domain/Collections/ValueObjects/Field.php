@@ -16,6 +16,10 @@ class Field implements \ArrayAccess, \JsonSerializable
         public ?string $id = null,
         public ?int $min = null,
         public ?int $max = null,
+        public bool $multiple = false,
+        public ?int $max_size_kb = null,
+        public array $allowed_mime_types = [],
+        public bool $protected = false,
         public ?string $target_collection_id = null,
         public bool $cascade_on_delete = false,
     ) {}
@@ -44,6 +48,13 @@ class Field implements \ArrayAccess, \JsonSerializable
             id: isset($shape['id']) ? (string) $shape['id'] : null,
             min: isset($shape['min']) ? (is_null($shape['min']) ? null : (int) $shape['min']) : null,
             max: isset($shape['max']) ? (is_null($shape['max']) ? null : (int) $shape['max']) : null,
+            multiple: (bool) ($shape['multiple'] ?? false),
+            max_size_kb: isset($shape['max_size_kb']) ? (is_null($shape['max_size_kb']) ? null : (int) $shape['max_size_kb']) : null,
+            allowed_mime_types: collect($shape['allowed_mime_types'] ?? [])
+                ->filter(fn (mixed $mime): bool => is_string($mime) && trim($mime) !== '')
+                ->values()
+                ->all(),
+            protected: (bool) ($shape['protected'] ?? false),
             target_collection_id: isset($shape['target_collection_id']) ? (is_null($shape['target_collection_id']) ? null : (string) $shape['target_collection_id']) : null,
             cascade_on_delete: (bool) ($shape['cascade_on_delete'] ?? false),
         );
@@ -61,12 +72,19 @@ class Field implements \ArrayAccess, \JsonSerializable
             'order' => $this->order,
             'nullable' => $this->nullable,
             'unique' => $this->unique,
-            'default' => $this->default,
             'min' => $this->min,
             'max' => $this->max,
+            'multiple' => $this->multiple,
+            'max_size_kb' => $this->max_size_kb,
+            'allowed_mime_types' => $this->allowed_mime_types,
+            'protected' => $this->protected,
             'target_collection_id' => $this->target_collection_id,
             'cascade_on_delete' => $this->cascade_on_delete,
         ];
+
+        if ($type !== CollectionFieldType::File) {
+            $data['default'] = $this->default;
+        }
 
         return collect($data)
             ->only($allowed)
@@ -145,6 +163,33 @@ class Field implements \ArrayAccess, \JsonSerializable
 
         if ($key === 'max') {
             $this->max = is_null($value) ? null : (int) $value;
+
+            return;
+        }
+
+        if ($key === 'multiple') {
+            $this->multiple = (bool) $value;
+
+            return;
+        }
+
+        if ($key === 'max_size_kb') {
+            $this->max_size_kb = is_null($value) ? null : (int) $value;
+
+            return;
+        }
+
+        if ($key === 'allowed_mime_types') {
+            $this->allowed_mime_types = collect((array) $value)
+                ->filter(fn (mixed $mime): bool => is_string($mime) && trim($mime) !== '')
+                ->values()
+                ->all();
+
+            return;
+        }
+
+        if ($key === 'protected') {
+            $this->protected = (bool) $value;
 
             return;
         }

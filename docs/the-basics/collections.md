@@ -23,13 +23,33 @@ Each collection is made up of fields that define the structure of your records. 
 |---|---|
 | `text` | Single line string (max 255 chars). |
 | `longtext` | Multi-line text for longer content. |
+| `richtext` | Same as longtext. Used to provide rich text editor for the admin panel. |
 | `number` | Floating point or integer numeric value. |
 | `boolean` | True/False value. |
 | `datetime` | Date and time value. |
 | `email` | Validated email address. |
 | `url` | Validated URL. |
 | `json` | Arbitrary JSON data. |
+| `file` | Upload metadata (single or multiple files) with optional protected access. |
 | `relation` | Link to a record in another collection. |
+
+### File Fields
+
+File fields support upload constraints and access protection.
+
+| Property | Type | Description |
+|---|---|---|
+| `multiple` | boolean | When `true`, the field accepts an array of files. |
+| `min` | integer\|null | Minimum file count for validation. |
+| `max` | integer\|null | Maximum file count for validation. |
+| `max_size_kb` | integer\|null | Max file size per item in KB. |
+| `allowed_mime_types` | array | MIME allow-list (example: `image/png`, `application/pdf`). |
+| `protected` | boolean | When `true`, file URLs are served through an authenticated API proxy route. |
+
+#### Important
+
+- File fields do not persist a `default` value in collection metadata.
+- If a `default` value is sent for a file field, it is ignored.
 
 ## Managing Collections
 

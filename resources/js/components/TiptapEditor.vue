@@ -119,7 +119,7 @@ onBeforeUnmount(() => {
       <!-- Text Style Dropdown -->
       <DropdownMenu>
         <DropdownMenuTrigger as-child>
-          <Button variant="ghost" size="sm" class="h-8 px-2 gap-1 text-xs font-normal min-w-[100px] justify-between">
+          <Button type="button" variant="ghost" size="sm" class="h-8 px-2 gap-1 text-xs font-normal min-w-[100px] justify-between">
             <span v-if="editor.isActive('heading', { level: 1 })">Heading 1</span>
             <span v-else-if="editor.isActive('heading', { level: 2 })">Heading 2</span>
             <span v-else-if="editor.isActive('heading', { level: 3 })">Heading 3</span>
@@ -145,36 +145,36 @@ onBeforeUnmount(() => {
 
       <div class="w-px h-4 bg-border mx-1" />
 
-      <Button variant="ghost" size="icon" class="h-8 w-8" :class="{ 'bg-accent': editor.isActive('bold') }"
+      <Button type="button" variant="ghost" size="icon" class="h-8 w-8" :class="{ 'bg-accent': editor.isActive('bold') }"
         @click="editor.chain().focus().toggleBold().run()">
         <Bold class="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="icon" class="h-8 w-8" :class="{ 'bg-accent': editor.isActive('italic') }"
+      <Button type="button" variant="ghost" size="icon" class="h-8 w-8" :class="{ 'bg-accent': editor.isActive('italic') }"
         @click="editor.chain().focus().toggleItalic().run()">
         <Italic class="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="icon" class="h-8 w-8" :class="{ 'bg-accent': editor.isActive('underline') }"
+      <Button type="button" variant="ghost" size="icon" class="h-8 w-8" :class="{ 'bg-accent': editor.isActive('underline') }"
         @click="editor.chain().focus().toggleUnderline().run()">
         <UnderlineIcon class="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="icon" class="h-8 w-8" :class="{ 'bg-accent': editor.isActive('strike') }"
+      <Button type="button" variant="ghost" size="icon" class="h-8 w-8" :class="{ 'bg-accent': editor.isActive('strike') }"
         @click="editor.chain().focus().toggleStrike().run()">
         <Strikethrough class="h-4 w-4" />
       </Button>
 
       <div class="w-px h-4 bg-border mx-1" />
 
-      <Button variant="ghost" size="icon" class="h-8 w-8"
+      <Button type="button" variant="ghost" size="icon" class="h-8 w-8"
         :class="{ 'bg-accent': editor.isActive({ textAlign: 'left' }) }"
         @click="editor.chain().focus().setTextAlign('left').run()">
         <AlignLeft class="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="icon" class="h-8 w-8"
+      <Button type="button" variant="ghost" size="icon" class="h-8 w-8"
         :class="{ 'bg-accent': editor.isActive({ textAlign: 'center' }) }"
         @click="editor.chain().focus().setTextAlign('center').run()">
         <AlignCenter class="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="icon" class="h-8 w-8"
+      <Button type="button" variant="ghost" size="icon" class="h-8 w-8"
         :class="{ 'bg-accent': editor.isActive({ textAlign: 'right' }) }"
         @click="editor.chain().focus().setTextAlign('right').run()">
         <AlignRight class="h-4 w-4" />
@@ -182,23 +182,23 @@ onBeforeUnmount(() => {
 
       <div class="w-px h-4 bg-border mx-1" />
 
-      <Button variant="ghost" size="icon" class="h-8 w-8" :class="{ 'bg-accent': editor.isActive('bulletList') }"
+      <Button type="button" variant="ghost" size="icon" class="h-8 w-8" :class="{ 'bg-accent': editor.isActive('bulletList') }"
         @click="editor.chain().focus().toggleBulletList().run()">
         <List class="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="icon" class="h-8 w-8" :class="{ 'bg-accent': editor.isActive('orderedList') }"
+      <Button type="button" variant="ghost" size="icon" class="h-8 w-8" :class="{ 'bg-accent': editor.isActive('orderedList') }"
         @click="editor.chain().focus().toggleOrderedList().run()">
         <ListOrdered class="h-4 w-4" />
       </Button>
 
       <div class="w-px h-4 bg-border mx-1" />
 
-      <Button variant="ghost" size="icon" class="h-8 w-8" :class="{ 'bg-accent': editor.isActive('link') }"
+      <Button type="button" variant="ghost" size="icon" class="h-8 w-8" :class="{ 'bg-accent': editor.isActive('link') }"
         @click="toggleLink">
         <LinkIcon class="h-4 w-4" />
       </Button>
 
-      <Button variant="ghost" size="icon" class="h-8 w-8" :class="{ 'bg-accent': editor.isActive('highlight') }"
+      <Button type="button" variant="ghost" size="icon" class="h-8 w-8" :class="{ 'bg-accent': editor.isActive('highlight') }"
         @click="editor.chain().focus().toggleHighlight().run()">
         <Highlighter class="h-4 w-4" />
       </Button>
@@ -208,7 +208,7 @@ onBeforeUnmount(() => {
       <!-- Placeholder Dropdown -->
       <DropdownMenu v-if="placeholders.length > 0">
         <DropdownMenuTrigger as-child>
-          <Button variant="ghost" size="sm" class="h-8 px-2 gap-1 text-xs font-normal">
+          <Button type="button" variant="ghost" size="sm" class="h-8 px-2 gap-1 text-xs font-normal">
             <Type class="h-3 w-3" />
             Placeholders
             <ChevronDown class="h-3 w-3 opacity-50" />
@@ -226,11 +226,11 @@ onBeforeUnmount(() => {
 
       <div class="flex-1" />
 
-      <Button variant="ghost" size="icon" class="h-8 w-8" @click="editor.chain().focus().undo().run()"
+      <Button type="button" variant="ghost" size="icon" class="h-8 w-8" @click="editor.chain().focus().undo().run()"
         :disabled="!editor.can().undo()">
         <Undo class="h-4 w-4" />
       </Button>
-      <Button variant="ghost" size="icon" class="h-8 w-8" @click="editor.chain().focus().redo().run()"
+      <Button type="button" variant="ghost" size="icon" class="h-8 w-8" @click="editor.chain().focus().redo().run()"
         :disabled="!editor.can().redo()">
         <Redo class="h-4 w-4" />
       </Button>

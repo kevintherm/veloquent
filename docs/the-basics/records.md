@@ -339,6 +339,47 @@ Relation fields can be expanded to include the full related record data in a nes
 }
 ```
 
+### File Fields in Record Responses
+
+File fields are normalized in API responses.
+
+- Single file field: returns one object or `null`.
+- Multiple file field: returns an array of file objects.
+
+Each file object has this shape:
+
+```json
+{
+  "name": "avatar.png",
+  "path": "uploads/users/01J.../avatar.png",
+  "size": 25123,
+  "extension": "png",
+  "mime": "image/png",
+  "protected": true,
+  "url": "https://example.test/api/collections/users/records/01J.../files/avatar?path=uploads%2Fusers%2F01J...%2Favatar.png"
+}
+```
+
+### Accessing Protected Files
+
+When a file field is configured with `protected: true`, the `url` points to an authenticated proxy endpoint:
+
+```http
+GET /api/collections/{collection}/records/{record}/files/{field}?path={encoded-storage-path}
+Authorization: Bearer <token>
+```
+
+Behavior:
+
+- Requires a valid bearer token (`auth:api`).
+- Enforces the collection `view` API rule for the target record.
+- Ensures the field exists, is type `file`, and is marked `protected`.
+- Ensures the requested `path` belongs to the file metadata stored on that record.
+
+Use the `url` returned by the records API instead of building the proxy URL manually.
+
+If you render files in browser contexts where headers are not automatically sent (for example plain `<img src>` to external URLs), fetch the file with `Authorization: Bearer <token>` and then render the resulting blob/object URL.
+
 ## Error Handling
 
 ### SDK Error Handling

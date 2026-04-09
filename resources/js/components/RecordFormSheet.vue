@@ -26,6 +26,7 @@ import { Copy, Plus, Search, Trash2, X, MoreVertical, Key } from "lucide-vue-nex
 import { resolveCollectionFieldTypeIcon } from "@/lib/collectionFieldTypeIcons";
 import { openRecordForm } from "@/lib/recordFormSheet";
 import { useDashboardState } from "@/lib/dashboardState";
+import TiptapEditor from "./TiptapEditor.vue";
 
 const props = defineProps({
   sheetId: {
@@ -53,6 +54,7 @@ const fieldErrors = ref({});
 const relationOptions = ref({});
 const relationLoading = ref({});
 const relationErrors = ref({});
+const fileSelections = ref({});
 const relationDialogState = ref({
   open: false,
   fieldName: null,
@@ -159,6 +161,10 @@ const defaultFieldValue = (field) => {
   }
 
   if (field.default !== undefined && field.default !== null) {
+    if (field.type === "file") {
+      return null;
+    }
+
     if (field.type === "timestamp") {
       return formatDatetimeLocal(field.default);
     }
@@ -194,6 +200,7 @@ const initializeFormState = () => {
 
   formState.value = nextState;
   fieldErrors.value = {};
+  fileSelections.value = {};
 };
 
 const normalizeRelationSelection = (value) => {
@@ -488,6 +495,120 @@ const resolveInputType = (field) => {
   return field?.type;
 };
 
+const normalizeFileMetadataList = (value) => {
+  if (value === null || value === undefined || value === "") {
+    return [];
+  }
+
+  if (Array.isArray(value)) {
+    return value.filter((item) => item && typeof item === "object");
+  }
+
+  if (typeof value === "object") {
+    return [value];
+  }
+
+  return [];
+};
+
+const selectedFileNames = (field) => {
+  return (fileSelections.value[field?.name] ?? []).map((file) => file?.name).filter(Boolean);
+};
+
+const existingFileNames = (field) => {
+  const currentValue = formState.value[field?.name];
+
+  return normalizeFileMetadataList(currentValue)
+    .map((item) => item?.name ?? item?.path)
+    .filter(Boolean);
+};
+
+const fileSelectionSummary = (field) => {
+  const selected = selectedFileNames(field);
+
+  if (selected.length > 0) {
+    return `Selected: ${selected.join(", ")}`;
+  }
+
+  const existing = existingFileNames(field);
+
+  if (existing.length > 0) {
+    return `Current: ${existing.join(", ")}`;
+  }
+
+  return field?.multiple ? "No files selected." : "No file selected.";
+};
+
+const handleFileInputChange = (field, event) => {
+  const files = Array.from(event?.target?.files ?? []);
+
+  fileSelections.value[field.name] = files;
+  modifyRecord();
+};
+
+const hasFilePayload = (payload) => {
+  return Object.values(payload).some((value) => {
+    if (value instanceof File) {
+      return true;
+    }
+
+    if (Array.isArray(value)) {
+      return value.some((item) => item instanceof File);
+    }
+
+    return false;
+  });
+};
+
+const appendFormDataEntry = (formData, key, value) => {
+  if (value === undefined) {
+    return;
+  }
+
+  if (value === null) {
+    formData.append(key, "");
+    return;
+  }
+
+  if (value instanceof File) {
+    formData.append(key, value);
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    if (value.every((item) => item instanceof File)) {
+      for (const file of value) {
+        formData.append(`${key}[]`, file);
+      }
+      return;
+    }
+
+    formData.append(key, JSON.stringify(value));
+    return;
+  }
+
+  if (typeof value === "object") {
+    formData.append(key, JSON.stringify(value));
+    return;
+  }
+
+  formData.append(key, String(value));
+};
+
+const buildFormDataPayload = (payload, isUpdateRequest) => {
+  const formData = new FormData();
+
+  if (isUpdateRequest) {
+    formData.append("_method", "PATCH");
+  }
+
+  for (const [key, value] of Object.entries(payload)) {
+    appendFormDataEntry(formData, key, value);
+  }
+
+  return formData;
+};
+
 const coerceFieldValue = (field, rawValue) => {
   if (rawValue === "" || rawValue === undefined) {
     return null;
@@ -571,6 +692,18 @@ const buildPayload = () => {
       continue;
     }
 
+    if (field.type === "file") {
+      const selectedFiles = fileSelections.value[field.name] ?? [];
+
+      if (selectedFiles.length > 0) {
+        payload[field.name] = field.multiple ? selectedFiles : selectedFiles[0];
+      } else if (!isUpdating.value) {
+        payload[field.name] = null;
+      }
+
+      continue;
+    }
+
     const rawValue = formState.value[field.name];
     payload[field.name] = coerceFieldValue(field, rawValue);
   }
@@ -643,18 +776,33 @@ const handleSave = async () => {
 
   try {
     const payload = buildPayload();
+    const containsFiles = hasFilePayload(payload);
     let response;
 
-    if (isUpdating.value) {
-      response = await axios.put(
-        `/api/collections/${encodeURIComponent(identifier)}/records/${encodeURIComponent(localRecordId.value)}`,
-        payload
+    if (containsFiles) {
+      const formData = buildFormDataPayload(payload, isUpdating.value);
+
+      response = await axios.post(
+        `/api/collections/${encodeURIComponent(identifier)}/records${isUpdating.value ? `/${encodeURIComponent(localRecordId.value)}` : ""}`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
       );
     } else {
-      response = await axios.post(
-        `/api/collections/${encodeURIComponent(identifier)}/records`,
-        payload
-      );
+      if (isUpdating.value) {
+        response = await axios.put(
+          `/api/collections/${encodeURIComponent(identifier)}/records/${encodeURIComponent(localRecordId.value)}`,
+          payload
+        );
+      } else {
+        response = await axios.post(
+          `/api/collections/${encodeURIComponent(identifier)}/records`,
+          payload
+        );
+      }
     }
 
     emit("save", response?.data?.data ?? null);
@@ -824,6 +972,22 @@ onMounted(async () => {
               class="min-h-24 rounded-md border border-input bg-background px-3 py-2 text-sm"
               :class="isDisabledField(field) ? 'cursor-not-allowed bg-muted' : ''" :disabled="isDisabledField(field)"
               :placeholder="`Enter ${displayFieldName(field.name)}...`" @input="modifyRecord"></textarea>
+
+            <TiptapEditor v-else-if="field.type === 'richtext'" v-model="formState[field.name]"
+              :placeholder="`Write ${displayFieldName(field.name)}...`" @update:model-value="modifyRecord" />
+
+            <div v-else-if="field.type === 'file'" class="space-y-2">
+              <Input
+                :id="`field-${sheetId}-${field.name}`"
+                type="file"
+                :multiple="Boolean(field.multiple)"
+                :disabled="isDisabledField(field)"
+                @change="(event) => handleFileInputChange(field, event)"
+              />
+              <p class="text-xs text-muted-foreground">
+                {{ fileSelectionSummary(field) }}
+              </p>
+            </div>
 
             <Input v-else-if="field.type !== 'boolean' && field.type !== 'relation'"
               :id="`field-${sheetId}-${field.name}`" v-model="formState[field.name]" :type="resolveInputType(field)"

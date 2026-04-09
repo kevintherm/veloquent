@@ -4,6 +4,7 @@ namespace App\Domain\Records\Observers;
 
 use App\Domain\Realtime\Contracts\RealtimeBusDriver;
 use App\Domain\Records\Models\Record;
+use App\Domain\Records\Services\FileFieldProcessor;
 use App\Domain\Records\Services\RelationIntegrityService;
 
 class RecordObserver
@@ -31,6 +32,7 @@ class RecordObserver
     public function deleting(Record $record): void
     {
         app(RelationIntegrityService::class)->handleRecordDeletion($record->collection, $record->id);
+        app(FileFieldProcessor::class)->cleanupRecordFiles($record);
 
         $this->publishEvent('deleted', $record);
     }

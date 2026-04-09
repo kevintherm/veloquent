@@ -87,12 +87,14 @@ const normalizeApiRules = (apiRules = {}) => ({
 const fieldTypes = [
   { value: "text", label: "Text" },
   { value: "longtext", label: "Long Text" },
+  { value: "richtext", label: "Rich Text" },
   { value: "number", label: "Number" },
   { value: "boolean", label: "Boolean" },
   { value: "timestamp", label: "Timestamp" },
   { value: "email", label: "Email" },
   { value: "url", label: "URL" },
   { value: "json", label: "JSON" },
+  { value: "file", label: "File" },
   { value: "relation", label: "Relation" },
 ];
 
@@ -230,6 +232,10 @@ const newField = ref({
   default: null,
   min: null,
   max: null,
+  multiple: false,
+  max_size_kb: null,
+  allowed_mime_types: [],
+  protected: false,
   target_collection_id: null,
   cascade_on_delete: false,
   order: 0,
@@ -265,12 +271,34 @@ const getReservedFieldNames = (type) => {
   return type === "auth" ? authReservedFieldNames : baseReservedFieldNames;
 };
 
+const normalizeMimeTypeList = (value) => {
+  if (Array.isArray(value)) {
+    return value
+      .map((mime) => String(mime).trim())
+      .filter((mime) => mime.length > 0);
+  }
+
+  return String(value ?? "")
+    .split(",")
+    .map((mime) => mime.trim())
+    .filter((mime) => mime.length > 0);
+};
+
 const normalizeFieldForForm = (field) => {
   const normalized = { ...field };
 
   if (normalized.type === "relation") {
     normalized.target_collection_id = normalized.target_collection_id ?? normalized.collection ?? null;
     normalized.cascade_on_delete = Boolean(normalized.cascade_on_delete ?? false);
+  }
+
+  if (normalized.type === "file") {
+    normalized.multiple = Boolean(normalized.multiple ?? false);
+    normalized.max_size_kb = normalized.max_size_kb ?? null;
+    normalized.allowed_mime_types = normalizeMimeTypeList(normalized.allowed_mime_types ?? []);
+    normalized.protected = Boolean(normalized.protected ?? false);
+    normalized.min = normalized.min ?? null;
+    normalized.max = normalized.max ?? null;
   }
 
   return normalized;
@@ -291,7 +319,7 @@ const normalizeIndexForForm = (index) => {
 };
 
 const isFieldIndexable = (type) => {
-  return !["json", "longtext", "url"].includes(type);
+  return !["json", "longtext", "url", "file"].includes(type);
 };
 
 const isRelationNeeded = computed(() => {
@@ -521,6 +549,10 @@ const addField = () => {
     default: null,
     min: null,
     max: null,
+    multiple: false,
+    max_size_kb: null,
+    allowed_mime_types: [],
+    protected: false,
     target_collection_id: null,
     cascade_on_delete: false,
     order: 0,
@@ -714,6 +746,21 @@ const buildPayload = () => {
         cleaned.target_collection_id = cleaned.target_collection_id ?? cleaned.collection ?? null;
         cleaned.cascade_on_delete = Boolean(cleaned.cascade_on_delete ?? false);
         delete cleaned.collection;
+      }
+
+      if (cleaned.type !== "file") {
+        delete cleaned.multiple;
+        delete cleaned.max_size_kb;
+        delete cleaned.allowed_mime_types;
+        delete cleaned.protected;
+      } else {
+        delete cleaned.default;
+        cleaned.multiple = Boolean(cleaned.multiple ?? false);
+        cleaned.max_size_kb = cleaned.max_size_kb === "" || cleaned.max_size_kb === undefined
+          ? null
+          : Number(cleaned.max_size_kb);
+        cleaned.allowed_mime_types = normalizeMimeTypeList(cleaned.allowed_mime_types ?? []);
+        cleaned.protected = Boolean(cleaned.protected ?? false);
       }
 
       return cleaned;
@@ -1082,7 +1129,7 @@ onMounted(async () => {
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div class="space-y-2">
+                  <div v-if="newField.type !== 'file'" class="space-y-2">
                     <Label class="text-xs font-semibold tracking-wide text-primary/80 uppercase">Default Value</Label>
                     <Input v-model="newField.default" class="h-9 focus-visible:ring-1 border-primary/20 bg-background"
                       placeholder="Optional default value" />
@@ -1115,6 +1162,35 @@ onMounted(async () => {
                         class="h-9 focus-visible:ring-1 border-primary/20 bg-background" placeholder="Optional" />
                     </div>
                   </div>
+
+                  <div v-if="newField.type === 'file'" class="space-y-2 col-span-1 sm:col-span-2">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div class="space-y-2">
+                        <Label class="text-xs font-semibold tracking-wide text-primary/80 uppercase">Min Files</Label>
+                        <Input v-model.number="newField.min" type="number"
+                          class="h-9 focus-visible:ring-1 border-primary/20 bg-background" placeholder="Optional" />
+                      </div>
+                      <div class="space-y-2">
+                        <Label class="text-xs font-semibold tracking-wide text-primary/80 uppercase">Max Files</Label>
+                        <Input v-model.number="newField.max" type="number"
+                          class="h-9 focus-visible:ring-1 border-primary/20 bg-background" placeholder="Optional" />
+                      </div>
+                      <div class="space-y-2">
+                        <Label class="text-xs font-semibold tracking-wide text-primary/80 uppercase">Max Size (KB)</Label>
+                        <Input v-model.number="newField.max_size_kb" type="number"
+                          class="h-9 focus-visible:ring-1 border-primary/20 bg-background" placeholder="Optional" />
+                      </div>
+                    </div>
+                    <div class="space-y-2">
+                      <Label class="text-xs font-semibold tracking-wide text-primary/80 uppercase">Allowed MIME Types</Label>
+                      <Input
+                        :model-value="(newField.allowed_mime_types ?? []).join(', ')"
+                        class="h-9 focus-visible:ring-1 border-primary/20 bg-background"
+                        placeholder="e.g. application/pdf, image/png"
+                        @update:model-value="(value) => { newField.allowed_mime_types = normalizeMimeTypeList(value); }"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div class="pt-4 border-t border-primary/10 mt-1">
@@ -1132,6 +1208,18 @@ onMounted(async () => {
                       <span
                         class="text-sm font-medium text-foreground/80 group-hover:text-foreground transition-colors">Cascade
                         on Delete</span>
+                    </label>
+                    <label v-if="newField.type === 'file'" class="flex items-center gap-2 cursor-pointer group">
+                      <Checkbox v-model="newField.multiple" />
+                      <span
+                        class="text-sm font-medium text-foreground/80 group-hover:text-foreground transition-colors">Allow
+                        Multiple Files</span>
+                    </label>
+                    <label v-if="newField.type === 'file'" class="flex items-center gap-2 cursor-pointer group">
+                      <Checkbox v-model="newField.protected" />
+                      <span
+                        class="text-sm font-medium text-foreground/80 group-hover:text-foreground transition-colors">Protected
+                        (Token Required)</span>
                     </label>
                   </div>
                   <div class="flex gap-3 justify-end mt-2">
@@ -1223,7 +1311,7 @@ onMounted(async () => {
                   </div>
 
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <div class="space-y-2">
+                    <div v-if="field.type !== 'file'" class="space-y-2">
                       <Label class="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Default
                         Value</Label>
                       <Input v-model="field.default" class="h-9 focus-visible:ring-1"
@@ -1259,6 +1347,39 @@ onMounted(async () => {
                           placeholder="Optional" />
                       </div>
                     </div>
+
+                    <div v-if="field.type === 'file'" class="space-y-2 col-span-1 sm:col-span-2">
+                      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div class="space-y-2">
+                          <Label class="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Min
+                            Files</Label>
+                          <Input v-model.number="field.min" type="number" class="h-9 focus-visible:ring-1"
+                            placeholder="Optional" />
+                        </div>
+                        <div class="space-y-2">
+                          <Label class="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Max
+                            Files</Label>
+                          <Input v-model.number="field.max" type="number" class="h-9 focus-visible:ring-1"
+                            placeholder="Optional" />
+                        </div>
+                        <div class="space-y-2">
+                          <Label class="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Max Size
+                            (KB)</Label>
+                          <Input v-model.number="field.max_size_kb" type="number" class="h-9 focus-visible:ring-1"
+                            placeholder="Optional" />
+                        </div>
+                      </div>
+                      <div class="space-y-2">
+                        <Label class="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Allowed MIME
+                          Types</Label>
+                        <Input
+                          :model-value="(field.allowed_mime_types ?? []).join(', ')"
+                          class="h-9 focus-visible:ring-1"
+                          placeholder="e.g. application/pdf, image/png"
+                          @update:model-value="(value) => { field.allowed_mime_types = normalizeMimeTypeList(value); }"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   <div class="pt-4 border-t border-border mt-1">
@@ -1276,6 +1397,18 @@ onMounted(async () => {
                         <span
                           class="text-sm font-medium text-foreground/80 group-hover:text-foreground transition-colors">Cascade
                           on Delete</span>
+                      </label>
+                      <label v-if="field.type === 'file'" class="flex items-center gap-2 cursor-pointer group">
+                        <Checkbox v-model="field.multiple" />
+                        <span
+                          class="text-sm font-medium text-foreground/80 group-hover:text-foreground transition-colors">Allow
+                          Multiple Files</span>
+                      </label>
+                      <label v-if="field.type === 'file'" class="flex items-center gap-2 cursor-pointer group">
+                        <Checkbox v-model="field.protected" />
+                        <span
+                          class="text-sm font-medium text-foreground/80 group-hover:text-foreground transition-colors">Protected
+                          (Token Required)</span>
                       </label>
                     </div>
                   </div>

@@ -1,7 +1,6 @@
 ## TODO
 
-- Add File field
-- Add Rich Text field (longtext)
+- File field admin panel file input update
 - Add multi tenant support stancl/tenant
 - Battle Testing
 - Ship
@@ -11,3 +10,4 @@
 - Add octane support
 - Circular relation detection for nested expand queries is not yet implemented. @RecordExpansionService
 - Hooks system
+- Add support for indexing json and file field

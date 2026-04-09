@@ -6,17 +6,20 @@ use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\QueryCompiler\Services\QueryFilter;
 use App\Domain\Records\Models\Record;
+use App\Domain\Records\Services\FileFieldProcessor;
 use App\Domain\Records\Services\RelationIntegrityService;
 use App\Domain\Records\Services\UpdateRuleContextBuilder;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class UpdateRecordAction
 {
     public function __construct(
         private readonly RelationIntegrityService $relationIntegrityService,
+        private readonly FileFieldProcessor $fileFieldProcessor,
     ) {}
 
     public function execute(Collection $collection, string $recordId, array $data): Record
@@ -87,8 +90,23 @@ class UpdateRecordAction
 
         $this->relationIntegrityService->validateRelationIds($collection->fields ?? [], $data);
 
-        $record->update($data);
-        $record->refresh();
+        $fileProcessing = $this->fileFieldProcessor->processForUpdate(
+            $collection,
+            $record,
+            $data,
+            request(),
+        );
+
+        try {
+            $record->update($fileProcessing['data']);
+            $record->refresh();
+        } catch (Throwable $exception) {
+            $this->fileFieldProcessor->deletePaths($fileProcessing['stored_paths']);
+
+            throw $exception;
+        }
+
+        $this->fileFieldProcessor->deletePaths($fileProcessing['pending_delete_paths']);
 
         return $record;
     }
