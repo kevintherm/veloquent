@@ -21,10 +21,12 @@ To start receiving updates, you must first subscribe to a collection. The SDK ha
 ### JavaScript SDK
 
 ```javascript
-import { configureEcho } from '@laravel/echo-vue';
+import { Veloquent } from '@veloquent/sdk';
+import { createEchoAdapter } from '@veloquent/sdk/adapters/realtime/echo';
+import Echo from 'laravel-echo';
 
-// Configure Echo (Laravel WebSocket library)
-const echo = configureEcho({
+// Configure Laravel Echo
+const echo = new Echo({
   broadcaster: 'reverb',
   key: import.meta.env.VITE_REVERB_APP_KEY,
   wsHost: import.meta.env.VITE_REVERB_HOST,
@@ -32,51 +34,56 @@ const echo = configureEcho({
   forceTLS: import.meta.env.VITE_REVERB_SCHEME === 'https'
 });
 
-// Subscribe to a collection and listen for events
-const subscription = echo
-  .private(`collections.posts`)
-  .subscribe()
-  .listen('.record.created', (event) => {
-    console.log('New record:', event.record);
-  })
-  .listen('.record.updated', (event) => {
-    console.log('Updated record:', event.record);
-  })
-  .listen('.record.deleted', (event) => {
-    console.log('Deleted record:', event.record);
-  });
+const sdk = new Veloquent({
+  host: import.meta.env.VITE_API_URL,
+  realtime: createEchoAdapter(echo)
+});
 
-// Leave the channel when done
-echo.leave('collections.posts');
+// Subscribe to a collection and listen for updates
+await sdk.realtime.subscribe('posts', { filter: 'status = "published"' }, (event, payload) => {
+  if (event === 'record.created') {
+    console.log('New record:', payload.record);
+  }
+});
+
+// Stop listening when done
+await sdk.realtime.unsubscribe('posts');
 ```
 
 ### Dart SDK
 
 ```dart
 import 'package:veloquent_sdk/veloquent_sdk.dart';
+import 'package:pusher_channels_flutter/pusher_channels_flutter.dart';
 
-// Configure Pusher Channels adapter
-final realtimeAdapter = PusherChannelsAdapter(
-  cluster: 'mt1',
-  key: pusherKey,
-  authEndpoint: 'https://your-api.com/api/pusher/auth',
-);
+// Initialize Pusher Channels Flutter instance
+final pusher = PusherChannelsFlutter.getInstance();
 
 final sdk = Veloquent(
-  apiUrl: 'https://your-api.com',
-  realtime: realtimeAdapter,
+  host: 'https://your-api.com',
+  realtime: PusherChannelsAdapter(pusher),
 );
 
-// Subscribe to collection events
-sdk.realtime.subscribe('posts', (event, payload) {
-  print('Event: $event');
-  print('Record: ${payload['record']}');
-});
+// Subscribe to collection updates
+await sdk.realtime.subscribe(
+  'posts', 
+  callback: (event, payload) {
+    print('Event: $event');
+    print('Record: ${payload['record']}');
+  },
+);
 
 // Alternatively, subscribe with a filter
-sdk.realtime.subscribe('posts', (event, payload) {
-  print('Event: $event');
-}, filter: 'status = "published"');
+await sdk.realtime.subscribe(
+  'posts', 
+  callback: (event, payload) {
+    print('Filtered event: $event');
+  },
+  filter: 'status = "published"',
+);
+
+// Unsubscribe when done
+await sdk.realtime.unsubscribe('posts');
 ```
 
 ### REST API - Manual Subscription
@@ -122,8 +129,7 @@ window.Echo.private('01JAB...private.posts')
 **Subscription Metadata:**
 - **TTL**: Subscriptions are temporary (default: 120 seconds).
 - **Auto-Refresh**: Clients should periodically re-subscribe to maintain a continuous connection.
-- **Garbage Collection**: Expired subscriptions are pruned automatically via the `realtime:prune` scheduler command.
-
+- **Garbage Collection**: Expired subscriptions are pruned automatically.
 ## Receiving Events
 
 Once subscribed, your client receives real-time events for record changes. Typical events include:
