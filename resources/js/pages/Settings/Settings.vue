@@ -23,7 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
       </div>
 
       <Tabs default-value="tests" class="space-y-4">
-        <TabsList>
+        <TabsList class="flex-wrap">
           <TabsTrigger value="tests" class="gap-2">
             <FlaskConical class="h-4 w-4" />
             Tests
