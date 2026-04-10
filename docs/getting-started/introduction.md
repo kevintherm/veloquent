@@ -1,10 +1,3 @@
----
-layout: default
-title: Introduction
-nav_order: 1
-has_children: false
----
-
 # Introduction to VeloquentPHP
 
 Veloquent is an open source backend built with Laravel to utilize Laravel's robust ecosystem and PHP's nature of hostability. It simplifies the development of modern web and mobile applications by handling your database, authentication, and real-time needs out of the box.
