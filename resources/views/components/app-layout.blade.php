@@ -172,7 +172,7 @@
                     <h4 class="detail-label mb-6 inline-block">Documentation</h4>
                     <ul class="flex flex-col gap-4 mono font-bold uppercase text-lg">
                         <li><a href="/docs/getting-started/quickstart" class="hover:underline">Quick Start</a></li>
-                        <li><a href="/docs/realtime" class="hover:underline">Realtime</a></li>
+                        <li><a href="/docs/realtime/realtime" class="hover:underline">Realtime</a></li>
                         <li><a href="/docs/security/authentication" class="hover:underline">Auth</a></li>
                     </ul>
                 </div>
