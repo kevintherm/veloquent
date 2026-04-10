@@ -46,6 +46,7 @@ class CollectionController extends ApiController
 
     public function store(StoreCollectionRequest $request): JsonResponse
     {
+        abort_if(app()->isProduction(), 403, 'Collection schema changes are locked in production.');
         Gate::authorize('create-collections', [$request->validated()]);
 
         $collection = $this->createCollectionAction->execute([
@@ -59,6 +60,7 @@ class CollectionController extends ApiController
 
     public function update(UpdateCollectionRequest $request, Collection $collection): JsonResponse
     {
+        abort_if(app()->isProduction(), 403, 'Collection schema changes are locked in production.');
         Gate::authorize('update-collections', [$collection->toArray()]);
 
         $payload = $request->validated();
@@ -77,6 +79,7 @@ class CollectionController extends ApiController
 
     public function destroy(Collection $collection): JsonResponse
     {
+        abort_if(app()->isProduction(), 403, 'Collection schema changes are locked in production.');
         Gate::authorize('delete-collections', [$collection]);
 
         $defaultAuthCollection = config('velo.default_auth_collection', 'users');
@@ -91,6 +94,7 @@ class CollectionController extends ApiController
 
     public function truncate(Collection $collection): JsonResponse
     {
+        abort_if(app()->isProduction(), 403, 'Collection schema changes are locked in production.');
         Gate::authorize('truncate-collections', $collection);
 
         $defaultAuthCollection = config('velo.default_auth_collection', 'users');

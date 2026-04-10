@@ -9,12 +9,12 @@ use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Observers\CollectionObserver;
 use App\Domain\Collections\QueryBuilder\CollectionBuilder;
 use Database\Factories\CollectionFactory;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Attributes\UseEloquentBuilder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 #[ObservedBy(CollectionObserver::class)]
 #[UseEloquentBuilder(CollectionBuilder::class)]
@@ -27,7 +27,18 @@ class Collection extends Model
         return CollectionFactory::new();
     }
 
-    protected $fillable = ['type', 'name', 'table_name', 'description', 'fields', 'api_rules', 'indexes', 'options', 'is_system', 'schema_updated_at'];
+    protected $fillable = [
+        'type',
+        'name',
+        'table_name',
+        'description',
+        'fields',
+        'api_rules',
+        'indexes',
+        'options',
+        'is_system',
+        'schema_updated_at',
+    ];
 
     protected function casts(): array
     {
