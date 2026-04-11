@@ -6,7 +6,6 @@ use App\Domain\OAuth\Models\OAuthProvider;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Laravel\Socialite\Two\AbstractProvider;
-use Laravel\Socialite\Two\DiscordProvider;
 use Laravel\Socialite\Two\FacebookProvider;
 use Laravel\Socialite\Two\GithubProvider;
 use Laravel\Socialite\Two\GoogleProvider;
@@ -18,7 +17,6 @@ class OAuthDriverFactory
     private const PROVIDERS = [
         'google' => GoogleProvider::class,
         'github' => GithubProvider::class,
-        'discord' => DiscordProvider::class,
         'facebook' => FacebookProvider::class,
         'x' => TwitterProvider::class,
     ];
