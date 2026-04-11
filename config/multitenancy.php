@@ -1,6 +1,7 @@
 <?php
 
 use App\Infrastructure\Models\Tenant;
+use App\Infrastructure\Multitenancy\Tasks\SwitchTenantAppUrlTask;
 use App\Infrastructure\Multitenancy\Tasks\SwitchTenantDatabaseTask;
 use Illuminate\Broadcasting\BroadcastEvent;
 use Illuminate\Events\CallQueuedListener;
@@ -40,6 +41,7 @@ return [
      */
     'switch_tenant_tasks' => [
         SwitchTenantDatabaseTask::class,
+        SwitchTenantAppUrlTask::class,
         PrefixCacheTask::class,
         // \Spatie\Multitenancy\Tasks\SwitchRouteCacheTask::class,
     ],
