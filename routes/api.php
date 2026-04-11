@@ -15,6 +15,11 @@ use App\Http\Controllers\OAuthProviderController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Middleware\SuperuserOnly;
 use Illuminate\Support\Facades\Route;
+use Spatie\Multitenancy\Http\Middleware\NeedsTenant;
+
+Route::middleware([NeedsTenant::class])->group(function () {
+    Route::get('/test', fn () => response()->json(['db' => DB::connection()->getDatabaseName()]));
+});
 
 /*
 |--------------------------------------------------------------------------

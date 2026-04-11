@@ -1,5 +1,10 @@
 ## TODO
 
+- Add switch filesystem task
+- Add switch logs task
+- Handle realtime worker tenancy
+- Delete tenant observer
+- Fix tests
 - Battle Testing
 - Ship
 

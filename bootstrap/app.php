@@ -9,9 +9,11 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull;
+use Illuminate\Http\Middleware\HandleCors;
 use Illuminate\Http\Request;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Validation\ValidationException;
+use Spatie\Multitenancy\Http\Middleware\NeedsTenant;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -31,6 +33,10 @@ return Application::configure(basePath: dirname(__DIR__))
         ]
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->prepend([
+            HandleCors::class,
+            NeedsTenant::class,
+        ]);
         $middleware->throttleWithRedis();
         $middleware->append(TokenAuthMiddleware::class);
         $middleware->redirectGuestsTo(function (Request $request): ?string {
@@ -42,7 +48,7 @@ return Application::configure(basePath: dirname(__DIR__))
         });
         $middleware->remove([
             ConvertEmptyStringsToNull::class,
-            StartSession::class
+            StartSession::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

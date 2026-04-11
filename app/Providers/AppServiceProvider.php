@@ -6,7 +6,9 @@ use App\Domain\Auth\Services\TokenAuthService;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Records\Models\Record;
 use App\Infrastructure\Guards\TokenGuard;
+use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
@@ -31,7 +33,17 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-    public function boot(): void {}
+    public function boot(): void
+    {
+        Event::listen(
+            CommandStarting::class,
+            function (CommandStarting $event) {
+                if ($event->command === 'migrate:fresh' || $event->command === 'db:wipe') {
+                    // drop tenant databases
+                }
+            }
+        );
+    }
 
     private function registerAuth(): void
     {

@@ -1,0 +1,44 @@
+<?php
+
+namespace App\Infrastructure\Multitenancy\Tasks;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
+use Spatie\Multitenancy\Concerns\UsesMultitenancyConfig;
+use Spatie\Multitenancy\Contracts\IsTenant;
+use Spatie\Multitenancy\Tasks\SwitchTenantTask;
+
+class SwitchTenantDatabaseTask implements SwitchTenantTask
+{
+    use UsesMultitenancyConfig;
+
+    public function makeCurrent(IsTenant $tenant): void
+    {
+        $this->setTenantConnectionDatabaseName($tenant->getDatabaseName());
+    }
+
+    public function forgetCurrent(): void
+    {
+        $this->setTenantConnectionDatabaseName(null);
+    }
+
+    protected function setTenantConnectionDatabaseName(?string $databaseName): void
+    {
+        $tenantConnectionName = $this->tenantDatabaseConnectionName();
+
+        config([
+            "database.connections.{$tenantConnectionName}.database" => $databaseName,
+        ]);
+
+        app('db')->extend($tenantConnectionName, function ($config, $name) use ($databaseName) {
+            $config['database'] = $databaseName;
+
+            return app('db.factory')->make($config, $name);
+        });
+
+        DB::purge($tenantConnectionName);
+
+        // Octane will have an old `db` instance in the Model::$resolver.
+        Model::setConnectionResolver(app('db'));
+    }
+}
