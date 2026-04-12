@@ -4,6 +4,7 @@ use App\Domain\Auth\Models\Superuser;
 use App\Http\Middleware\TokenAuthMiddleware;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 use function Pest\Laravel\actingAs;
@@ -27,8 +28,12 @@ beforeEach(function () {
     File::ensureDirectoryExists(storage_path('logs'));
     File::put($this->logPath, implode("\n", $content));
 
-    $this->user = Superuser::factory()->create();
-    actingAs($this->user, 'api');
+    if (Schema::hasTable('superusers')) {
+        $this->user = Superuser::factory()->create();
+        actingAs($this->user, 'api');
+    } else {
+        withoutMiddleware();
+    }
 
     // The TokenAuthMiddleware clears the guard if no token is in request,
     // which breaks actingAs(). So we bypass it.
@@ -139,6 +144,35 @@ it('returns hourly statistics', function () {
     expect($stats[1]['error'])->toBe(1);
     expect($stats[2]['warning'])->toBe(1);
     expect($stats[3]['count'])->toBe(2);
+});
+
+it('uses the configured daily channel path for date listing and log reading', function () {
+    /** @var TestCase $this */
+    $tenantDate = '2020-01-02';
+    $tenantLogPath = storage_path("tenants/777/logs/laravel-{$tenantDate}.log");
+
+    config()->set('logging.channels.daily.path', storage_path('tenants/777/logs/laravel.log'));
+
+    File::ensureDirectoryExists(dirname($tenantLogPath));
+    File::put($tenantLogPath, json_encode([
+        'datetime' => '2020-01-02 08:00:00',
+        'level_name' => 'INFO',
+        'channel' => 'local',
+        'message' => 'Tenant log entry',
+        'context' => null,
+    ]));
+
+    $this->getJson('/api/logs/dates')
+        ->assertSuccessful()
+        ->assertJsonFragment([$tenantDate])
+        ->assertJsonMissing([$this->testDate]);
+
+    $this->getJson("/api/logs?date={$tenantDate}")
+        ->assertSuccessful()
+        ->assertJsonPath('data.0.message', 'Tenant log entry');
+
+    File::delete($tenantLogPath);
+    File::deleteDirectory(storage_path('tenants/777'));
 });
 
 it('performs well with 100k entries', function () {

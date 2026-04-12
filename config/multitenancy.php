@@ -3,6 +3,8 @@
 use App\Infrastructure\Models\Tenant;
 use App\Infrastructure\Multitenancy\Tasks\SwitchTenantAppUrlTask;
 use App\Infrastructure\Multitenancy\Tasks\SwitchTenantDatabaseTask;
+use App\Infrastructure\Multitenancy\Tasks\SwitchTenantFilesystemTask;
+use App\Infrastructure\Multitenancy\Tasks\SwitchTenantLogsTask;
 use Illuminate\Broadcasting\BroadcastEvent;
 use Illuminate\Events\CallQueuedListener;
 use Illuminate\Mail\SendQueuedMailable;
@@ -41,6 +43,8 @@ return [
      */
     'switch_tenant_tasks' => [
         SwitchTenantDatabaseTask::class,
+        SwitchTenantFilesystemTask::class,
+        SwitchTenantLogsTask::class,
         SwitchTenantAppUrlTask::class,
         PrefixCacheTask::class,
         // \Spatie\Multitenancy\Tasks\SwitchRouteCacheTask::class,

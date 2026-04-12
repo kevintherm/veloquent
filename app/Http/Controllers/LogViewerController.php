@@ -10,7 +10,9 @@ class LogViewerController extends Controller
 {
     public function getDates()
     {
-        $logPath = storage_path('logs');
+        $logPath = $this->dailyLogDirectory();
+        $dailyFilenamePrefixPattern = preg_quote($this->dailyLogFilenamePrefix(), '/');
+
         if (! File::isDirectory($logPath)) {
             return response()->json([]);
         }
@@ -19,7 +21,7 @@ class LogViewerController extends Controller
         $dates = [];
 
         foreach ($files as $file) {
-            if (preg_match('/laravel-(\d{4}-\d{2}-\d{2})\.log/', $file->getFilename(), $matches)) {
+            if (preg_match("/{$dailyFilenamePrefixPattern}-(\\d{4}-\\d{2}-\\d{2})\\.log$/", $file->getFilename(), $matches)) {
                 $dates[] = $matches[1];
             }
         }
@@ -40,7 +42,7 @@ class LogViewerController extends Controller
         $page = (int) ($validated['page'] ?? 1);
         $perPage = (int) ($validated['per_page'] ?? 20);
 
-        $logFile = storage_path("logs/laravel-{$date}.log");
+        $logFile = $this->dailyLogFilePath($date);
 
         if (! File::exists($logFile)) {
             return response()->json([
@@ -170,7 +172,7 @@ class LogViewerController extends Controller
     {
         clearstatcache(true, $logFile);
         $fileSize = File::size($logFile);
-        $cacheKey = 'logs:'.basename($logFile).':'.md5(serialize([$level, $query, $hour, $perPage]));
+        $cacheKey = 'logs:'.sha1($logFile).':'.md5(serialize([$level, $query, $hour, $perPage]));
         $cached = Cache::get($cacheKey);
 
         if ($cached && $cached['file_size'] === $fileSize) {
@@ -307,5 +309,37 @@ class LogViewerController extends Controller
         }
 
         return (int) substr($line, $colonPos - 2, 2) === $hour;
+    }
+
+    private function dailyLogFilePath(string $date): string
+    {
+        $directory = $this->dailyLogDirectory();
+        $filenamePrefix = $this->dailyLogFilenamePrefix();
+
+        return "{$directory}/{$filenamePrefix}-{$date}.log";
+    }
+
+    private function dailyLogDirectory(): string
+    {
+        $configuredDailyPath = (string) config('logging.channels.daily.path', storage_path('logs/laravel.log'));
+        $directory = dirname($configuredDailyPath);
+
+        if ($directory === '' || $directory === '.') {
+            return storage_path('logs');
+        }
+
+        return $directory;
+    }
+
+    private function dailyLogFilenamePrefix(): string
+    {
+        $configuredDailyPath = (string) config('logging.channels.daily.path', storage_path('logs/laravel.log'));
+        $filenamePrefix = pathinfo($configuredDailyPath, PATHINFO_FILENAME);
+
+        if (! is_string($filenamePrefix) || $filenamePrefix === '') {
+            return 'laravel';
+        }
+
+        return $filenamePrefix;
     }
 }

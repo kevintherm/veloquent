@@ -80,6 +80,7 @@ return [
         'mode' => env('VELO_REALTIME_MODE', 'persistent'), // persistent, cron
         'cron_ttl' => env('VELO_REALTIME_TTL', 55),
         'subscription_ttl' => env('VELO_REALTIME_SUBSCRIPTION_TTL', 120),
+        'filesystem_bus_path' => storage_path('realtime/bus'),
     ],
 
     /*

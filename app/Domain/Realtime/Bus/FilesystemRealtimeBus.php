@@ -11,7 +11,11 @@ class FilesystemRealtimeBus implements RealtimeBusDriver
 
     private function directory(): string
     {
-        $directory = storage_path('realtime/bus');
+        $directory = trim((string) config('velo.realtime.filesystem_bus_path', storage_path('realtime/bus')));
+
+        if ($directory === '') {
+            $directory = storage_path('realtime/bus');
+        }
 
         if (! is_dir($directory)) {
             mkdir($directory, 0755, true);
