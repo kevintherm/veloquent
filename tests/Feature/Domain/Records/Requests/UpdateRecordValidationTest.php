@@ -1,6 +1,7 @@
 <?php
 
 use App\Domain\Collections\Actions\CreateCollectionAction;
+use App\Domain\Collections\Enums\CollectionFieldType;
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Records\Models\Record;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -68,4 +69,65 @@ it('still validates required fields if they are present but null', function () {
 
     $response->assertStatus(422)
         ->assertJsonValidationErrors(['title']);
+});
+
+it('allows auth updates when password is omitted or empty', function () {
+    $collection = app(CreateCollectionAction::class)->execute([
+        'name' => 'users_'.Str::random(5),
+        'type' => CollectionType::Auth->value,
+        'fields' => [
+            ['name' => 'name', 'type' => CollectionFieldType::Text->value, 'nullable' => false],
+        ],
+        'api_rules' => [
+            'list' => '',
+            'create' => '',
+            'view' => '',
+            'update' => 'id != ""',
+            'delete' => '',
+            'manage' => '',
+        ],
+    ]);
+
+    $record = Record::of($collection)->create([
+        'name' => 'Original Name',
+        'email' => 'user_'.Str::lower(Str::random(6)).'@example.test',
+        'password' => 'password123',
+    ]);
+
+    $this->patchJson(route('records.update', [$collection->id, $record->id]), [
+        'name' => 'Updated Name',
+    ])->assertOk();
+
+    $this->patchJson(route('records.update', [$collection->id, $record->id]), [
+        'password' => '',
+    ])->assertOk();
+});
+
+it('still validates auth password length when provided on update', function () {
+    $collection = app(CreateCollectionAction::class)->execute([
+        'name' => 'users_'.Str::random(5),
+        'type' => CollectionType::Auth->value,
+        'fields' => [
+            ['name' => 'name', 'type' => CollectionFieldType::Text->value, 'nullable' => false],
+        ],
+        'api_rules' => [
+            'list' => '',
+            'create' => '',
+            'view' => '',
+            'update' => 'id != ""',
+            'delete' => '',
+            'manage' => '',
+        ],
+    ]);
+
+    $record = Record::of($collection)->create([
+        'name' => 'Original Name',
+        'email' => 'user_'.Str::lower(Str::random(6)).'@example.test',
+        'password' => 'password123',
+    ]);
+
+    $this->patchJson(route('records.update', [$collection->id, $record->id]), [
+        'password' => 'short',
+    ])->assertStatus(422)
+        ->assertJsonValidationErrors(['password']);
 });

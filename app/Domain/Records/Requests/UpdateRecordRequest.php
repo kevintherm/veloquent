@@ -13,18 +13,19 @@ class UpdateRecordRequest extends BaseRecordRequest
 
         return $this->getDynamicValidationRules(
             intervene: function ($fieldName, &$fieldRules) use ($collection) {
+                if ($collection->type === CollectionType::Auth
+                    && in_array($fieldName, ['email', 'password'], true)
+                    && ! in_array('nullable', $fieldRules, true)) {
+                    $fieldRules[] = 'nullable';
+                }
+
                 $fieldRules = Arr::map($fieldRules, function ($value) {
-                    if (in_array($value, ['nullable', 'required'])) {
+                    if ($value === 'required') {
                         return 'sometimes';
                     }
 
                     return $value;
                 });
-
-                if ($collection->type === CollectionType::Auth
-                    && in_array($fieldName, ['email', 'password'])) {
-                    $fieldRules = Arr::map($fieldRules, fn ($value) => $value === 'required' ? 'nullable' : $value);
-                }
             }
         );
     }

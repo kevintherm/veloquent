@@ -35,6 +35,23 @@ abstract class BaseRecordRequest extends FormRequest
             );
         }
 
+        foreach ($this->getBooleanFields($collection) as $fieldName => $field) {
+            if (! array_key_exists($fieldName, $payload)) {
+                continue;
+            }
+
+            $payload[$fieldName] = $this->normalizeBooleanInputValue(
+                $payload[$fieldName]
+            );
+        }
+
+        if ($collection->type === CollectionType::Auth
+            && array_key_exists('password', $payload)
+            && is_string($payload['password'])
+            && trim($payload['password']) === '') {
+            $payload['password'] = null;
+        }
+
         $this->replace($payload);
     }
 
@@ -225,6 +242,14 @@ abstract class BaseRecordRequest extends FormRequest
             ->all();
     }
 
+    private function getBooleanFields(Collection $collection): array
+    {
+        return collect($collection->fields ?? [])
+            ->filter(fn (Field|array $field): bool => ($field['type'] ?? null) === CollectionFieldType::Boolean->value)
+            ->keyBy(fn (Field|array $field): string => (string) $field['name'])
+            ->all();
+    }
+
     private function normalizeRelationInputValue(mixed $value): mixed
     {
         if ($value === null) {
@@ -236,5 +261,20 @@ abstract class BaseRecordRequest extends FormRequest
         }
 
         return $value;
+    }
+
+    private function normalizeBooleanInputValue(mixed $value): mixed
+    {
+        if (! is_string($value)) {
+            return $value;
+        }
+
+        $normalizedValue = strtolower(trim($value));
+
+        return match ($normalizedValue) {
+            'true', '1' => true,
+            'false', '0' => false,
+            default => $value,
+        };
     }
 }

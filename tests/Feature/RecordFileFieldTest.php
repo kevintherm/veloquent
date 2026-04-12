@@ -86,6 +86,55 @@ it('accepts richtext field values as plain strings', function () {
     $response->assertJsonPath('data.content', '<h1>Hello</h1><p>World</p>');
 });
 
+it('accepts boolean multipart values when a file field is present', function () {
+    Storage::fake(config('filesystems.default', 'local'));
+
+    $collection = createRecordFileCollection([
+        ['name' => 'title', 'type' => CollectionFieldType::Text->value, 'nullable' => false],
+        ['name' => 'is_published', 'type' => CollectionFieldType::Boolean->value, 'nullable' => false],
+        [
+            'name' => 'resume',
+            'type' => CollectionFieldType::File->value,
+            'nullable' => false,
+            'multiple' => false,
+            'min' => 1,
+            'max' => 1,
+            'max_size_kb' => 1024,
+            'allowed_mime_types' => ['application/pdf'],
+        ],
+    ]);
+
+    $createResponse = post(
+        "/api/collections/{$collection->id}/records",
+        [
+            'title' => 'Boolean + File Create',
+            'is_published' => 'true',
+            'resume' => UploadedFile::fake()->create('resume.pdf', 150, 'application/pdf'),
+        ],
+        ['Accept' => 'application/json']
+    )->assertCreated();
+
+    $createResponse->assertJsonPath('data.is_published', true);
+
+    $recordId = (string) $createResponse->json('data.id');
+
+    post(
+        "/api/collections/{$collection->id}/records/{$recordId}",
+        [
+            '_method' => 'PATCH',
+            'is_published' => 'false',
+            'resume' => UploadedFile::fake()->create('resume-v2.pdf', 150, 'application/pdf'),
+        ],
+        ['Accept' => 'application/json']
+    )
+        ->assertOk()
+        ->assertJsonPath('data.is_published', false);
+
+    $storedRecord = Record::of($collection)->findOrFail($recordId);
+
+    expect((bool) $storedRecord->is_published)->toBeFalse();
+});
+
 it('drops file default and persists protected configuration in collection metadata', function () {
     $collection = createRecordFileCollection([
         ['name' => 'title', 'type' => CollectionFieldType::Text->value, 'nullable' => false],
