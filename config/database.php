@@ -3,6 +3,8 @@
 use Illuminate\Support\Str;
 use Pdo\Mysql;
 
+$landlordConnectionDriver = env('LANDLORD_DB_DRIVER', env('DB_CONNECTION', 'sqlite'));
+
 return [
 
     /*
@@ -114,6 +116,90 @@ return [
             // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
         ],
 
+        'landlord' => match ($landlordConnectionDriver) {
+            'mysql' => [
+                'driver' => 'mysql',
+                'url' => env('LANDLORD_DB_URL', env('DB_URL')),
+                'host' => env('LANDLORD_DB_HOST', env('DB_HOST', '127.0.0.1')),
+                'port' => env('LANDLORD_DB_PORT', env('DB_PORT', '3306')),
+                'database' => env('LANDLORD_DB_DATABASE', env('DB_DATABASE', 'laravel')),
+                'username' => env('LANDLORD_DB_USERNAME', env('DB_USERNAME', 'root')),
+                'password' => env('LANDLORD_DB_PASSWORD', env('DB_PASSWORD', '')),
+                'unix_socket' => env('LANDLORD_DB_SOCKET', env('DB_SOCKET', '')),
+                'charset' => env('LANDLORD_DB_CHARSET', env('DB_CHARSET', 'utf8mb4')),
+                'collation' => env('LANDLORD_DB_COLLATION', env('DB_COLLATION', 'utf8mb4_unicode_ci')),
+                'prefix' => '',
+                'prefix_indexes' => true,
+                'strict' => true,
+                'engine' => null,
+                'options' => extension_loaded('pdo_mysql') ? array_filter([
+                    (PHP_VERSION_ID >= 80500 ? Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
+                ]) : [],
+            ],
+
+            'mariadb' => [
+                'driver' => 'mariadb',
+                'url' => env('LANDLORD_DB_URL', env('DB_URL')),
+                'host' => env('LANDLORD_DB_HOST', env('DB_HOST', '127.0.0.1')),
+                'port' => env('LANDLORD_DB_PORT', env('DB_PORT', '3306')),
+                'database' => env('LANDLORD_DB_DATABASE', env('DB_DATABASE', 'laravel')),
+                'username' => env('LANDLORD_DB_USERNAME', env('DB_USERNAME', 'root')),
+                'password' => env('LANDLORD_DB_PASSWORD', env('DB_PASSWORD', '')),
+                'unix_socket' => env('LANDLORD_DB_SOCKET', env('DB_SOCKET', '')),
+                'charset' => env('LANDLORD_DB_CHARSET', env('DB_CHARSET', 'utf8mb4')),
+                'collation' => env('LANDLORD_DB_COLLATION', env('DB_COLLATION', 'utf8mb4_unicode_ci')),
+                'prefix' => '',
+                'prefix_indexes' => true,
+                'strict' => true,
+                'engine' => null,
+                'options' => extension_loaded('pdo_mysql') ? array_filter([
+                    (PHP_VERSION_ID >= 80500 ? Mysql::ATTR_SSL_CA : PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
+                ]) : [],
+            ],
+
+            'pgsql' => [
+                'driver' => 'pgsql',
+                'url' => env('LANDLORD_DB_URL', env('DB_URL')),
+                'host' => env('LANDLORD_DB_HOST', env('DB_HOST', '127.0.0.1')),
+                'port' => env('LANDLORD_DB_PORT', env('DB_PORT', '5432')),
+                'database' => env('LANDLORD_DB_DATABASE', env('DB_DATABASE', 'laravel')),
+                'username' => env('LANDLORD_DB_USERNAME', env('DB_USERNAME', 'root')),
+                'password' => env('LANDLORD_DB_PASSWORD', env('DB_PASSWORD', '')),
+                'charset' => env('LANDLORD_DB_CHARSET', env('DB_CHARSET', 'utf8')),
+                'prefix' => '',
+                'prefix_indexes' => true,
+                'search_path' => env('LANDLORD_DB_SEARCH_PATH', env('DB_SEARCH_PATH', 'public')),
+                'sslmode' => env('LANDLORD_DB_SSLMODE', env('DB_SSLMODE', 'prefer')),
+            ],
+
+            'sqlsrv' => [
+                'driver' => 'sqlsrv',
+                'url' => env('LANDLORD_DB_URL', env('DB_URL')),
+                'host' => env('LANDLORD_DB_HOST', env('DB_HOST', 'localhost')),
+                'port' => env('LANDLORD_DB_PORT', env('DB_PORT', '1433')),
+                'database' => env('LANDLORD_DB_DATABASE', env('DB_DATABASE', 'laravel')),
+                'username' => env('LANDLORD_DB_USERNAME', env('DB_USERNAME', 'root')),
+                'password' => env('LANDLORD_DB_PASSWORD', env('DB_PASSWORD', '')),
+                'charset' => env('LANDLORD_DB_CHARSET', env('DB_CHARSET', 'utf8')),
+                'prefix' => '',
+                'prefix_indexes' => true,
+                // 'encrypt' => env('DB_ENCRYPT', 'yes'),
+                // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
+            ],
+
+            default => [
+                'driver' => 'sqlite',
+                'url' => env('LANDLORD_DB_URL', env('DB_URL')),
+                'database' => env('LANDLORD_DB_DATABASE', env('DB_DATABASE', database_path('database.sqlite'))),
+                'prefix' => '',
+                'foreign_key_constraints' => env('LANDLORD_DB_FOREIGN_KEYS', env('DB_FOREIGN_KEYS', true)),
+                'busy_timeout' => null,
+                'journal_mode' => null,
+                'synchronous' => null,
+                'transaction_mode' => 'DEFERRED',
+            ],
+        },
+
     ],
 
     /*
@@ -186,6 +272,7 @@ return [
             'password' => env('REDIS_PASSWORD'),
             'port' => env('REDIS_PORT', '6379'),
             'database' => env('REDIS_REALTIME_DB', '1'),
+            'prefix' => env('REDIS_REALTIME_PREFIX', ''),
             'read_timeout' => env('REDIS_REALTIME_READ_TIMEOUT', -1),
             'max_retries' => env('REDIS_MAX_RETRIES', 3),
             'backoff_algorithm' => env('REDIS_BACKOFF_ALGORITHM', 'decorrelated_jitter'),

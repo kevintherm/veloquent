@@ -5,6 +5,7 @@ use App\Infrastructure\Multitenancy\Tasks\SwitchTenantAppUrlTask;
 use App\Infrastructure\Multitenancy\Tasks\SwitchTenantDatabaseTask;
 use App\Infrastructure\Multitenancy\Tasks\SwitchTenantFilesystemTask;
 use App\Infrastructure\Multitenancy\Tasks\SwitchTenantLogsTask;
+use App\Infrastructure\Multitenancy\Tasks\SwitchTenantRedisPrefixTask;
 use Illuminate\Broadcasting\BroadcastEvent;
 use Illuminate\Events\CallQueuedListener;
 use Illuminate\Mail\SendQueuedMailable;
@@ -46,6 +47,7 @@ return [
         SwitchTenantFilesystemTask::class,
         SwitchTenantLogsTask::class,
         SwitchTenantAppUrlTask::class,
+        SwitchTenantRedisPrefixTask::class,
         PrefixCacheTask::class,
         // \Spatie\Multitenancy\Tasks\SwitchRouteCacheTask::class,
     ],
@@ -75,7 +77,7 @@ return [
     /*
      * The connection name to reach the landlord database.
      */
-    'landlord_database_connection_name' => env('DB_CONNECTION', 'sqlite'),
+    'landlord_database_connection_name' => env('LANDLORD_DB_CONNECTION', 'landlord'),
 
     /*
      * This key will be used to associate the current tenant in the context

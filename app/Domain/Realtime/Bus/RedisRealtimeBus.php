@@ -11,6 +11,8 @@ class RedisRealtimeBus implements RealtimeBusDriver
 {
     private const CHANNEL = 'realtime:events';
 
+    private const CHANNEL_PATTERN = '*realtime:events';
+
     private const RECONNECT_DELAY_US = 500_000;
 
     public function publish(array $payload): void
@@ -21,7 +23,7 @@ class RedisRealtimeBus implements RealtimeBusDriver
             return;
         }
 
-        Redis::publish(self::CHANNEL, $encodedPayload);
+        Redis::connection('realtime')->publish(self::CHANNEL, $encodedPayload);
     }
 
     public function listen(callable $callback, Closure $shouldStop): void
@@ -29,7 +31,7 @@ class RedisRealtimeBus implements RealtimeBusDriver
         while (! $shouldStop()) {
             try {
                 Redis::connection('realtime')->psubscribe(
-                    [self::CHANNEL],
+                    [self::CHANNEL_PATTERN],
                     function (...$args) use ($callback, $shouldStop): void {
                         if ($shouldStop()) {
                             Redis::connection('realtime')->punsubscribe();

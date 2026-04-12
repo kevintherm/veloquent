@@ -9,6 +9,7 @@ use App\Domain\Realtime\Models\RealtimeSubscription;
 use App\Domain\Records\Events\RecordChanged;
 use App\Domain\Records\Models\Record;
 use App\Domain\Records\Services\CreateRuleContextBuilder;
+use App\Infrastructure\Models\Tenant;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 use Illuminate\Http\Request;
@@ -48,10 +49,18 @@ class RealtimeWorker extends Command
 
         RealtimeSubscription::query()
             ->where('expired_at', '>', now())
+            ->orderBy('tenant_id')
             ->orderBy('id')
             ->chunk(500, function ($chunk) use (&$loadedCount): void {
                 foreach ($chunk as $subscription) {
-                    $this->subscriptions[$subscription->collection_id][] = [
+                    $tenantId = $subscription->tenant_id;
+                    $collectionId = $subscription->collection_id;
+
+                    if (!$tenantId || $collectionId === '') {
+                        continue;
+                    }
+
+                    $this->subscriptions[$tenantId][$collectionId][] = [
                         'auth_collection' => $subscription->auth_collection,
                         'subscriber_id' => $subscription->subscriber_id,
                         'filter' => $subscription->filter ?? '',
@@ -79,11 +88,20 @@ class RealtimeWorker extends Command
 
     private function handleConnection(array $payload): void
     {
+        $tenantId = $payload['tenant_id'] ?? null;
         $collectionId = $payload['collection_id'] ?? null;
 
-        if (($payload['action'] ?? null) === 'logout') {
-            $this->handleLogout($payload);
+        if (($payload['action'] ?? null) === 'logout' || ($payload['action'] ?? null) === 'logoutAll') {
+            if ($tenantId === null) {
+                return;
+            }
 
+            $this->handleLogout($payload, $tenantId);
+
+            return;
+        }
+
+        if ($tenantId === null) {
             return;
         }
 
@@ -96,15 +114,15 @@ class RealtimeWorker extends Command
             $subscriberId = (string) ($payload['subscriber_id'] ?? '');
             $expiresAt = $this->parseExpiryTimestamp($payload['expired_at'] ?? null);
 
-            $this->subscriptions[$collectionId] = array_values(array_filter(
-                $this->subscriptions[$collectionId] ?? [],
+            $this->subscriptions[$tenantId][$collectionId] = array_values(array_filter(
+                $this->subscriptions[$tenantId][$collectionId] ?? [],
                 fn (array $subscription): bool => ! (
                     $subscription['auth_collection'] === $authCollection
                     && $subscription['subscriber_id'] === $subscriberId
                 )
             ));
 
-            $this->subscriptions[$collectionId][] = [
+            $this->subscriptions[$tenantId][$collectionId][] = [
                 'auth_collection' => $authCollection,
                 'subscriber_id' => $subscriberId,
                 'filter' => (string) ($payload['filter'] ?? ''),
@@ -113,6 +131,7 @@ class RealtimeWorker extends Command
             ];
 
             $this->debug('Realtime subscribe event applied', [
+                'tenant_id' => $tenantId,
                 'collection_id' => $collectionId,
                 'auth_collection' => $authCollection,
                 'subscriber_id' => $subscriberId,
@@ -127,8 +146,8 @@ class RealtimeWorker extends Command
             $authCollection = (string) ($payload['auth_collection'] ?? '');
             $subscriberId = (string) ($payload['subscriber_id'] ?? '');
 
-            $this->subscriptions[$collectionId] = array_values(array_filter(
-                $this->subscriptions[$collectionId] ?? [],
+            $this->subscriptions[$tenantId][$collectionId] = array_values(array_filter(
+                $this->subscriptions[$tenantId][$collectionId] ?? [],
                 fn (array $subscription): bool => ! (
                     $subscription['auth_collection'] === $authCollection
                     && $subscription['subscriber_id'] === $subscriberId
@@ -136,6 +155,7 @@ class RealtimeWorker extends Command
             ));
 
             $this->debug('Realtime unsubscribe event applied', [
+                'tenant_id' => $tenantId,
                 'collection_id' => $collectionId,
                 'auth_collection' => $authCollection,
                 'subscriber_id' => $subscriberId,
@@ -143,7 +163,7 @@ class RealtimeWorker extends Command
         }
     }
 
-    private function handleLogout(array $payload): void
+    private function handleLogout(array $payload, int $tenantId): void
     {
         $subscriberId = (string) ($payload['subscriber_id'] ?? '');
 
@@ -153,20 +173,21 @@ class RealtimeWorker extends Command
 
         $removedCount = 0;
 
-        foreach ($this->subscriptions as $collectionId => $subscriptions) {
+        foreach (($this->subscriptions[$tenantId] ?? []) as $collectionId => $subscriptions) {
             $beforeCount = count($subscriptions);
 
-            $this->subscriptions[$collectionId] = array_values(array_filter(
+            $this->subscriptions[$tenantId][$collectionId] = array_values(array_filter(
                 $subscriptions,
                 fn (array $subscription): bool => ! (
                     $subscription['subscriber_id'] === $subscriberId
                 )
             ));
 
-            $removedCount += max(0, $beforeCount - count($this->subscriptions[$collectionId]));
+            $removedCount += max(0, $beforeCount - count($this->subscriptions[$tenantId][$collectionId]));
         }
 
         $this->debug('Realtime logout event applied', [
+            'tenant_id' => $tenantId,
             'auth_collection' => (string) ($payload['auth_collection'] ?? ''),
             'subscriber_id' => $subscriberId,
             'removed_subscriptions' => $removedCount,
@@ -175,82 +196,94 @@ class RealtimeWorker extends Command
 
     private function handleRecordEvent(array $payload): void
     {
+        $tenantId = $payload['tenant_id'] ?? null;
         $collectionId = $payload['collection_id'] ?? null;
         $record = $payload['record'] ?? [];
         $event = (string) ($payload['event'] ?? 'updated');
 
-        if (! is_string($collectionId) || $collectionId === '' || ! is_array($record) || $record === []) {
+        if ($tenantId === null || ! is_string($collectionId) || $collectionId === '' || ! is_array($record) || $record === []) {
             return;
         }
 
-        $collection = Collection::query()->find($collectionId);
+        $tenant = Tenant::query()->find($tenantId);
 
-        if (! $collection) {
+        if (! $tenant) {
             return;
         }
 
-        $subscriptions = $this->pruneExpiredSubscriptionsForCollection($collectionId);
-        $matchedCount = 0;
+        $tenant->execute(function () use ($tenantId, $collectionId, $record, $event): void {
+            $collection = Collection::query()->find($collectionId);
 
-        foreach ($subscriptions as $subscription) {
-            $filter = (string) ($subscription['filter'] ?? '');
-            $matched = $this->evaluateFilter($filter, $collection, $record, $subscription);
+            if (! $collection) {
+                return;
+            }
 
-            $this->debug('Realtime subscription filter/auth evaluated', [
+            $subscriptions = $this->pruneExpiredSubscriptionsForCollection($tenantId, $collectionId);
+            $matchedCount = 0;
+
+            foreach ($subscriptions as $subscription) {
+                $filter = (string) ($subscription['filter'] ?? '');
+                $matched = $this->evaluateFilter($filter, $collection, $record, $subscription);
+
+                $this->debug('Realtime subscription filter/auth evaluated', [
+                    'tenant_id' => $tenantId,
+                    'event' => $event,
+                    'collection_id' => $collectionId,
+                    'auth_collection' => (string) ($subscription['auth_collection'] ?? ''),
+                    'subscriber_id' => (string) ($subscription['subscriber_id'] ?? ''),
+                    'channel' => (string) ($subscription['channel'] ?? ''),
+                    'filter' => $filter,
+                    'matched' => $matched,
+                    'record_id' => $record['id'] ?? null,
+                ]);
+
+                if ($matched) {
+                    $matchedCount++;
+
+                    broadcast(new RecordChanged(
+                        channel: (string) $subscription['channel'],
+                        event: $event,
+                        record: array_merge(array_intersect_key($record, array_flip(array_keys($record))), ['_collection' => $collection->name]),
+                    ));
+                }
+            }
+
+            $this->debug('Realtime record event processed', [
+                'tenant_id' => $tenantId,
                 'event' => $event,
                 'collection_id' => $collectionId,
-                'auth_collection' => (string) ($subscription['auth_collection'] ?? ''),
-                'subscriber_id' => (string) ($subscription['subscriber_id'] ?? ''),
-                'channel' => (string) ($subscription['channel'] ?? ''),
-                'filter' => $filter,
-                'matched' => $matched,
+                'subscriptions_in_collection' => count($subscriptions),
+                'matched_subscriptions' => $matchedCount,
                 'record_id' => $record['id'] ?? null,
             ]);
-
-            if ($matched) {
-                $matchedCount++;
-
-                broadcast(new RecordChanged(
-                    channel: (string) $subscription['channel'],
-                    event: $event,
-                    record: array_merge(array_intersect_key($record, array_flip(array_keys($record))), ['_collection' => $collection->name]),
-                ));
-            }
-        }
-
-        $this->debug('Realtime record event processed', [
-            'event' => $event,
-            'collection_id' => $collectionId,
-            'subscriptions_in_collection' => count($subscriptions),
-            'matched_subscriptions' => $matchedCount,
-            'record_id' => $record['id'] ?? null,
-        ]);
+        });
     }
 
-    private function pruneExpiredSubscriptionsForCollection(string $collectionId): array
+    private function pruneExpiredSubscriptionsForCollection(int $tenantId, string $collectionId): array
     {
         $nowTimestamp = CarbonImmutable::now()->timestamp;
-        $beforeCount = count($this->subscriptions[$collectionId] ?? []);
+        $beforeCount = count($this->subscriptions[$tenantId][$collectionId] ?? []);
 
-        $this->subscriptions[$collectionId] = array_values(array_filter(
-            $this->subscriptions[$collectionId] ?? [],
+        $this->subscriptions[$tenantId][$collectionId] = array_values(array_filter(
+            $this->subscriptions[$tenantId][$collectionId] ?? [],
             fn (array $subscription): bool => ! isset($subscription['expired_at'])
                 || ! is_numeric($subscription['expired_at'])
                 || (int) $subscription['expired_at'] > $nowTimestamp
         ));
 
-        $afterCount = count($this->subscriptions[$collectionId]);
+        $afterCount = count($this->subscriptions[$tenantId][$collectionId]);
         $prunedCount = max(0, $beforeCount - $afterCount);
 
         if ($prunedCount > 0) {
             $this->debug('Realtime subscriptions pruned from memory', [
+                'tenant_id' => $tenantId,
                 'collection_id' => $collectionId,
                 'pruned' => $prunedCount,
                 'remaining' => $afterCount,
             ]);
         }
 
-        return $this->subscriptions[$collectionId];
+        return $this->subscriptions[$tenantId][$collectionId];
     }
 
     private function parseExpiryTimestamp(mixed $expiredAt): int

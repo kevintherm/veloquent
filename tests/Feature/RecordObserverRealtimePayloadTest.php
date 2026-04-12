@@ -1,32 +1,26 @@
 <?php
 
-use App\Domain\Collections\Actions\CreateCollectionAction;
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Realtime\Contracts\RealtimeBusDriver;
 use App\Domain\Records\Models\Record;
+use App\Domain\Records\Observers\RecordObserver;
+use App\Infrastructure\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
 
-function createRealtimePayloadCollection(string $name): Collection
-{
-    return app(CreateCollectionAction::class)->execute([
-        'name' => $name,
-        'type' => CollectionType::Base->value,
-        'description' => ucfirst($name).' collection',
-        'fields' => [
-            ['name' => 'name', 'type' => 'text', 'nullable' => false, 'unique' => false],
-        ],
-        'api_rules' => [
-            'list' => '',
-            'view' => '',
-            'create' => '',
-            'update' => '',
-            'delete' => '',
-        ],
-    ]);
-}
+beforeEach(function (): void {
+    $tenant = new Tenant;
+    $tenant->forceFill(['id' => 1001]);
+
+    app()->instance((string) config('multitenancy.current_tenant_container_key'), $tenant);
+});
+
+afterEach(function (): void {
+    app()->forgetInstance((string) config('multitenancy.current_tenant_container_key'));
+});
 
 it('publishes created event with collection id for realtime worker', function () {
     $publishedPayloads = [];
@@ -49,20 +43,32 @@ it('publishes created event with collection id for realtime worker', function ()
         }
     });
 
-    $collection = createRealtimePayloadCollection('realtime_payload_users');
+    $collection = new Collection([
+        'name' => 'realtime_payload_users',
+        'type' => CollectionType::Base,
+        'table_name' => '_velo_realtime_payload_users',
+    ]);
 
-    $record = Record::of($collection)->create([
+    $collection->forceFill([
+        'id' => (string) Str::ulid(),
+    ]);
+
+    $record = Record::fromTable('_velo_realtime_payload_users');
+    $record->collection = $collection;
+    $record->forceFill([
+        'id' => (string) Str::ulid(),
         'name' => 'Realtime Payload Test',
     ]);
 
-    expect($record->id)->not->toBeNull();
-    expect($publishedPayloads)->toHaveCount(1);
+    (new RecordObserver)->created($record);
 
-    expect($publishedPayloads[0])->toMatchArray([
-        'type' => 'record_event',
-        'event' => 'created',
-        'collection_id' => $collection->id,
-    ]);
-    expect($publishedPayloads[0]['record'])->toBeArray();
-    expect($publishedPayloads[0]['record']['id'])->toBe($record->id);
+    expect($publishedPayloads)->toHaveCount(1)
+        ->and($publishedPayloads[0])->toMatchArray([
+            'type' => 'record_event',
+            'event' => 'created',
+            'tenant_id' => 1001,
+            'collection_id' => $collection->id,
+        ]);
+    expect($publishedPayloads[0]['record'])->toBeArray()
+        ->and($publishedPayloads[0]['record']['id'])->toBe($record->id);
 });

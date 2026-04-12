@@ -6,6 +6,7 @@ use App\Domain\Realtime\Contracts\RealtimeBusDriver;
 use App\Domain\Records\Models\Record;
 use App\Domain\Records\Services\FileFieldProcessor;
 use App\Domain\Records\Services\RelationIntegrityService;
+use Spatie\Multitenancy\Contracts\IsTenant;
 
 class RecordObserver
 {
@@ -49,6 +50,12 @@ class RecordObserver
 
     private function publishEvent(string $event, Record $record): void
     {
+        $tenantId = $this->resolveTenantId();
+
+        if ($tenantId === null) {
+            return;
+        }
+
         $collectionId = $record->collection?->id ?? $record->getAttribute('collection_id');
 
         if (! is_string($collectionId) || $collectionId === '') {
@@ -58,8 +65,14 @@ class RecordObserver
         app(RealtimeBusDriver::class)->publish([
             'type' => 'record_event',
             'event' => $event,
+            'tenant_id' => $tenantId,
             'collection_id' => $collectionId,
             'record' => $record->toArray(),
         ]);
+    }
+
+    private function resolveTenantId(): string|null
+    {
+        return data_get(app(IsTenant::class)::current(), 'id');
     }
 }

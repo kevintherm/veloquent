@@ -6,6 +6,7 @@ use App\Domain\Auth\Services\TokenAuthService;
 use App\Domain\Realtime\Contracts\RealtimeBusDriver;
 use App\Domain\Realtime\Models\RealtimeSubscription;
 use App\Domain\Records\Models\Record;
+use Spatie\Multitenancy\Contracts\IsTenant;
 
 class LogoutAllAction
 {
@@ -17,17 +18,25 @@ class LogoutAllAction
      */
     public function execute(Record $user): void
     {
+        $tenantId = $this->resolveTenantId();
         $this->tokenService->revokeRecordTokens($user->collection->id, $user->id);
 
         RealtimeSubscription::query()
+            ->where('tenant_id', $tenantId)
             ->where('subscriber_id', (string) $user->getKey())
             ->delete();
 
-        $this->realtimeBus->publish([
+        if ($tenantId) $this->realtimeBus->publish([
             'type' => 'connection',
             'action' => 'logoutAll',
+            'tenant_id' => $tenantId,
             'auth_collection' => $user->getTable(),
             'subscriber_id' => (string) $user->getKey(),
         ]);
+    }
+
+    private function resolveTenantId(): string|null
+    {
+        return data_get(app(IsTenant::class)::current(), 'id');
     }
 }

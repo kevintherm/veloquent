@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('realtime_subscriptions', function (Blueprint $table) {
             $table->ulid('id')->primary();
+            $table->unsignedBigInteger('tenant_id');
             $table->ulid('collection_id');
             $table->string('auth_collection');
             $table->ulid('subscriber_id');
@@ -21,12 +22,15 @@ return new class extends Migration
             $table->timestamp('expired_at');
             $table->timestamps();
 
+            $table->index('tenant_id', 'rt_subs_tenant_idx');
             $table->index('collection_id', 'rt_subs_collection_idx');
             $table->index('expired_at', 'rt_subs_expired_at_idx');
+            $table->index(['tenant_id', 'collection_id'], 'rt_subs_tenant_collection_idx');
+            $table->index(['tenant_id', 'expired_at'], 'rt_subs_tenant_expired_idx');
             $table->index(['collection_id', 'expired_at'], 'rt_subs_collection_expired_idx');
             $table->unique(
-                ['collection_id', 'auth_collection', 'subscriber_id'],
-                'rt_subs_collection_auth_sub_uq'
+                ['tenant_id', 'collection_id', 'auth_collection', 'subscriber_id'],
+                'rt_subs_tenant_collection_auth_sub_uq'
             );
         });
     }

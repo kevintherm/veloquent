@@ -8,6 +8,8 @@ use App\Domain\Realtime\Models\RealtimeSubscription;
 use App\Domain\Records\Models\Record;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Str;
+use RuntimeException;
+use Spatie\Multitenancy\Contracts\IsTenant;
 
 class SubscribeToCollectionAction
 {
@@ -19,6 +21,7 @@ class SubscribeToCollectionAction
      */
     public function execute(Record $user, Collection $collection, ?string $filter = null): array
     {
+        $tenantId = $this->resolveTenantId();
         $authCollection = $user->collection->name;
         $subscriberId = (string) $user->getKey();
         $channel = "private-{$authCollection}.{$subscriberId}";
@@ -27,6 +30,7 @@ class SubscribeToCollectionAction
 
         $subscription = RealtimeSubscription::query()->updateOrCreate(
             [
+                'tenant_id' => $tenantId,
                 'collection_id' => $collection->id,
                 'auth_collection' => $authCollection,
                 'subscriber_id' => $subscriberId,
@@ -42,6 +46,7 @@ class SubscribeToCollectionAction
         $this->driver->publish([
             'type' => 'connection',
             'action' => 'subscribe',
+            'tenant_id' => $tenantId,
             'collection_id' => $collection->id,
             'auth_collection' => $authCollection,
             'subscriber_id' => $subscriberId,
@@ -54,5 +59,17 @@ class SubscribeToCollectionAction
             'channel' => $channel,
             'expires_at' => $expiresAt->toIso8601String(),
         ];
+    }
+
+    private function resolveTenantId(): int
+    {
+        $tenant = app(IsTenant::class)::current();
+        $tenantId = data_get($tenant, 'id');
+
+        if (! is_numeric($tenantId)) {
+            throw new RuntimeException('No current tenant is available for realtime subscriptions.');
+        }
+
+        return (int) $tenantId;
     }
 }
