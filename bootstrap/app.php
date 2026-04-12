@@ -13,6 +13,7 @@ use Illuminate\Http\Middleware\HandleCors;
 use Illuminate\Http\Request;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Validation\ValidationException;
+use Spatie\Multitenancy\Exceptions\NoCurrentTenant;
 use Spatie\Multitenancy\Http\Middleware\NeedsTenant;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -53,6 +54,10 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (Throwable $e, $request) {
+            if ($e instanceof NoCurrentTenant) {
+                return abort(Response::HTTP_NOT_FOUND);
+            }
+            
             if ($request->is('api/*')) {
                 $errorResponse = static function (string $message, int $code, mixed $errors = null) {
                     return response()->json([
