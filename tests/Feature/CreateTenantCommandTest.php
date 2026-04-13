@@ -29,7 +29,7 @@ beforeEach(function (): void {
 });
 
 it('creates a tenant using generated domain and database names', function () {
-    artisan('velo:tenants:create', [
+    artisan('tenants:create', [
         'name' => 'Acme Team',
     ])->assertSuccessful();
 
@@ -62,7 +62,7 @@ it('fails when the tenant domain already exists', function () {
         ]);
     });
 
-    artisan('velo:tenants:create', [
+    artisan('tenants:create', [
         'name' => 'Another Tenant',
         '--domain' => 'existing.localhost',
         '--database' => 'tenant_another',
@@ -74,7 +74,7 @@ it('fails when the tenant domain already exists', function () {
 it('does not insert a tenant row when tenant migrations fail', function () {
     ArtisanFacade::shouldReceive('call')->once()->andReturn(1);
 
-    artisan('velo:tenants:create', [
+    artisan('tenants:create', [
         'name' => 'Broken Tenant',
     ])->assertExitCode(Command::FAILURE);
 

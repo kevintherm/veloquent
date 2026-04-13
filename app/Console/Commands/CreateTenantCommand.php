@@ -15,7 +15,7 @@ class CreateTenantCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'velo:tenants:create {name : The name of the tenant} {--domain= : Tenant domain (defaults to a slug-based domain)} {--database= : Tenant database name (defaults to tenant_{slug})}';
+    protected $signature = 'tenants:create {name : The name of the tenant} {--domain= : Tenant domain (defaults to a slug-based domain)} {--database= : Tenant database name (defaults to tenant_{slug})}';
 
     /**
      * The console command description.
@@ -111,7 +111,9 @@ class CreateTenantCommand extends Command
             return $providedDatabase;
         }
 
-        return 'velo_tenant_'.$this->tenantSlug($name, '_');
+        $prefix = config('velo.tenants_database_prefix');
+
+        return $prefix.$this->tenantSlug($name, '_');
     }
 
     private function tenantSlug(string $name, string $separator): string

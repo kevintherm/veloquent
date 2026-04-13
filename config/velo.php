@@ -51,6 +51,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Tenants Database Prefix
+    |--------------------------------------------------------------------------
+    |
+    | The prefix for all databases created for tenants.
+    | ! Changing this on runtime will cause issues with existing tenant databases.
+    |
+    */
+    'tenants_database_prefix' => env('VELO_TENANTS_DB_PREFIX', 'velo_tenant_'),
+
+    /*
+    |--------------------------------------------------------------------------
     | OTP Configuration
     |--------------------------------------------------------------------------
     */
