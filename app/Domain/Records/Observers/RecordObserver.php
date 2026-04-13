@@ -71,7 +71,7 @@ class RecordObserver
         ]);
     }
 
-    private function resolveTenantId(): string|null
+    private function resolveTenantId(): ?string
     {
         return data_get(app(IsTenant::class)::current(), 'id');
     }

@@ -56,7 +56,7 @@ class RealtimeWorker extends Command
                     $tenantId = $subscription->tenant_id;
                     $collectionId = $subscription->collection_id;
 
-                    if (!$tenantId || $collectionId === '') {
+                    if (! $tenantId || $collectionId === '') {
                         continue;
                     }
 

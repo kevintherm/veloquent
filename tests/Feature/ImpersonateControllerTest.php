@@ -1,13 +1,14 @@
 <?php
 
 use App\Domain\Auth\Models\Superuser;
+use App\Domain\Auth\Services\TokenAuthService;
 use App\Domain\Collections\Actions\CreateCollectionAction;
 use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Records\Models\Record;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use App\Domain\Auth\Services\TokenAuthService;
-use function Pest\Laravel\mock;
+use Illuminate\Support\Str;
+use Mockery\MockInterface;
 
 uses(RefreshDatabase::class);
 
@@ -59,7 +60,7 @@ it('allows superuser to masquerade/generate a token for an auth record', functio
     $superuserRecord->forceFill($superuser->toArray());
     $superuserRecord->exists = true;
 
-    $this->mock(TokenAuthService::class, function (\Mockery\MockInterface $mock) use ($superuserRecord) {
+    $this->mock(TokenAuthService::class, function (MockInterface $mock) use ($superuserRecord) {
         $mock->shouldReceive('authenticate')->with('super-token')->andReturn($superuserRecord);
         $mock->shouldReceive('extractTokenFromRequest')->andReturn('super-token');
     })->makePartial();
@@ -73,9 +74,9 @@ it('allows superuser to masquerade/generate a token for an auth record', functio
             'token',
             'expires_in',
             'collection_name',
-        ]
+        ],
     ]);
-    
+
     $token = $response->json('data.token');
     expect($token)->not->toBeEmpty();
 });
@@ -95,7 +96,7 @@ it('rejects generating a token for a non-auth collection', function () {
     $superuserRecord->forceFill($superuser->toArray());
     $superuserRecord->exists = true;
 
-    $this->mock(TokenAuthService::class, function (\Mockery\MockInterface $mock) use ($superuserRecord) {
+    $this->mock(TokenAuthService::class, function (MockInterface $mock) use ($superuserRecord) {
         $mock->shouldReceive('authenticate')->with('super-token')->andReturn($superuserRecord);
         $mock->shouldReceive('extractTokenFromRequest')->andReturn('super-token');
     })->makePartial();
@@ -113,12 +114,12 @@ it('returns 404 for non-existent record', function () {
     $superuserRecord->forceFill($superuser->toArray());
     $superuserRecord->exists = true;
 
-    $this->mock(TokenAuthService::class, function (\Mockery\MockInterface $mock) use ($superuserRecord) {
+    $this->mock(TokenAuthService::class, function (MockInterface $mock) use ($superuserRecord) {
         $mock->shouldReceive('authenticate')->with('super-token')->andReturn($superuserRecord);
         $mock->shouldReceive('extractTokenFromRequest')->andReturn('super-token');
     })->makePartial();
 
-    $fakeId = \Illuminate\Support\Str::uuid()->toString();
+    $fakeId = Str::uuid()->toString();
 
     $response = $this->withHeaders(['Authorization' => 'Bearer super-token'])
         ->postJson("/api/collections/{$this->authCollection->id}/auth/impersonate/{$fakeId}");

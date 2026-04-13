@@ -26,16 +26,18 @@ class LogoutAllAction
             ->where('subscriber_id', (string) $user->getKey())
             ->delete();
 
-        if ($tenantId) $this->realtimeBus->publish([
-            'type' => 'connection',
-            'action' => 'logoutAll',
-            'tenant_id' => $tenantId,
-            'auth_collection' => $user->getTable(),
-            'subscriber_id' => (string) $user->getKey(),
-        ]);
+        if ($tenantId) {
+            $this->realtimeBus->publish([
+                'type' => 'connection',
+                'action' => 'logoutAll',
+                'tenant_id' => $tenantId,
+                'auth_collection' => $user->getTable(),
+                'subscriber_id' => (string) $user->getKey(),
+            ]);
+        }
     }
 
-    private function resolveTenantId(): string|null
+    private function resolveTenantId(): ?string
     {
         return data_get(app(IsTenant::class)::current(), 'id');
     }

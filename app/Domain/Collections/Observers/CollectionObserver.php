@@ -267,7 +267,6 @@ readonly class CollectionObserver
         return [];
     }
 
-
     /**
      * @param  array<int, array<string, mixed>>  $beforeFields
      * @param  array<int, array<string, mixed>>  $afterFields

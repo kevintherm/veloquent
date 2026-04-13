@@ -32,9 +32,8 @@ class RecordFileController extends ApiController
                 && $isProtected;
         });
 
-        
         abort_if($fieldDefinition === null, 404);
-        
+
         $path = trim((string) $request->query('path', ''));
         abort_if($path === '', 404);
 

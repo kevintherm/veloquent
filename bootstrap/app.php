@@ -57,7 +57,7 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($e instanceof NoCurrentTenant) {
                 return abort(Response::HTTP_NOT_FOUND);
             }
-            
+
             if ($request->is('api/*')) {
                 $errorResponse = static function (string $message, int $code, mixed $errors = null) {
                     return response()->json([
