@@ -7,11 +7,8 @@ use App\Domain\Otp\Jobs\SendOtpJob;
 use App\Domain\Otp\Models\OtpToken;
 use App\Domain\Otp\Services\OtpService;
 use App\Domain\Records\Models\Record;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Validation\ValidationException;
-
-uses(RefreshDatabase::class);
 
 beforeEach(function () {
     $this->otpService = app(OtpService::class);
@@ -54,6 +51,8 @@ it('issues an OTP token and stores hashed code', function () {
 });
 
 it('invalidates previous unused tokens on re-issue', function () {
+    Queue::fake();
+
     $this->otpService->issue($this->user, OtpAction::PasswordReset, $this->collection);
     expect(OtpToken::count())->toBe(1);
 

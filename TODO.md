@@ -1,6 +1,5 @@
 ## TODO
 
-- Fix tests
 - Battle Testing
 - Ship
 
