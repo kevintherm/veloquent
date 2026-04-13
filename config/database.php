@@ -200,6 +200,11 @@ return [
             ],
         },
 
+        'tenant' => [
+            'driver' => (string) (env('TENANT_DB_DRIVER') ?? $landlordConnectionDriver),
+            'database' => '',
+        ],
+
     ],
 
     /*

@@ -106,8 +106,9 @@ it('deletes SQLite tenant database files during purge', function () {
         $this->markTestSkipped('SQLite driver not configured');
     }
 
-    $databasePath1 = database_path('tenants/velo_tenant_sqlite_purge_1.sqlite');
-    $databasePath2 = database_path('tenants/velo_tenant_sqlite_purge_2.sqlite');
+    $uniqueId = microtime(true) * 10000;
+    $databasePath1 = database_path("tenants/velo_tenant_sqlite_purge_1_{$uniqueId}.sqlite");
+    $databasePath2 = database_path("tenants/velo_tenant_sqlite_purge_2_{$uniqueId}.sqlite");
 
     Tenant::withoutEvents(function () use ($databasePath1, $databasePath2): void {
         Tenant::query()->create([
@@ -145,8 +146,9 @@ it('detects and deletes orphan SQLite databases', function () {
         $this->markTestSkipped('SQLite driver not configured');
     }
 
+    $uniqueId = microtime(true) * 10000;
     // Create a tracked tenant
-    $trackedPath = database_path('tenants/velo_tenant_tracked.sqlite');
+    $trackedPath = database_path("tenants/velo_tenant_tracked_{$uniqueId}.sqlite");
     Tenant::withoutEvents(function () use ($trackedPath): void {
         Tenant::query()->create([
             'name' => 'Tracked Tenant',
@@ -156,7 +158,7 @@ it('detects and deletes orphan SQLite databases', function () {
     });
 
     // Create an orphan database file (not tracked)
-    $orphanPath = database_path('tenants/velo_tenant_orphan.sqlite');
+    $orphanPath = database_path("tenants/velo_tenant_orphan_{$uniqueId}.sqlite");
     File::ensureDirectoryExists(dirname($orphanPath));
     File::put($trackedPath, '');
     File::put($orphanPath, '');

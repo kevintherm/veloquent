@@ -100,13 +100,16 @@ it('deletes a SQLite tenant database file', function () {
         $this->markTestSkipped('SQLite driver not configured');
     }
 
-    $databasePath = database_path('tenants/velo_tenant_sqlite_test.sqlite');
+    $uniqueId = microtime(true) * 10000;
+    $databasePath = database_path("tenants/velo_tenant_sqlite_test_{$uniqueId}.sqlite");
 
-    $tenant = Tenant::query()->create([
-        'name' => 'SQLite Test Tenant',
-        'domain' => 'sqlite-test.localhost',
-        'database' => $databasePath,
-    ]);
+    $tenant = Tenant::withoutEvents(function () use ($databasePath) {
+        return Tenant::query()->create([
+            'name' => 'SQLite Test Tenant',
+            'domain' => 'sqlite-test.localhost',
+            'database' => $databasePath,
+        ]);
+    });
 
     // Manually create the SQLite file since we're not running the observer
     File::ensureDirectoryExists(dirname($databasePath));
