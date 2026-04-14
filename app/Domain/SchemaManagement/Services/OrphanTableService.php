@@ -27,7 +27,7 @@ class OrphanTableService
 
         $collectionTables = Collection::pluck('table_name')->all();
 
-        // @TODO: Relocate this to a config file for easier management on the future
+        // @TODO: Relocate this to a config file for easier management in the future
         $systemTables = [
             'collections',
             'schema_jobs',
