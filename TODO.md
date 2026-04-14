@@ -5,6 +5,7 @@
 
 ## Roadmap
 
+- Cache tenants
 - Add cross table validation rules `@collection.x.field = ?`
 - Circular relation detection for nested expand queries is not yet implemented. @RecordExpansionService
 - Add octane support
