@@ -5,8 +5,8 @@
 
 ## Roadmap
 
-- Add multi tenant feature
-- Add octane support
+- Add cross table validation rules `@collection.x.field = ?`
 - Circular relation detection for nested expand queries is not yet implemented. @RecordExpansionService
-- Hooks system
+- Add octane support
 - Add support for indexing json and file field
+- Hooks system
