@@ -7,5 +7,16 @@
 *.php diff=php
 
 /.github export-ignore
+.github/skills export-ignore
 CHANGELOG.md export-ignore
 .styleci.yml export-ignore
+TODO.md export-ignore
+composer.lock export-ignore
+package-lock.json export-ignore
+bun.lock export-ignore
+.ai export-ignore
+.gemini export-ignore
+.junie export-ignore
+.vscode export-ignore
+.idea export-ignore
+.agents export-ignore
