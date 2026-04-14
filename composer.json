@@ -11,6 +11,11 @@
         "framework"
     ],
     "license": "MIT",
+    "homepage": "https://github.com/kevintherm/veloquent",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/kevintherm/veloquent.git"
+    },
     "require": {
         "php": "^8.3",
         "carbon-cli/carbon-cli": "^1.4",
