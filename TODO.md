@@ -5,6 +5,7 @@
 
 ## Roadmap
 
+- Add deployment documentation
 - Strip html tags on datatable for field rich text
 - Cache tenants
 - Circular relation detection for nested expand queries is not yet implemented. @RecordExpansionService
