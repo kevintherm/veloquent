@@ -32,6 +32,8 @@ php artisan serve
 Veloquent post install script will automatically create a default tenant with the domain localhost, and then serve the project using PHP's built in server at port 8000. Make sure the port is not blocked.
 Next, visit [http://localhost:8000](http://localhost:8000).
 
+> If you use port other than 8000, make sure to update your APP_URL port to use that port as well.
+
 Run these in separate terminals
 ```
 ./vendor/bin/sail artisan realtime:worker
