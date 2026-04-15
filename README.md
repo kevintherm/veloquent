@@ -21,14 +21,19 @@ Comprehensive documentation is available in the `docs` directory:
 
 ## Installation Quick Start
 
-If you have Docker installed, you can get started in minutes using Laravel Sail:
+Install using composer:
 
 ```bash
 composer create-project veloquent/veloquent awesome-baas
 cd awesome-baas
-./vendor/bin/sail up -d
+php artisan serve --port=80
+```
 
-# Run these in separate terminals
+Veloquent post install script will automatically create a default tenant with the domain localhost, and then serve the project using PHP's built in server at port 80.
+Next, visit [http://localhost](http://localhost).
+
+Run these in separate terminals
+```
 ./vendor/bin/sail artisan realtime:worker
 ./vendor/bin/sail artisan queue:work
 ```
