@@ -26,11 +26,11 @@ Install using composer:
 ```bash
 composer create-project veloquent/veloquent awesome-baas
 cd awesome-baas
-php artisan serve --port=80
+php artisan serve
 ```
 
-Veloquent post install script will automatically create a default tenant with the domain localhost, and then serve the project using PHP's built in server at port 80.
-Next, visit [http://localhost](http://localhost).
+Veloquent post install script will automatically create a default tenant with the domain localhost, and then serve the project using PHP's built in server at port 8000. Make sure the port is not blocked.
+Next, visit [http://localhost:8000](http://localhost:8000).
 
 Run these in separate terminals
 ```
