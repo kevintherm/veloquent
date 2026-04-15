@@ -1,3 +1,7 @@
+<p align="center">
+    <img src="public/logo.svg" width="250" />
+</p>
+
 # Veloquent
 
 Veloquent is an open-source backend skeleton powered by Laravel. It provides standard BaaS features like real-time broadcasting, multi-provider authentication, and a flexible database abstraction layer, all within a developer-friendly ecosystem.
@@ -20,16 +24,16 @@ Comprehensive documentation is available in the `docs` directory:
 If you have Docker installed, you can get started in minutes using Laravel Sail:
 
 ```bash
-composer install
+composer create-project veloquent/veloquent awesome-baas
+cd awesome-baas
 ./vendor/bin/sail up -d
-./vendor/bin/sail artisan migrate --seed
 
-# In separate terminals
+# Run these in separate terminals
 ./vendor/bin/sail artisan realtime:worker
 ./vendor/bin/sail artisan queue:work
 ```
 
-For more detailed instructions, see the [Installation Guide](docs/getting-started/quickstart.md).
+For more detailed instructions, see the [Installation Guide](https://velophp.com/docs/quickstart).
 
 ## Known Issues
 
@@ -41,6 +45,6 @@ Please refer to [TODO.md](TODO.md) for the latest status and upcoming features.
 
 ## License
 
-The Veloquent skeleton is open-sourced software licensed under the MIT License.
+The Veloquent skeleton is open-sourced software licensed under the [MIT](LICENSE) License.
 
 
