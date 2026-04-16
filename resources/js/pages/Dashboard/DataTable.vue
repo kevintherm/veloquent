@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/pagination";
 import { computed, watchEffect, ref, onMounted, onUnmounted } from "vue";
 import { getAuthToken } from "@/lib/tokenAuth";
+import { stripHtml } from "@/lib/utils";
 
 const props = defineProps({
     records: {
@@ -125,9 +126,13 @@ const formatDatetimeParts = (value) => {
     };
 };
 
-const formatValue = (value) => {
+const formatValue = (value, type = null) => {
     if (value === null || value === undefined || value === "") {
         return "-";
+    }
+
+    if (type === "richtext") {
+        return stripHtml(value);
     }
 
     if (typeof value === "boolean") {
@@ -623,7 +628,7 @@ const copyRecordId = async (recordId) => {
                                     </span>
                                 </div>
                                 <span v-else class="line-clamp-2">
-                                    {{ formatValue(record[column]) }}
+                                    {{ formatValue(record[column], columnTypes[column]) }}
                                 </span>
                             </TableCell>
                         </TableRow>
