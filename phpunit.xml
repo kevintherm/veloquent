@@ -27,6 +27,7 @@
         <env name="DB_DATABASE" value=":memory:"/>
         <env name="LANDLORD_DB_CONNECTION" value="sqlite"/>
         <env name="LANDLORD_DB_DATABASE" value=":memory:"/>
+        <env name="TENANT_DB_DRIVER" value="sqlite"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>

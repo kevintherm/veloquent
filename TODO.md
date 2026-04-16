@@ -5,14 +5,14 @@
 
 ## Roadmap
 
-- Add deployment documentation
-- Setup file upload on sdk
-- Strip html tags on datatable for field rich text
 - Cache tenants
-- Circular relation detection for nested expand queries is not yet implemented. @RecordExpansionService
+- Strip html tags on datatable for field rich text
+- Setup file upload on sdk
 - Add cross table validation rules `@collection.x.field = ?`
-- Add octane support
+- Circular relation detection for nested expand queries is not yet implemented. @RecordExpansionService
+- Add deployment documentation
 - Add support for indexing json and file field
+- Add octane support
 - Hooks system
 
 ## Issues

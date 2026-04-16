@@ -1,14 +1,10 @@
 import axios from 'axios';
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
-import { applyAuthHeader, getAuthToken } from './lib/tokenAuth';
+import { getAuthToken } from './lib/tokenAuth';
 
 window.axios = axios;
 window.Pusher = Pusher;
-
-window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
-window.axios.defaults.withCredentials = true;
-window.axios.defaults.withXSRFToken = true;
 
 window.axios.interceptors.request.use((config) => {
 	if (config.headers?.Authorization) {
