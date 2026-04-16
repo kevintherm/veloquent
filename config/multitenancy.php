@@ -6,6 +6,7 @@ use App\Infrastructure\Multitenancy\Tasks\SwitchTenantDatabaseTask;
 use App\Infrastructure\Multitenancy\Tasks\SwitchTenantFilesystemTask;
 use App\Infrastructure\Multitenancy\Tasks\SwitchTenantLogsTask;
 use App\Infrastructure\Multitenancy\Tasks\SwitchTenantRedisPrefixTask;
+use App\Infrastructure\Multitenancy\TenantFinders\CachedDomainTenantFinder;
 use Illuminate\Broadcasting\BroadcastEvent;
 use Illuminate\Events\CallQueuedListener;
 use Illuminate\Mail\SendQueuedMailable;
@@ -18,7 +19,6 @@ use Spatie\Multitenancy\Actions\MigrateTenantAction;
 use Spatie\Multitenancy\Jobs\NotTenantAware;
 use Spatie\Multitenancy\Jobs\TenantAware;
 use Spatie\Multitenancy\Tasks\PrefixCacheTask;
-use Spatie\Multitenancy\TenantFinder\DomainTenantFinder;
 
 return [
     /*
@@ -28,7 +28,7 @@ return [
      * This class should extend `Spatie\Multitenancy\TenantFinder\TenantFinder`
      *
      */
-    'tenant_finder' => DomainTenantFinder::class,
+    'tenant_finder' => CachedDomainTenantFinder::class,
 
     /*
      * These fields are used by tenant:artisan command to match one or more tenant.

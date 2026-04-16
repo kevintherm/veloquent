@@ -4,7 +4,9 @@ namespace App\Observers;
 
 use App\Infrastructure\Models\Tenant;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
@@ -17,6 +19,20 @@ class TenantObserver
     public function creating(Tenant $tenant): void
     {
         $this->prepareTenantDatabaseAndRunMigrations($tenant);
+    }
+
+    public function saved(Tenant $tenant): void
+    {
+        Cache::forget("tenant_domain_{$tenant->domain}");
+
+        if ($tenant->isDirty('domain')) {
+            Cache::forget("tenant_domain_{$tenant->getOriginal('domain')}");
+        }
+    }
+
+    public function deleted(Tenant $tenant): void
+    {
+        Cache::forget("tenant_domain_{$tenant->domain}");
     }
 
     private function prepareTenantDatabaseAndRunMigrations(Tenant $tenant): void
@@ -53,12 +69,24 @@ class TenantObserver
             throw new RuntimeException('Missing tenant database connection configuration.');
         }
 
-        $tenantConnectionConfig = $databaseConnections[$tenantConnectionName] ?? null;
+        $tenantConnectionConfig = $databaseConnections[$tenantConnectionName] ?? [];
 
         if (! is_array($tenantConnectionConfig)) {
-            $tenantConnectionConfig = $landlordConnectionConfig;
-            config(["database.connections.{$tenantConnectionName}" => $tenantConnectionConfig]);
+            $tenantConnectionConfig = [];
         }
+
+        $driver = $tenantConnectionConfig['driver'] ?? $landlordConnectionConfig['driver'] ?? 'mysql';
+
+        // Use the default configuration for the target driver as the base
+        $baseConfig = $databaseConnections[$driver] ?? $landlordConnectionConfig;
+
+        $tenantConnectionConfig = array_merge(
+            Arr::except($baseConfig, ['database', 'name']),
+            $tenantConnectionConfig
+        );
+
+        config(["database.connections.{$tenantConnectionName}" => $tenantConnectionConfig]);
+        DB::purge($tenantConnectionName);
 
         $driver = (string) ($tenantConnectionConfig['driver'] ?? '');
 
