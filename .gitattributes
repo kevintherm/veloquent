@@ -20,3 +20,4 @@ bun.lock export-ignore
 .vscode export-ignore
 .idea export-ignore
 .agents export-ignore
+/docs export-ignore
