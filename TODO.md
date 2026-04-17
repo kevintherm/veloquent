@@ -5,8 +5,6 @@
 
 ## Roadmap
 
-- Setup file upload on sdk
-- Add cross table validation rules `@collection.x.field = ?`
 - Circular relation detection for nested expand queries is not yet implemented. @RecordExpansionService
 - Add deployment documentation
 - Add support for indexing json and file field

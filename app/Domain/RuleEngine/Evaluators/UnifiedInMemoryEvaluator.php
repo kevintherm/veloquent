@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\RuleEngine\Evaluators;
 
+use App\Domain\Collections\Models\Collection;
+use Illuminate\Support\Facades\DB;
 use Kevintherm\Exprc\Ast\ComparisonNode;
 use Kevintherm\Exprc\Ast\IdentifierNode;
 use Kevintherm\Exprc\Ast\LogicalNode;
@@ -76,21 +78,58 @@ class UnifiedInMemoryEvaluator implements EvaluatorInterface, VisitorInterface
         $op = strtoupper($node->operator);
         $val = $node->value;
 
-        // Resolve LHS
-        $left = $this->isSysvar($field) ? $this->getSysvarValue($field) : data_get($this->context, $field);
+        // Check if either side is a cross collection subquery
+        $leftIsCollection = is_string($field) && str_starts_with($field, '__sysvar__collection.');
 
-        // Resolve RHS
+        $rightIsCollection = false;
         if ($val instanceof IdentifierNode) {
-            $right = $val->accept($this);
+            $rightValue = $this->isSysvar($val->name) ? $this->getSysvarValue($val->name) : data_get($this->context, $val->name);
+            if (str_starts_with($val->name, '__sysvar__collection.')) {
+                $rightIsCollection = true;
+                $rightPath = str_replace('__sysvar__collection.', '', $val->name);
+            }
         } else {
-            $right = $val;
+            $rightValue = $val;
         }
 
-        return $this->compare($left, $op, $right);
+        if ($leftIsCollection) {
+            $leftPath = str_replace('__sysvar__collection.', '', $field);
+
+            return $this->evaluateCrossCollectionExists($leftPath, $op, $rightValue);
+        }
+
+        if ($rightIsCollection) {
+            // invert operator and query the rightPath against LHS value
+            $leftValue = $this->isSysvar($field) ? $this->getSysvarValue($field) : data_get($this->context, $field);
+
+            return $this->evaluateCrossCollectionExists($rightPath, $this->invertOperatorForInMemory($op), $leftValue);
+        }
+
+        // Original logic
+        $left = $this->isSysvar($field) ? $this->getSysvarValue($field) : data_get($this->context, $field);
+
+        return $this->compare($left, $op, $rightValue);
     }
 
     public function visitNullComparisonNode(NullComparisonNode $node): bool
     {
+        if (str_starts_with($node->field, '__sysvar__collection.')) {
+            $path = str_replace('__sysvar__collection.', '', $node->field);
+            $parts = explode('.', $path, 2);
+            if (count($parts) < 2) {
+                return false;
+            }
+            $collection = Collection::findByNameCached($parts[0]);
+            if (! $collection) {
+                return false;
+            }
+            $tableName = $collection->getPhysicalTableName();
+
+            return DB::table($tableName)
+                ->where($parts[1], $node->isNot ? '!=' : '=', null)
+                ->exists();
+        }
+
         $val = $this->isSysvar($node->field)
             ? $this->getSysvarValue($node->field)
             : data_get($this->context, $node->field);
@@ -101,6 +140,51 @@ class UnifiedInMemoryEvaluator implements EvaluatorInterface, VisitorInterface
     public function visitIdentifierNode(IdentifierNode $node): mixed
     {
         return $this->isSysvar($node->name) ? $this->getSysvarValue($node->name) : data_get($this->context, $node->name);
+    }
+
+    private function evaluateCrossCollectionExists(string $path, string $operator, mixed $otherValue): bool
+    {
+        $parts = explode('.', $path, 2);
+        if (count($parts) < 2) {
+            return false;
+        }
+
+        $collectionName = $parts[0];
+        $collectionField = $parts[1];
+
+        $collection = Collection::findByNameCached($collectionName);
+        if (! $collection) {
+            return false;
+        }
+
+        $tableName = $collection->getPhysicalTableName();
+        $query = DB::table($tableName);
+
+        if ($operator === 'IN') {
+            $query->whereIn($collectionField, is_array($otherValue) ? $otherValue : [$otherValue]);
+        } elseif ($operator === 'NOT IN') {
+            $query->whereNotIn($collectionField, is_array($otherValue) ? $otherValue : [$otherValue]);
+        } else {
+            $sqlOp = match ($operator) {
+                '=', '!=', '>', '>=', '<', '<=', 'LIKE', 'NOT LIKE' => $operator,
+                'CONTAINS', 'HASKEY' => throw new RuntimeException("Operator $operator not supported in cross collections."),
+                default => '=',
+            };
+            $query->where($collectionField, $sqlOp, $otherValue);
+        }
+
+        return $query->exists();
+    }
+
+    private function invertOperatorForInMemory(string $op): string
+    {
+        return match (strtoupper($op)) {
+            '>' => '<',
+            '<' => '>',
+            '>=' => '<=',
+            '<=' => '>=',
+            default => $op,
+        };
     }
 
     private function compare(mixed $l, string $op, mixed $r): bool

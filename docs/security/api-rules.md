@@ -65,6 +65,18 @@ Rules can reference the current request context using the `@request` prefix:
 | `@request.body.*` | Access fields from the incoming request body (useful for `create` and `update` rules). |
 | `@request.query.*` | Access query parameters from the request. |
 
+### Cross-Collection Checks (`@collection`)
+
+You can perform existence checks against other collections using the `@collection` prefix. This acts as a subquery, allowing you to validate data against records outside your immediate collection.
+
+Syntax: `@collection.[collection_name].[field] = value`
+
+For example, to ensure a user only can edit comments if they have an active subscription record in another collection:
+- `@collection.subscriptions.user_id = @request.auth.id`
+
+Or to enforce unique constraint validations via data stored elsewhere:
+- `@collection.bans.user_id != @request.auth.id` (Where the user's ID does not appear in a bans collection).
+
 ### Relation Joins
 
 You can access fields of related records using dot notation. For example, if a `posts` collection has a `userId` relation field pointing to `users`, you can write:

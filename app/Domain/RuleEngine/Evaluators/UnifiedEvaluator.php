@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Domain\RuleEngine\Evaluators;
 
+use App\Domain\Collections\Models\Collection;
+use Illuminate\Database\Eloquent\Builder;
 use Kevintherm\Exprc\Ast\ComparisonNode;
 use Kevintherm\Exprc\Ast\IdentifierNode;
 use Kevintherm\Exprc\Ast\LogicalNode;
@@ -161,19 +163,40 @@ class UnifiedEvaluator implements EvaluatorInterface, VisitorInterface
         $operator = strtoupper($node->operator);
         $value = $node->value;
 
-        // Symmetric check
-        $leftIsSysvar = $this->isSysvar($field);
+        $leftIsCollectionSysvar = is_string($field) && str_starts_with($field, '__sysvar__collection.');
 
+        $rightIsCollectionSysvar = false;
         if ($value instanceof IdentifierNode) {
             $rightValue = $this->isSysvar($value->name) ? $this->getSysvarValue($value->name) : $value->name;
             $rightIsSysvar = $this->isSysvar($value->name);
             $rightIsField = ! $rightIsSysvar;
+            $rightIsCollectionSysvar = str_starts_with($value->name, '__sysvar__collection.');
         } else {
             $rightValue = $value;
             $rightIsSysvar = false;
             $rightIsField = false;
         }
 
+        // Handle cross-collection lookups
+        if ($leftIsCollectionSysvar) {
+            $collectionPath = str_replace('__sysvar__collection.', '', $field);
+            $this->applyCrossCollectionComparison($builder, $collectionPath, $operator, $rightValue, $rightIsField, $boolean);
+
+            return;
+        }
+
+        if ($rightIsCollectionSysvar) {
+            $collectionPath = str_replace('__sysvar__collection.', '', $value->name);
+            $leftValue = $this->isSysvar($field) ? $this->getSysvarValue($field) : $field;
+            $leftIsField = ! $this->isSysvar($field);
+
+            $this->applyCrossCollectionComparison($builder, $collectionPath, $this->invertOrderedOperator($operator), $leftValue, $leftIsField, $boolean);
+
+            return;
+        }
+
+        // Symmetric check
+        $leftIsSysvar = $this->isSysvar($field);
         $leftValue = $leftIsSysvar ? $this->getSysvarValue($field) : null;
 
         // List operators (Priority)
@@ -235,6 +258,50 @@ class UnifiedEvaluator implements EvaluatorInterface, VisitorInterface
         $this->applyScalarComparison($builder, $this->resolver->resolve($field), $operator, $rightValue, $boolean);
     }
 
+    private function applyCrossCollectionComparison(object $builder, string $collectionPath, string $operator, mixed $otherValue, bool $otherIsField, string $boolean): void
+    {
+        $parts = explode('.', $collectionPath, 2);
+        if (count($parts) < 2) {
+            throw new RuntimeException('Invalid collection sysvar.');
+        }
+        $collectionName = $parts[0];
+        $collectionField = $parts[1];
+
+        $collection = Collection::findByNameCached($collectionName);
+        if (! $collection) {
+            $method = $boolean === 'or' ? 'orWhereRaw' : 'whereRaw';
+            $builder->{$method}('0 = 1');
+
+            return;
+        }
+        $tableName = $collection->getPhysicalTableName();
+
+        $method = $boolean === 'or' ? 'orWhereExists' : 'whereExists';
+        $builder->{$method}(function ($q) use ($builder, $tableName, $collectionField, $operator, $otherValue, $otherIsField) {
+            $q->selectRaw('1')->from($tableName);
+
+            if ($operator === 'IN' || $operator === 'NOT IN') {
+                $inValues = is_array($otherValue) ? $otherValue : [$otherValue];
+                if ($operator === 'IN') {
+                    $q->whereIn($tableName.'.'.$collectionField, $inValues);
+                } else {
+                    $q->whereNotIn($tableName.'.'.$collectionField, $inValues);
+                }
+            } elseif ($otherIsField) {
+                // Determine the parent table name to prefix the other value
+                $parentTable = $builder instanceof Builder ? $builder->getModel()->getTable() : null;
+                $resolvedOtherValue = $this->resolver->resolve((string) $otherValue);
+                if ($parentTable && ! str_contains($resolvedOtherValue, '.')) {
+                    $resolvedOtherValue = $parentTable.'.'.$resolvedOtherValue;
+                }
+
+                $q->whereColumn($tableName.'.'.$collectionField, $this->toSqlOperator($operator), $resolvedOtherValue);
+            } else {
+                $q->where($tableName.'.'.$collectionField, $this->toSqlOperator($operator), $otherValue);
+            }
+        });
+    }
+
     private function applyScalarComparison(object $builder, string $field, string $operator, mixed $value, string $boolean): void
     {
         $sqlOperator = $this->toSqlOperator($operator);
@@ -245,6 +312,37 @@ class UnifiedEvaluator implements EvaluatorInterface, VisitorInterface
 
     private function applyNullComparison(object $builder, string $field, bool $isNot, string $boolean): void
     {
+        if (str_starts_with($field, '__sysvar__collection.')) {
+            $collectionPath = str_replace('__sysvar__collection.', '', $field);
+            $parts = explode('.', $collectionPath, 2);
+            if (count($parts) < 2) {
+                throw new RuntimeException('Invalid collection sysvar.');
+            }
+            $collectionName = $parts[0];
+            $collectionField = $parts[1];
+
+            $collection = Collection::findByNameCached($collectionName);
+            if (! $collection) {
+                $method = $boolean === 'or' ? 'orWhereRaw' : 'whereRaw';
+                $builder->{$method}('0 = 1');
+
+                return;
+            }
+            $tableName = $collection->getPhysicalTableName();
+
+            $method = $boolean === 'or' ? 'orWhereExists' : 'whereExists';
+            $builder->{$method}(function ($q) use ($tableName, $collectionField, $isNot) {
+                $q->selectRaw('1')->from($tableName);
+                if ($isNot) {
+                    $q->whereNotNull($tableName.'.'.$collectionField);
+                } else {
+                    $q->whereNull($tableName.'.'.$collectionField);
+                }
+            });
+
+            return;
+        }
+
         if ($this->isSysvar($field)) {
             $method = $boolean === 'or' ? 'orWhereRaw' : 'whereRaw';
             $sql = $isNot ? '? IS NOT NULL' : '? IS NULL';

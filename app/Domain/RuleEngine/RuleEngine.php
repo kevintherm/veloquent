@@ -111,7 +111,7 @@ class RuleEngine
             // If LHS is a sysvar, validate its prefix
             if (str_starts_with($field, '__sysvar__')) {
                 $path = str_replace('__sysvar__', '', $field);
-                if (! preg_match('/^(request|user|auth)\./', $path)) {
+                if (! preg_match('/^(request|user|auth|collection)\./', $path)) {
                     throw new \RuntimeException(sprintf('Invalid system variable namespace: %s', $path));
                 }
             }
@@ -121,7 +121,7 @@ class RuleEngine
                 $name = $node->value->name;
                 if (str_starts_with($name, '__sysvar__')) {
                     $path = str_replace('__sysvar__', '', $name);
-                    if (! preg_match('/^(request|user|auth)\./', $path)) {
+                    if (! preg_match('/^(request|user|auth|collection)\./', $path)) {
                         throw new \RuntimeException(sprintf('Invalid system variable namespace: %s', $path));
                     }
                 } elseif (! str_starts_with($name, '__numeric__')) {
