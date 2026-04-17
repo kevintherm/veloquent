@@ -52,6 +52,7 @@ class CreateRecordAction
         $data = array_diff_key($data, array_flip(['created_at', 'updated_at']));
 
         $this->relationIntegrityService->validateRelationIds($collection->fields ?? [], $data);
+        $this->relationIntegrityService->validateNoCircularReferences($collection, null, $data);
 
         $fileProcessing = $this->fileFieldProcessor->processForCreate(
             $collection,

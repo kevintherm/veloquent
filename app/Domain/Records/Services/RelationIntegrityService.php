@@ -64,6 +64,135 @@ class RelationIntegrityService
     }
 
     /**
+     * Validate that setting relation fields does not introduce any circular references (e.g. A -> B -> C -> A).
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function validateNoCircularReferences(Collection $collection, ?string $recordId, array $data): void
+    {
+        $idToCheck = $recordId ?? ($data['id'] ?? null);
+
+        if (empty($idToCheck)) {
+            return;
+        }
+
+        $startingNodes = [];
+
+        foreach ($collection->fields ?? [] as $field) {
+            $fieldName = $field['name'] ?? null;
+            $fieldType = $field['type'] ?? null;
+
+            if ($fieldType !== CollectionFieldType::Relation->value) {
+                continue;
+            }
+
+            if (! array_key_exists($fieldName, $data) || empty($data[$fieldName])) {
+                continue;
+            }
+
+            $targetCollectionId = $field['target_collection_id'] ?? null;
+            if (empty($targetCollectionId)) {
+                continue;
+            }
+
+            $targetId = $data[$fieldName];
+
+            if ($targetId === $idToCheck && $targetCollectionId === $collection->id) {
+                throw ValidationException::withMessages([
+                    $fieldName => ["Circular reference detected: '{$fieldName}' cannot reference the record itself."],
+                ]);
+            }
+
+            $startingNodes[] = [
+                'collection_id' => $targetCollectionId,
+                'record_id' => $targetId,
+                'field_name' => $fieldName,
+            ];
+        }
+
+        if (empty($startingNodes)) {
+            return;
+        }
+
+        $this->detectCircularRelationsBfs($collection, $idToCheck, $startingNodes);
+    }
+
+    /**
+     * @param  array<int, array{collection_id: string, record_id: string, field_name: string}>  $startingNodes
+     */
+    private function detectCircularRelationsBfs(Collection $collection, string $idToCheck, array $startingNodes): void
+    {
+        $collectionsById = collect([$collection->id => $collection]);
+        $visited = [];
+        $visited[$collection->id.':'.$idToCheck] = true;
+
+        $queue = $startingNodes;
+
+        while (! empty($queue)) {
+            $currentNode = array_shift($queue);
+            $cId = $currentNode['collection_id'];
+            $rId = $currentNode['record_id'];
+            $originFieldName = $currentNode['field_name'] ?? null;
+
+            if ($cId === $collection->id && $rId === $idToCheck) {
+                throw ValidationException::withMessages([
+                    $originFieldName => ['Circular reference detected: following this relation creates an infinite loop.'],
+                ]);
+            }
+
+            $visitedKey = $cId.':'.$rId;
+            if (isset($visited[$visitedKey])) {
+                continue;
+            }
+            $visited[$visitedKey] = true;
+
+            if (! $collectionsById->has($cId)) {
+                $c = Collection::query()->find($cId);
+                if ($c !== null) {
+                    $collectionsById->put($cId, $c);
+                }
+            }
+
+            $currentCollection = $collectionsById->get($cId);
+            if ($currentCollection === null) {
+                continue;
+            }
+
+            $relationFields = [];
+            foreach ($currentCollection->fields ?? [] as $field) {
+                if (($field['type'] ?? null) === CollectionFieldType::Relation->value && ! empty($field['target_collection_id'])) {
+                    $relationFields[] = $field;
+                }
+            }
+
+            if (empty($relationFields)) {
+                continue;
+            }
+
+            $tableName = $currentCollection->getPhysicalTableName();
+            $record = DB::table($tableName)->where('id', $rId)->first();
+
+            if (! $record) {
+                continue;
+            }
+
+            foreach ($relationFields as $rField) {
+                $fName = $rField['name'];
+                $targetCId = $rField['target_collection_id'];
+
+                $val = $record->$fName ?? null;
+                if (! empty($val)) {
+                    $queue[] = [
+                        'collection_id' => $targetCId,
+                        'record_id' => $val,
+                        'field_name' => $originFieldName,
+                    ];
+                }
+            }
+        }
+    }
+
+    /**
      * Handle record deletion with referential integrity checks.
      * If cascade_on_delete is true, delete referencing records.
      * If cascade_on_delete is false, block deletion.
