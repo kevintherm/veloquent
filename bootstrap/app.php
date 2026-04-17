@@ -76,7 +76,9 @@ return Application::configure(basePath: dirname(__DIR__))
                 }
 
                 if ($e instanceof ValidationException) {
-                    return $errorResponse('Validation error', Response::HTTP_UNPROCESSABLE_ENTITY, $e->errors());
+                    $firstError = collect($e->errors())->flatten()->first() ?? 'Validation error';
+
+                    return $errorResponse($firstError, Response::HTTP_UNPROCESSABLE_ENTITY, $e->errors());
                 }
                 if ($e instanceof ModelNotFoundException || $e instanceof NotFoundHttpException) {
                     return $errorResponse('Resource not found', Response::HTTP_NOT_FOUND);

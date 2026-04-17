@@ -125,7 +125,7 @@ it('rejects create when related records do not exist', function () {
         'title' => 'Hello',
         'author' => '01ARZ3NDEKTSV4RRFFQ69G5FAV',
     ])->assertUnprocessable()
-        ->assertJsonPath('message', 'Validation error');
+        ->assertJsonPath('message', 'The selected related record does not exist.');
 });
 
 it('rejects update when related records do not exist', function () {
@@ -145,7 +145,7 @@ it('rejects update when related records do not exist', function () {
         'title' => 'Hello',
         'author' => '01ARZ3NDEKTSV4RRFFQ69G5FAV',
     ])->assertUnprocessable()
-        ->assertJsonPath('message', 'Validation error');
+        ->assertJsonPath('message', 'The selected related record does not exist.');
 });
 
 it('expands single relation as object', function () {
