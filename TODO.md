@@ -1,6 +1,7 @@
 ## TODO
 
 - Convert != null to IS NOT NULL explicitly because of how Sql handle NULL
+- Optimize cascading records when deleting
 - Battle Testing
 - Ship
 
@@ -9,6 +10,7 @@
 - Add expand option to realtime
 - Add deployment documentation
 - Add support for indexing json and file field
+- Bypass rule for superuser in realtime worker
 - Add octane support
 - Hooks system
 
