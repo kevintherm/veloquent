@@ -10,6 +10,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Support\Str;
 use RuntimeException;
 use Spatie\Multitenancy\Contracts\IsTenant;
+use Spatie\Multitenancy\Landlord;
 
 class SubscribeToCollectionAction
 {
@@ -28,32 +29,36 @@ class SubscribeToCollectionAction
         $subscriptionTtl = max(1, (int) config('velo.realtime.subscription_ttl', 120));
         $expiresAt = CarbonImmutable::now()->addSeconds($subscriptionTtl);
 
-        $subscription = RealtimeSubscription::query()->updateOrCreate(
-            [
+        Landlord::execute(function () use ($tenantId, $collection, $authCollection, $subscriberId, $filter, $channel, $expiresAt) {
+
+            $subscription = RealtimeSubscription::query()->updateOrCreate(
+                [
+                    'tenant_id' => $tenantId,
+                    'collection_id' => $collection->id,
+                    'auth_collection' => $authCollection,
+                    'subscriber_id' => $subscriberId,
+                ],
+                [
+                    'id' => (string) Str::ulid(),
+                    'channel' => $channel,
+                    'filter' => (string) ($filter ?? ''),
+                    'expired_at' => $expiresAt,
+                ]
+            );
+
+            $this->driver->publish([
+                'type' => 'connection',
+                'action' => 'subscribe',
                 'tenant_id' => $tenantId,
                 'collection_id' => $collection->id,
                 'auth_collection' => $authCollection,
                 'subscriber_id' => $subscriberId,
-            ],
-            [
-                'id' => (string) Str::ulid(),
+                'filter' => $subscription->filter,
                 'channel' => $channel,
-                'filter' => (string) ($filter ?? ''),
-                'expired_at' => $expiresAt,
-            ]
-        );
+                'expired_at' => $expiresAt->toIso8601String(),
+            ]);
 
-        $this->driver->publish([
-            'type' => 'connection',
-            'action' => 'subscribe',
-            'tenant_id' => $tenantId,
-            'collection_id' => $collection->id,
-            'auth_collection' => $authCollection,
-            'subscriber_id' => $subscriberId,
-            'filter' => $subscription->filter,
-            'channel' => $channel,
-            'expired_at' => $expiresAt->toIso8601String(),
-        ]);
+        });
 
         return [
             'channel' => $channel,

@@ -12,6 +12,13 @@ class SwitchTenantDatabaseTask implements SwitchTenantTask
 {
     use UsesMultitenancyConfig;
 
+    protected ?string $landlordDatabaseName;
+
+    public function __construct()
+    {
+        $this->landlordDatabaseName = config("database.connections.{$this->tenantDatabaseConnectionName()}.database");
+    }
+
     public function makeCurrent(IsTenant $tenant): void
     {
         $this->setTenantConnectionDatabaseName($tenant->getDatabaseName());
@@ -19,7 +26,7 @@ class SwitchTenantDatabaseTask implements SwitchTenantTask
 
     public function forgetCurrent(): void
     {
-        $this->setTenantConnectionDatabaseName(null);
+        $this->setTenantConnectionDatabaseName($this->landlordDatabaseName);
     }
 
     protected function setTenantConnectionDatabaseName(?string $databaseName): void

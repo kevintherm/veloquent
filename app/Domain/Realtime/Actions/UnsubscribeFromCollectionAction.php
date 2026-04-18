@@ -7,6 +7,7 @@ use App\Domain\Realtime\Contracts\RealtimeBusDriver;
 use App\Domain\Realtime\Models\RealtimeSubscription;
 use App\Domain\Records\Models\Record;
 use Spatie\Multitenancy\Contracts\IsTenant;
+use Spatie\Multitenancy\Landlord;
 
 class UnsubscribeFromCollectionAction
 {
@@ -23,22 +24,26 @@ class UnsubscribeFromCollectionAction
         $subscriberId = (string) $user->getKey();
         $channel = "private-$authCollection.$subscriberId";
 
-        RealtimeSubscription::query()->where([
-            'tenant_id' => $tenantId,
-            'collection_id' => $collection->id,
-            'auth_collection' => $authCollection,
-            'subscriber_id' => $subscriberId,
-        ])->delete();
+        Landlord::execute(function () use ($tenantId, $collection, $authCollection, $subscriberId, $channel) {
 
-        $this->driver->publish([
-            'type' => 'connection',
-            'action' => 'unsubscribe',
-            'tenant_id' => $tenantId,
-            'collection_id' => $collection->id,
-            'auth_collection' => $authCollection,
-            'subscriber_id' => $subscriberId,
-            'channel' => $channel,
-        ]);
+            RealtimeSubscription::query()->where([
+                'tenant_id' => $tenantId,
+                'collection_id' => $collection->id,
+                'auth_collection' => $authCollection,
+                'subscriber_id' => $subscriberId,
+            ])->delete();
+
+            $this->driver->publish([
+                'type' => 'connection',
+                'action' => 'unsubscribe',
+                'tenant_id' => $tenantId,
+                'collection_id' => $collection->id,
+                'auth_collection' => $authCollection,
+                'subscriber_id' => $subscriberId,
+                'channel' => $channel,
+            ]);
+
+        });
     }
 
     private function resolveTenantId(): ?string
