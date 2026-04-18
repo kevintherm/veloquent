@@ -84,7 +84,7 @@ return Application::configure(basePath: dirname(__DIR__))
                     return $errorResponse('Resource not found', Response::HTTP_NOT_FOUND);
                 }
                 if ($e instanceof AuthenticationException) {
-                    return $errorResponse('Unauthenticated', Response::HTTP_UNAUTHORIZED);
+                    return $errorResponse($e->getMessage() ?: 'Unauthenticated', Response::HTTP_UNAUTHORIZED);
                 }
                 if ($e instanceof AuthorizationException) {
                     return $errorResponse('Unauthorized', Response::HTTP_FORBIDDEN);
