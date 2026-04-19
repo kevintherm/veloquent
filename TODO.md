@@ -1,6 +1,5 @@
 ## TODO
 
-- Convert != null to IS NOT NULL implicitly because of how Sql handle NULL
 - Optimize cascading records when deleting
 - Battle Testing
 - Ship

@@ -2,15 +2,16 @@
 
 namespace App\Domain\QueryCompiler\Exceptions;
 
-use Symfony\Component\HttpKernel\Exception\HttpException;
+use RuntimeException;
+use Throwable;
 
 /**
  * Thrown when a rule/filter expression is syntactically invalid.
  */
-class InvalidRuleExpressionException extends HttpException
+class InvalidRuleExpressionException extends RuntimeException
 {
-    public function __construct(string $message)
+    public function __construct(string $message = '', int $code = 0, ?Throwable $previous = null)
     {
-        parent::__construct(400, $message);
+        parent::__construct($message, $code, $previous);
     }
 }

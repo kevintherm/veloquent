@@ -212,7 +212,18 @@ class RuleEngine
 
         if ($node instanceof ComparisonNode) {
             $field = str_replace('_ARROW_', '->', $node->field);
-            $operator = $node->operator;
+            $operator = strtoupper($node->operator);
+
+            // Handle implicit null conversion: field = null -> IS NULL, field != null -> IS NOT NULL
+            if ($node->value === null) {
+                if ($operator === '=') {
+                    return new NullComparisonNode($field, false);
+                }
+
+                if ($operator === '!=' || $operator === '<>') {
+                    return new NullComparisonNode($field, true);
+                }
+            }
 
             // Check original operator
             $originalLower = strtolower($originalFilter);
@@ -236,8 +247,7 @@ class RuleEngine
         $filter = str_ireplace(' not in ', ' NOT IN ', $filter);
         $filter = str_replace('?=', ' LIKE ', $filter);
         $filter = str_replace('?&', ' NOT LIKE ', $filter);
-        // Replace -> with something that looks like an underscore + arrow for lexer
-        $filter = str_replace('->', '_ARROW_', $filter);
+        $filter = str_replace('->', '_ARROW_', $filter); // Replace -> with something that looks like an underscore + arrow for lexer
         $filter = preg_replace('/@([A-Za-z0-9_.]+)/', '__sysvar__$1', $filter);
 
         if (preg_match('/^\s*(\d+)\s*(>|<|>=|<=|=)/', $filter, $matches)) {
