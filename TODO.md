@@ -1,6 +1,5 @@
 ## TODO
 
-- Optimize cascading records when deleting
 - Add deployment documentation
 - Battle Testing
 - Ship
