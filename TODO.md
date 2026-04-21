@@ -1,9 +1,5 @@
 ## TODO
 
-- Revamp error handling. 
-    - Send explicit error code and message to client.
-    - Map error code to a message string.
-- Fix: Dart SDK was sending a Dart List for json field.
 - Add fields configuration to admin panel
     - Number: min, max, allow_decimals
     - Text: min, max

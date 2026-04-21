@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch, nextTick } from "vue";
 import axios from "axios";
 import { toast } from "vue-sonner";
 import {
@@ -139,12 +139,33 @@ const formatDatetimeLocal = (value) => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
+const formatJsonValue = (value) => {
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  if (typeof value === "object") {
+    return JSON.stringify(value, null, 2);
+  }
+
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return JSON.stringify(parsed, null, 2);
+    } catch {
+      return value;
+    }
+  }
+
+  return "";
+};
+
 const defaultFieldValue = (field) => {
   if (props.record && props.record[field.name] !== undefined) {
     const existingValue = props.record[field.name];
 
-    if (field.type === "json" && existingValue && typeof existingValue === "object") {
-      return JSON.stringify(existingValue, null, 2);
+    if (field.type === "json") {
+      return formatJsonValue(existingValue);
     }
 
     if (field.type === "timestamp") {
@@ -175,8 +196,8 @@ const defaultFieldValue = (field) => {
       return Boolean(field.default);
     }
 
-    if (field.type === "json" && typeof field.default === "object") {
-      return JSON.stringify(field.default, null, 2);
+    if (field.type === "json") {
+      return formatJsonValue(field.default);
     }
 
     return field.default;
@@ -443,6 +464,17 @@ const fetchCollectionInfo = async () => {
 const modifyRecord = () => {
   isRecordModified.value = true;
 }
+
+const adjustTextareaHeight = (element) => {
+  if (!element) return;
+  element.style.height = "auto";
+  element.style.height = `${element.scrollHeight}px`;
+};
+
+const adjustAllJsonTextareasHeight = () => {
+  const textareas = document.querySelectorAll(`textarea[id^="field-${props.sheetId}-"]`);
+  textareas.forEach((textarea) => adjustTextareaHeight(textarea));
+};
 
 const requestClose = () => {
   if (isRecordModified.value == true) {
@@ -1008,6 +1040,12 @@ const requestDeleteRecord = () => {
   showDeleteRecordDialog.value = true;
 };
 
+watch(internalOpen, (isOpen) => {
+  if (isOpen) {
+    adjustAllJsonTextareasHeight();
+  }
+}, { flush: 'post' });
+
 onMounted(async () => {
   await fetchCollectionInfo();
 });
@@ -1042,8 +1080,8 @@ onMounted(async () => {
             <textarea v-if="field.type === 'longtext' || field.type === 'json'" :id="`field-${sheetId}-${field.name}`"
               v-model="formState[field.name]"
               class="min-h-24 rounded-md border border-input bg-background px-3 py-2 text-sm"
-              :class="isDisabledField(field) ? 'cursor-not-allowed bg-muted' : ''" :disabled="isDisabledField(field)"
-              :placeholder="`Enter ${displayFieldName(field.name)}...`" @input="modifyRecord"></textarea>
+              :class="[isDisabledField(field) ? 'cursor-not-allowed bg-muted' : '', field.type === 'json' ? 'overflow-hidden' : '']" :disabled="isDisabledField(field)"
+              :placeholder="`Enter ${displayFieldName(field.name)}...`" @input="(e) => { modifyRecord(); adjustTextareaHeight(e.target); }"></textarea>
 
             <TiptapEditor v-else-if="field.type === 'richtext'" v-model="formState[field.name]"
               :placeholder="`Write ${displayFieldName(field.name)}...`" @update:model-value="modifyRecord" />
