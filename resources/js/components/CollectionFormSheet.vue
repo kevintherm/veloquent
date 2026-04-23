@@ -301,6 +301,12 @@ const normalizeFieldForForm = (field) => {
     normalized.max = normalized.max ?? null;
   }
 
+  if (normalized.type === "number") {
+    normalized.allow_decimals = normalized.allow_decimals ?? false;
+    normalized.min = normalized.min ?? null;
+    normalized.max = normalized.max ?? null;
+  }
+
   return normalized;
 };
 
@@ -555,6 +561,7 @@ const addField = () => {
     protected: false,
     target_collection_id: null,
     cascade_on_delete: false,
+    allow_decimals: false,
     order: 0,
   };
 
@@ -761,6 +768,12 @@ const buildPayload = () => {
           : Number(cleaned.max_size_kb);
         cleaned.allowed_mime_types = normalizeMimeTypeList(cleaned.allowed_mime_types ?? []);
         cleaned.protected = Boolean(cleaned.protected ?? false);
+      }
+
+      if (cleaned.type !== "number") {
+        delete cleaned.allow_decimals;
+      } else {
+        cleaned.allow_decimals = Boolean(cleaned.allow_decimals ?? false);
       }
 
       return cleaned;
@@ -1163,6 +1176,19 @@ onMounted(async () => {
                     </div>
                   </div>
 
+                  <div v-if="newField.type === 'number'" class="space-y-2 grid grid-cols-2 gap-3 col-span-1">
+                    <div class="space-y-2">
+                      <Label class="text-xs font-semibold tracking-wide text-primary/80 uppercase">Min Value</Label>
+                      <Input v-model.number="newField.min" type="number"
+                        class="h-9 focus-visible:ring-1 border-primary/20 bg-background" placeholder="Optional" />
+                    </div>
+                    <div class="space-y-2">
+                      <Label class="text-xs font-semibold tracking-wide text-primary/80 uppercase">Max Value</Label>
+                      <Input v-model.number="newField.max" type="number"
+                        class="h-9 focus-visible:ring-1 border-primary/20 bg-background" placeholder="Optional" />
+                    </div>
+                  </div>
+
                   <div v-if="newField.type === 'file'" class="space-y-2 col-span-1 sm:col-span-2">
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div class="space-y-2">
@@ -1202,6 +1228,12 @@ onMounted(async () => {
                       <span
                         class="text-sm font-medium text-foreground/80 group-hover:text-foreground transition-colors">Allow
                         Null Values</span>
+                    </label>
+                    <label v-if="newField.type === 'number'" class="flex items-center gap-2 cursor-pointer group">
+                      <Checkbox v-model="newField.allow_decimals" />
+                      <span
+                        class="text-sm font-medium text-foreground/80 group-hover:text-foreground transition-colors">Allow
+                        Decimals</span>
                     </label>
                     <label v-if="newField.type === 'relation'" class="flex items-center gap-2 cursor-pointer group">
                       <Checkbox v-model="newField.cascade_on_delete" />
@@ -1348,6 +1380,21 @@ onMounted(async () => {
                       </div>
                     </div>
 
+                    <div v-if="field.type === 'number'" class="space-y-2 grid grid-cols-2 gap-3 col-span-1">
+                      <div class="space-y-2">
+                        <Label class="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Min
+                          Value</Label>
+                        <Input v-model.number="field.min" type="number" class="h-9 focus-visible:ring-1"
+                          placeholder="Optional" />
+                      </div>
+                      <div class="space-y-2">
+                        <Label class="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Max
+                          Value</Label>
+                        <Input v-model.number="field.max" type="number" class="h-9 focus-visible:ring-1"
+                          placeholder="Optional" />
+                      </div>
+                    </div>
+
                     <div v-if="field.type === 'file'" class="space-y-2 col-span-1 sm:col-span-2">
                       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div class="space-y-2">
@@ -1391,6 +1438,12 @@ onMounted(async () => {
                         <span
                           class="text-sm font-medium text-foreground/80 group-hover:text-foreground transition-colors">Allow
                           Null Values</span>
+                      </label>
+                      <label v-if="field.type === 'number'" class="flex items-center gap-2 cursor-pointer group">
+                        <Checkbox v-model="field.allow_decimals" />
+                        <span
+                          class="text-sm font-medium text-foreground/80 group-hover:text-foreground transition-colors">Allow
+                          Decimals</span>
                       </label>
                       <label v-if="field.type === 'relation'" class="flex items-center gap-2 cursor-pointer group">
                         <Checkbox v-model="field.cascade_on_delete" />

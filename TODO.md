@@ -1,6 +1,5 @@
 ## TODO
 
-
 - App settings
 - Add deployment documentation
 - Battle Testing

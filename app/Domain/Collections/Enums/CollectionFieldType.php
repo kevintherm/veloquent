@@ -26,7 +26,8 @@ enum CollectionFieldType: string
             self::LongText => [],
             self::RichText => [],
             self::Relation => ['target_collection_id' => null, 'cascade_on_delete' => false],
-            self::Number, self::Boolean, self::Datetime, self::Json => [],
+            self::Number => ['min' => null, 'max' => null, 'allow_decimals' => false],
+            self::Boolean, self::Datetime, self::Json => [],
         };
     }
 
@@ -65,6 +66,7 @@ enum CollectionFieldType: string
             self::Number => [
                 "{$prefix}.min" => ['nullable', 'numeric'],
                 "{$prefix}.max" => ['nullable', 'numeric'],
+                "{$prefix}.allow_decimals" => ['sometimes', 'boolean'],
             ],
             self::Relation => [
                 "{$prefix}.target_collection_id" => ['required', 'string', 'exists:collections,id'],

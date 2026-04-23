@@ -45,6 +45,28 @@ abstract class BaseRecordRequest extends FormRequest
             );
         }
 
+        foreach ($this->getNumberFields($collection) as $fieldName => $field) {
+            if (! array_key_exists($fieldName, $payload)) {
+                continue;
+            }
+
+            $payload[$fieldName] = $this->normalizeNumberInputValue(
+                $payload[$fieldName],
+                $field
+            );
+        }
+
+        foreach ($collection->fields ?? [] as $field) {
+            $fieldName = $field['name'] ?? null;
+            if (! $fieldName || array_key_exists($fieldName, $payload)) {
+                continue;
+            }
+
+            if (isset($field['default']) && $field['default'] !== null) {
+                $payload[$fieldName] = $field['default'];
+            }
+        }
+
         if ($collection->type === CollectionType::Auth
             && array_key_exists('password', $payload)
             && is_string($payload['password'])
@@ -250,6 +272,14 @@ abstract class BaseRecordRequest extends FormRequest
             ->all();
     }
 
+    private function getNumberFields(Collection $collection): array
+    {
+        return collect($collection->fields ?? [])
+            ->filter(fn (Field|array $field): bool => ($field['type'] ?? null) === CollectionFieldType::Number->value)
+            ->keyBy(fn (Field|array $field): string => (string) $field['name'])
+            ->all();
+    }
+
     private function normalizeRelationInputValue(mixed $value): mixed
     {
         if ($value === null) {
@@ -276,5 +306,20 @@ abstract class BaseRecordRequest extends FormRequest
             'false', '0' => false,
             default => $value,
         };
+    }
+
+    private function normalizeNumberInputValue(mixed $value, Field|array $field): mixed
+    {
+        if (! is_numeric($value)) {
+            return $value;
+        }
+
+        $allowDecimals = $field['allow_decimals'] ?? false;
+
+        if (! $allowDecimals) {
+            return (int) floor((float) $value);
+        }
+
+        return $value;
     }
 }
