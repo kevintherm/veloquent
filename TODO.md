@@ -7,6 +7,7 @@
 
 ## Roadmap
 
+- SDK: OAuth login flow
 - Schema SDK sync (Typed)
 - Add expand option to realtime
 - Add Select field type
