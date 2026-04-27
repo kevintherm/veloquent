@@ -1,5 +1,6 @@
 ## TODO
 
+- Remove hardcoded app version on config
 - App settings
 - Add deployment documentation
 - Battle Testing
