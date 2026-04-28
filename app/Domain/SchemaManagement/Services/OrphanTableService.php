@@ -3,6 +3,7 @@
 namespace App\Domain\SchemaManagement\Services;
 
 use App\Domain\Collections\Models\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
@@ -22,7 +23,8 @@ class OrphanTableService
      */
     public function getOrphans(): array
     {
-        $allTables = Schema::getTableListing();
+        $db = DB::connection()->getDatabaseName();
+        $allTables = Schema::getTableListing(schema: $db);
         $prefix = $this->prefix;
 
         $collectionTables = Collection::pluck('table_name')->all();
