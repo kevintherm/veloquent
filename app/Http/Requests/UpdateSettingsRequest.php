@@ -2,8 +2,11 @@
 
 namespace App\Http\Requests;
 
+use App\Domain\Settings\Resolvers\TenantStorageResolver;
+use App\Domain\Settings\StorageSettings;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class UpdateSettingsRequest extends FormRequest
 {
@@ -51,6 +54,37 @@ class UpdateSettingsRequest extends FormRequest
             'email.mail_password' => ['nullable', 'string'],
             'email.mail_from_address' => ['required', 'email'],
             'email.mail_from_name' => ['required', 'string', 'max:255'],
+        ];
+    }
+
+    /**
+     * Get the "after" validation callables for the request.
+     */
+    public function after(): array
+    {
+        return [
+            function (Validator $validator) {
+                if ($this->input('storage.storage_driver') === 's3') {
+                    $config = $this->input('storage', []);
+                    $currentSettings = app(StorageSettings::class);
+
+                    $isUnchanged = $currentSettings->storage_driver === 's3'
+                        && ($config['s3_key'] ?? '') === $currentSettings->s3_key
+                        && ($config['s3_secret'] ?? '') === $currentSettings->s3_secret
+                        && ($config['s3_region'] ?? '') === $currentSettings->s3_region
+                        && ($config['s3_bucket'] ?? '') === $currentSettings->s3_bucket
+                        && ($config['s3_endpoint'] ?? '') === $currentSettings->s3_endpoint;
+
+                    if ($isUnchanged) {
+                        return;
+                    }
+
+                    $resolver = app(TenantStorageResolver::class);
+                    if (! $resolver->testConnection($config)) {
+                        $validator->errors()->add('storage.storage_driver', 'The S3 credentials are invalid or the bucket is not writable.');
+                    }
+                }
+            },
         ];
     }
 }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Infrastructure\Models\Tenant;
+use App\Infrastructure\Multitenancy\Tasks\ApplyTenantSettingsTask;
 use App\Infrastructure\Multitenancy\Tasks\SwitchTenantAppUrlTask;
 use App\Infrastructure\Multitenancy\Tasks\SwitchTenantDatabaseTask;
 use App\Infrastructure\Multitenancy\Tasks\SwitchTenantFilesystemTask;
@@ -48,6 +49,7 @@ return [
         SwitchTenantLogsTask::class,
         SwitchTenantAppUrlTask::class,
         SwitchTenantRedisPrefixTask::class,
+        ApplyTenantSettingsTask::class,
         PrefixCacheTask::class,
         // \Spatie\Multitenancy\Tasks\SwitchRouteCacheTask::class,
     ],

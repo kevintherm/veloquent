@@ -2,6 +2,7 @@
 
 namespace App\Infrastructure\Multitenancy\Tasks;
 
+use App\Domain\Settings\Resolvers\TenantStorageResolver;
 use Illuminate\Filesystem\FilesystemManager;
 use Illuminate\Support\Facades\File;
 use RuntimeException;
@@ -45,7 +46,11 @@ class SwitchTenantFilesystemTask implements SwitchTenantTask
 
         config()->set('filesystems.default', 'tenant');
 
-        if ($originalDiskDriver === 's3') {
+        $tenantStorageResolver = app(TenantStorageResolver::class);
+
+        if ($tenantStorageResolver->hasOwnS3()) {
+            config()->set('filesystems.disks.tenant', $tenantStorageResolver->getS3Config());
+        } elseif ($originalDiskDriver === 's3') {
             $tenantS3Config = is_array($originalDiskConfig) ? $originalDiskConfig : [];
             $tenantS3Config['driver'] = 's3';
             $tenantS3Config['prefix'] = "tenants/{$tenantPathKey}/app";

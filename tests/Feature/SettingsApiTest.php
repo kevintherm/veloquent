@@ -2,6 +2,7 @@
 
 use App\Domain\Auth\Models\Superuser;
 use App\Domain\Settings\GeneralSettings;
+use App\Domain\Settings\Resolvers\TenantStorageResolver;
 use App\Http\Middleware\TokenAuthMiddleware;
 use App\Infrastructure\Models\Tenant;
 
@@ -19,6 +20,10 @@ beforeEach(function () {
     $this->tenant->makeCurrent();
 
     $this->user = Superuser::factory()->create();
+
+    $this->mock(TenantStorageResolver::class, function ($mock) {
+        $mock->shouldReceive('testConnection')->andReturn(true);
+    })->makePartial();
 
     withoutMiddleware(TokenAuthMiddleware::class);
 });
