@@ -8,12 +8,15 @@ use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Events\CollectionTruncated;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\Records\Models\Record;
+use App\Domain\Settings\GeneralSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 
 use function Pest\Laravel\deleteJson;
+use function Pest\Laravel\postJson;
+use function Pest\Laravel\putJson;
 
 uses(RefreshDatabase::class);
 
@@ -178,4 +181,44 @@ it('blocks deletion of referenced records if cascade is disabled', function () {
     // Verify records still exist
     expect(Record::of($authors)->where('id', $authorId)->exists())->toBeTrue();
     expect(Record::of($books)->where('id', $bookId)->exists())->toBeTrue();
+});
+
+it('prevents schema changes when lock_schema_change is true', function () {
+    $settings = app(GeneralSettings::class);
+    $settings->lock_schema_change = true;
+    $settings->save();
+
+    Gate::shouldReceive('authorize')->andReturnNull();
+
+    $collection = createManageCollection('to_lock');
+
+    // Test store
+    $response = postJson('/api/collections', [
+        'name' => 'test_lock',
+        'type' => CollectionType::Base->value,
+        'fields' => [['name' => 'title', 'type' => CollectionFieldType::Text->value]],
+    ]);
+    $response->assertStatus(403);
+    expect($response->getData(true)['message'])->toBe('Collection schema changes are locked.');
+
+    // Test update
+    $response = putJson("/api/collections/{$collection->id}", [
+        'name' => 'updated_lock',
+    ]);
+    $response->assertStatus(403);
+    expect($response->getData(true)['message'])->toBe('Collection schema changes are locked.');
+
+    // Test truncate
+    $response = deleteJson("/api/collections/{$collection->id}/truncate");
+    $response->assertStatus(403);
+    expect($response->getData(true)['message'])->toBe('Collection schema changes are locked.');
+
+    // Test destroy
+    $response = deleteJson("/api/collections/{$collection->id}");
+    $response->assertStatus(403);
+    expect($response->getData(true)['message'])->toBe('Collection schema changes are locked.');
+
+    // Reset setting
+    $settings->lock_schema_change = false;
+    $settings->save();
 });

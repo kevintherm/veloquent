@@ -156,8 +156,8 @@ onMounted(() => {
 
     <Card>
       <CardHeader>
-        <CardTitle>Storage & Backups</CardTitle>
-        <CardDescription>Manage where files are stored and backup policies.</CardDescription>
+        <CardTitle>Storage</CardTitle>
+        <CardDescription>Manage where files are stored.</CardDescription>
       </CardHeader>
       <CardContent class="space-y-4">
         <div class="space-y-2">
@@ -167,6 +167,7 @@ onMounted(() => {
             <option value="local">Local Disk</option>
             <option value="s3">S3</option>
           </select>
+          <p class="text-xs text-muted-foreground mt-1">Note: Switching the storage driver will not automatically move existing files. You must migrate your data manually.</p>
           <p v-if="errors['storage.storage_driver']" class="text-xs text-red-500">{{ errors['storage.storage_driver'][0]
           }}</p>
         </div>
@@ -211,7 +212,7 @@ onMounted(() => {
 
     <Card>
       <CardHeader>
-        <CardTitle>Email settings (SMTP)</CardTitle>
+        <CardTitle>Email settings</CardTitle>
         <CardDescription>Configuration for outgoing application emails.</CardDescription>
       </CardHeader>
       <CardContent class="space-y-4">
