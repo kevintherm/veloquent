@@ -1,12 +1,12 @@
 ## TODO
 
+- SDK: OAuth login flow
 - Add deployment documentation
 - Battle Testing
 - Ship
 
 ## Roadmap
 
-- SDK: OAuth login flow
 - Schema SDK sync (Typed)
 - Add expand option to realtime
 - Add Select field type
