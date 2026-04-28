@@ -5,6 +5,7 @@ use App\Domain\Settings\GeneralSettings;
 use App\Domain\Settings\Resolvers\TenantStorageResolver;
 use App\Http\Middleware\TokenAuthMiddleware;
 use App\Infrastructure\Models\Tenant;
+use Illuminate\Support\Facades\Mail;
 
 use function Pest\Laravel\actingAs;
 use function Pest\Laravel\getJson;
@@ -24,6 +25,8 @@ beforeEach(function () {
     $this->mock(TenantStorageResolver::class, function ($mock) {
         $mock->shouldReceive('testConnection')->andReturn(true);
     })->makePartial();
+
+    Mail::fake();
 
     withoutMiddleware(TokenAuthMiddleware::class);
 });

@@ -2,10 +2,13 @@
 
 namespace App\Http\Requests;
 
+use App\Domain\Settings\EmailSettings;
 use App\Domain\Settings\Resolvers\TenantStorageResolver;
 use App\Domain\Settings\StorageSettings;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Validator;
 
 class UpdateSettingsRequest extends FormRequest
@@ -75,13 +78,53 @@ class UpdateSettingsRequest extends FormRequest
                         && ($config['s3_bucket'] ?? '') === $currentSettings->s3_bucket
                         && ($config['s3_endpoint'] ?? '') === $currentSettings->s3_endpoint;
 
-                    if ($isUnchanged) {
-                        return;
+                    if (! $isUnchanged) {
+                        $resolver = app(TenantStorageResolver::class);
+                        if (! $resolver->testConnection($config)) {
+                            $validator->errors()->add('storage.storage_driver', 'The S3 credentials are invalid or the bucket is not writable.');
+                        }
                     }
+                }
 
-                    $resolver = app(TenantStorageResolver::class);
-                    if (! $resolver->testConnection($config)) {
-                        $validator->errors()->add('storage.storage_driver', 'The S3 credentials are invalid or the bucket is not writable.');
+                // Email Validation
+                $emailConfig = $this->input('email', []);
+                $currentEmailSettings = app(EmailSettings::class);
+
+                $isEmailUnchanged =
+                    ($emailConfig['mail_driver'] ?? '') === $currentEmailSettings->mail_driver
+                    && ($emailConfig['mail_host'] ?? '') === $currentEmailSettings->mail_host
+                    && (int) ($emailConfig['mail_port'] ?? 0) === $currentEmailSettings->mail_port
+                    && ($emailConfig['mail_encryption'] ?? '') === $currentEmailSettings->mail_encryption
+                    && ($emailConfig['mail_username'] ?? '') === $currentEmailSettings->mail_username
+                    && ($emailConfig['mail_password'] ?? '') === $currentEmailSettings->mail_password
+                    && ($emailConfig['mail_from_address'] ?? '') === $currentEmailSettings->mail_from_address
+                    && ($emailConfig['mail_from_name'] ?? '') === $currentEmailSettings->mail_from_name;
+
+                if (! $isEmailUnchanged && ! empty($emailConfig)) {
+                    $testMailer = '__test_email_connection_'.uniqid();
+                    try {
+                        $mailerConfig = [
+                            'transport' => $emailConfig['mail_driver'] ?? 'smtp',
+                            'host' => $emailConfig['mail_host'] ?? '127.0.0.1',
+                            'port' => $emailConfig['mail_port'] ?? 1025,
+                            'encryption' => $emailConfig['mail_encryption'] ?? 'tls',
+                            'username' => $emailConfig['mail_username'] ?? null,
+                            'password' => $emailConfig['mail_password'] ?? null,
+                            'timeout' => 5,
+                        ];
+
+                        config(["mail.mailers.{$testMailer}" => $mailerConfig]);
+
+                        Mail::mailer($testMailer)->raw('Veloquent email connection test.', function ($message) use ($emailConfig) {
+                            $message->to($emailConfig['mail_from_address'])
+                                ->from($emailConfig['mail_from_address'], $emailConfig['mail_from_name'])
+                                ->subject('Veloquent Email Test');
+                        });
+                    } catch (\Exception $e) {
+                        Log::warning('Tenant email test failed: '.$e->getMessage());
+                        $validator->errors()->add('email.mail_driver', 'Failed to send test email: '.$e->getMessage());
+                    } finally {
+                        config(["mail.mailers.{$testMailer}" => null]);
                     }
                 }
             },
