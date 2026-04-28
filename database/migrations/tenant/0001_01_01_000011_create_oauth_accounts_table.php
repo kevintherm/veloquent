@@ -74,6 +74,6 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('oauth_accounts');
-        Collection::where('name', 'oauth')->deleteQuietly();
+        Collection::where('name', 'oauth')->delete();
     }
 };

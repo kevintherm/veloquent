@@ -67,6 +67,6 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('otp_tokens');
-        Collection::where('name', 'otps')->deleteQuietly();
+        Collection::where('name', 'otps')->delete();
     }
 };

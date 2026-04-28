@@ -1,6 +1,7 @@
 <?php
 
 use App\Domain\SchemaManagement\Exceptions\SchemaCorruptException;
+use App\Http\Middleware\SuperuserOnly;
 use App\Http\Middleware\TokenAuthMiddleware;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
@@ -38,8 +39,10 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleCors::class,
             NeedsTenant::class,
         ]);
+
         $middleware->throttleWithRedis();
         $middleware->append(TokenAuthMiddleware::class);
+
         $middleware->redirectGuestsTo(function (Request $request): ?string {
             if ($request->is('api/*') || $request->expectsJson()) {
                 return null;
@@ -47,9 +50,14 @@ return Application::configure(basePath: dirname(__DIR__))
 
             return '/';
         });
+
         $middleware->remove([
             ConvertEmptyStringsToNull::class,
             StartSession::class,
+        ]);
+
+        $middleware->alias([
+            'superuser' => SuperuserOnly::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -1,5 +1,8 @@
 ## TODO
 
+- Make task to apply tenant settings
+- Make TenantStorageResolver to check if tenant bring their own S3
+- Validate PutObject and Headbucket on switch storage settings
 - Remove hardcoded app version on config
 - App settings
 - Add deployment documentation

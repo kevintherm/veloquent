@@ -13,7 +13,7 @@ use App\Http\Controllers\LogViewerController;
 use App\Http\Controllers\OAuthController;
 use App\Http\Controllers\OAuthProviderController;
 use App\Http\Controllers\OnboardingController;
-use App\Http\Middleware\SuperuserOnly;
+use App\Http\Controllers\Settings\SettingsController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -137,7 +137,7 @@ Route::middleware('auth:api')->group(function () {
 | email template management, and OAuth provider configuration.
 |
 */
-Route::middleware(['auth:api', SuperuserOnly::class])->group(function () {
+Route::middleware(['auth:api', 'superuser'])->group(function () {
     Route::get('/schema/corrupt', [SchemaRecoveryController::class, 'index'])->name('schema.corrupt.index');
     Route::post('/collections/{collection}/recover', [SchemaRecoveryController::class, 'recover'])->name('collections.recover');
     Route::get('/schema/orphans', [OrphanTableController::class, 'index'])->name('schema.orphans.index');
@@ -162,4 +162,7 @@ Route::middleware(['auth:api', SuperuserOnly::class])->group(function () {
         Route::post('/export', [SchemaTransferController::class, 'export'])->name('export');
         Route::post('/import', [SchemaTransferController::class, 'import'])->name('import');
     });
+
+    Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
+    Route::patch('/settings', [SettingsController::class, 'update'])->name('settings.update');
 });
