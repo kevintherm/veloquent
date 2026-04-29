@@ -134,6 +134,8 @@ class SchemaTransferService
             'records' => [],
         ];
 
+        $apiRulesToApply = [];
+
         $metadataCollections = data_get($payload, 'metadata.collections', []);
 
         if (is_array($metadataCollections)) {
@@ -142,13 +144,15 @@ class SchemaTransferService
                     continue;
                 }
 
-                $result['metadata'][] = $this->importCollectionMetadataRow($collectionRow, $conflict);
+                $result['metadata'][] = $this->importCollectionMetadataRow($collectionRow, $conflict, $apiRulesToApply);
             }
         }
 
         $records = data_get($payload, 'records', []);
 
         if (! is_array($records)) {
+            $this->applyDeferredApiRules($apiRulesToApply);
+
             return $result;
         }
 
@@ -166,7 +170,8 @@ class SchemaTransferService
                 $rows,
                 $conflict,
                 $collectionsByTable->get($tableName),
-                useTransaction: false,
+                false,
+                $apiRulesToApply
             );
         }
 
@@ -188,18 +193,35 @@ class SchemaTransferService
             $tableRows = $records[$tableName] ?? [];
             $rows = is_array($tableRows) ? $tableRows : [];
 
-            $result['records'][$tableName] = DB::transaction(function () use ($tableName, $rows, $conflict, $collection): array {
+            $result['records'][$tableName] = DB::transaction(function () use ($tableName, $rows, $conflict, $collection, &$apiRulesToApply): array {
                 return $this->importTableRows(
                     $tableName,
                     $rows,
                     $conflict,
                     $collection,
-                    useTransaction: true,
+                    true,
+                    $apiRulesToApply
                 );
             });
         }
 
+        $this->applyDeferredApiRules($apiRulesToApply);
+
         return $result;
+    }
+
+    /**
+     * @param array<string, array<string, mixed>> $apiRulesToApply
+     */
+    private function applyDeferredApiRules(array $apiRulesToApply): void
+    {
+        foreach ($apiRulesToApply as $collectionName => $apiRules) {
+            $existing = Collection::query()->where('name', $collectionName)->first();
+            
+            if ($existing instanceof Collection) {
+                $this->updateCollectionAction->execute($existing, ['api_rules' => $apiRules]);
+            }
+        }
     }
 
     /**
@@ -256,11 +278,7 @@ class SchemaTransferService
             ->all();
     }
 
-    /**
-     * @param  array<string, mixed>  $row
-     * @return array<string, mixed>
-     */
-    private function importCollectionMetadataRow(array $row, string $conflict): array
+    private function importCollectionMetadataRow(array $row, string $conflict, array &$apiRulesToApply): array
     {
         $name = (string) ($row['name'] ?? '');
         $type = (string) ($row['type'] ?? CollectionType::Base->value);
@@ -292,7 +310,6 @@ class SchemaTransferService
             'name' => $name,
             'description' => $row['description'] ?? null,
             'fields' => $filteredFields,
-            'api_rules' => is_array($row['api_rules'] ?? null) ? $row['api_rules'] : [],
             'indexes' => is_array($row['indexes'] ?? null) ? $row['indexes'] : [],
             'options' => is_array($row['options'] ?? null) ? $row['options'] : [],
         ];
@@ -301,6 +318,8 @@ class SchemaTransferService
 
         if (! $existing instanceof Collection) {
             $created = $this->createCollectionAction->execute($payload);
+
+            $apiRulesToApply[$created->name] = is_array($row['api_rules'] ?? null) ? $row['api_rules'] : [];
 
             return [
                 'collection' => $created->name,
@@ -316,6 +335,8 @@ class SchemaTransferService
         }
 
         $updated = $this->updateCollectionAction->execute($existing, Arr::except($payload, ['type', 'is_system']));
+
+        $apiRulesToApply[$updated->name] = is_array($row['api_rules'] ?? null) ? $row['api_rules'] : [];
 
         return [
             'collection' => $updated->name,
@@ -359,16 +380,13 @@ class SchemaTransferService
         return array_values(array_unique($tables));
     }
 
-    /**
-     * @param  list<mixed>  $rows
-     * @return array{inserted: int, updated: int, skipped: int}
-     */
     private function importTableRows(
         string $tableName,
         array $rows,
         string $conflict,
         ?Collection $collection,
         bool $useTransaction,
+        array &$apiRulesToApply,
     ): array {
         $this->assertTableExists($tableName);
 
@@ -384,7 +402,7 @@ class SchemaTransferService
             }
 
             if ($tableName === 'collections') {
-                $metadataResult = $this->importCollectionMetadataRow($row, $conflict);
+                $metadataResult = $this->importCollectionMetadataRow($row, $conflict, $apiRulesToApply);
                 $action = $metadataResult['action'] ?? 'skipped';
 
                 if ($action === 'created') {
