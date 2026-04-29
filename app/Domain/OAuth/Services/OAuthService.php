@@ -9,6 +9,7 @@ use App\Domain\Collections\Enums\CollectionType;
 use App\Domain\Collections\Models\Collection;
 use App\Domain\OAuth\Factory\OAuthDriverFactory;
 use App\Domain\OAuth\Models\OAuthAccount;
+use App\Domain\OAuth\Models\OAuthProvider;
 use App\Domain\Records\Models\Record;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
@@ -87,7 +88,15 @@ class OAuthService
             $exchangeCode = Str::random(60);
             Cache::put("oauth_exchange:{$exchangeCode}", $tokenData, now()->addMinutes(5));
 
-            return ['code' => $exchangeCode];
+            $oauthProvider = OAuthProvider::query()
+                ->where('collection_id', $collection->id)
+                ->where('provider', $provider)
+                ->first();
+
+            return [
+                'code' => $exchangeCode,
+                'redirect_uri' => $oauthProvider?->redirect_uri,
+            ];
         } finally {
             $lock->release();
         }

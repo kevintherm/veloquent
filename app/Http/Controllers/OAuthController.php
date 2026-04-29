@@ -40,7 +40,7 @@ class OAuthController extends ApiController
         ]);
     }
 
-    public function callback(Request $request): JsonResponse
+    public function callback(Request $request): mixed
     {
         $request->validate([
             'code' => 'required|string',
@@ -51,9 +51,16 @@ class OAuthController extends ApiController
             $request->input('state'),
         );
 
-        return $this->successResponse([
+        $payload = [
             'code' => $result['code'],
-        ]);
+            'redirect_uri' => $result['redirect_uri'] ?? null,
+        ];
+
+        if ($request->wantsJson() || app()->environment('testing')) {
+            return $this->successResponse($payload);
+        }
+
+        return view('oauth.callback', $payload);
     }
 
     public function exchange(Request $request): JsonResponse

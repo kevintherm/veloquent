@@ -30,7 +30,7 @@ class OAuthProviderController extends ApiController
             'enabled' => 'boolean',
             'client_id' => 'required|string',
             'client_secret' => 'required|string',
-            'redirect_uri' => 'nullable|string|url',
+            'redirect_uri' => 'nullable|string',
             'scopes' => 'nullable|array',
             'scopes.*' => 'string',
         ]);
@@ -55,7 +55,7 @@ class OAuthProviderController extends ApiController
             'enabled' => 'boolean',
             'client_id' => 'sometimes|required|string',
             'client_secret' => 'sometimes|required|string',
-            'redirect_uri' => 'nullable|string|url',
+            'redirect_uri' => 'nullable|string',
             'scopes' => 'nullable|array',
             'scopes.*' => 'string',
         ]);
