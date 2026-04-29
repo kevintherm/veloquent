@@ -1,5 +1,8 @@
 ## TODO
 
+- Fix: Schema Transfer silently fail but does not return appropriate message
+- Fix: Schema Transfer fails to update API Rules
+- Fix: Schema Transfer cannot add new fields for existing collections
 - SDK: OAuth login flow
 - Add deployment documentation
 - Battle Testing
