@@ -53,6 +53,7 @@ class OAuthController extends ApiController
 
         $payload = [
             'code' => $result['code'],
+            'exchange_code' => $result['code'],
             'redirect_uri' => $result['redirect_uri'] ?? null,
         ];
 
