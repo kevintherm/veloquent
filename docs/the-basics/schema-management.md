@@ -38,7 +38,7 @@ The Schema Transfer feature is exposed via the API and is restricted to **Superu
 - **Metadata Export**: Exporting collection definitions, fields, API rules, and indexes.
 - **Full Backup**: Exporting both metadata and all records in selected collections.
 - **System Tables**: Transferring core system data like superusers, email templates, and OAuth providers.
-- **Import with Conflict Resolution**: Restoring data with options to skip or overwrite existing records.
+- **Import with Conflict Resolution**: Restoring data with options to skip or overwrite existing records. Overwrite mode intelligently merges new fields into existing collections without dropping reserved auth fields.
 
 ## Exporting Data
 
@@ -68,10 +68,19 @@ To import data, send a `POST` request to `/api/schema/transfer/import` with the 
 
 ## Important Considerations
 
-### *Stale Relation Data
-Relation fields store references to other records (often by ID). When importing records into a new environment, **relation fields will contain stale data** if the referenced records' IDs have changed or do not exist in the target environment. You must manually verify and update these relations after the import is complete.
+> [!WARNING]
+> Data imports are complex operations that can result in data loss or broken relations if not managed carefully. Always back up your target database before performing an import.
 
-### *System Collections & Transactions
+### Cross-Environment Relations
+Relation fields store references to other collections via `target_collection_id`. Because UUIDs vary between environments, these relations will likely point to non-existent IDs after an import. Veloquent will flag these collections with a warning in the import result, and you should manually reconfigure these relation fields in the collection settings after the import.
+
+### Stale Record Data
+While collection mappings are resolved, **individual record IDs** in relation fields may still contain stale data if the referenced records do not exist or have different IDs in the target environment. You should verify record-level relations after a data import.
+
+### API Rule Resilience
+API rules are imported in a deferred pass and are applied directly to the collections without linting. This prevents the import from failing if rules reference fields or collections that haven't been fully initialized or exist in different environments. However, this means you might import invalid rules; you should verify your API rules after the import. If you attempt to edit a collection schema through the UI later, the normal linting process will identify any issues.
+
+### System Collections & Transactions
 Importing **system collections** (e.g., `superusers`, `collections`) does **not use database transactions**.
 - If an error occurs (e.g., a SQL unique constraint violation), the process will stop immediately and throw an error.
 - **Example**: If you import a `superusers` row with an email that already exists (like the default superuser email), it will cause a unique constraint error. Ensure you have handled unique fields before importing.

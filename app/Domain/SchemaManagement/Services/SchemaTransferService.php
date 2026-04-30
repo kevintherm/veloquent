@@ -10,6 +10,7 @@ use App\Domain\Records\Models\Record;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use RuntimeException;
 
@@ -32,7 +33,6 @@ class SchemaTransferService
      * @var list<string>
      */
     private const EXPOSED_SYSTEM_TABLES = [
-        'collections',
         'superusers',
         'email_templates',
         'auth_tokens',
@@ -211,15 +211,23 @@ class SchemaTransferService
     }
 
     /**
-     * @param array<string, array<string, mixed>> $apiRulesToApply
+     * Apply collected API rules directly on the model, bypassing linting.
+     * Rules may reference fields from other environments that don't exist locally.
+     * Users should reconfigure affected rules manually if needed.
+     *
+     * @param  array<string, array<string, mixed>>  $apiRulesToApply
      */
     private function applyDeferredApiRules(array $apiRulesToApply): void
     {
         foreach ($apiRulesToApply as $collectionName => $apiRules) {
+            if (empty($apiRules)) {
+                continue;
+            }
+
             $existing = Collection::query()->where('name', $collectionName)->first();
-            
+
             if ($existing instanceof Collection) {
-                $this->updateCollectionAction->execute($existing, ['api_rules' => $apiRules]);
+                $existing->update(['api_rules' => $apiRules]);
             }
         }
     }
@@ -254,12 +262,16 @@ class SchemaTransferService
      */
     private function exportCollectionMetadata(Collection $collection): array
     {
+        $fields = collect($collection->fields ?? [])
+            ->map(fn ($field): array => is_array($field) ? $field : (array) $field)
+            ->all();
+
         return [
             'type' => $collection->type->value,
             'is_system' => (bool) $collection->is_system,
             'name' => $collection->name,
             'description' => $collection->description,
-            'fields' => $collection->fields,
+            'fields' => $fields,
             'api_rules' => $collection->api_rules,
             'indexes' => $collection->indexes,
             'options' => $collection->options,
@@ -290,6 +302,8 @@ class SchemaTransferService
         $isAuthCollection = $type === CollectionType::Auth->value;
 
         $rawFields = is_array($row['fields'] ?? null) ? $row['fields'] : [];
+        $hasRelationFields = collect($rawFields)->contains(fn (mixed $f): bool => is_array($f) && ($f['type'] ?? '') === 'relation');
+
         $filteredFields = collect($rawFields)
             ->filter(fn (mixed $field): bool => is_array($field))
             ->reject(function (array $field) use ($isAuthCollection): bool {
@@ -321,11 +335,20 @@ class SchemaTransferService
 
             $apiRulesToApply[$created->name] = is_array($row['api_rules'] ?? null) ? $row['api_rules'] : [];
 
-            return [
+            $result = [
                 'collection' => $created->name,
                 'action' => 'created',
             ];
+
+            if ($hasRelationFields) {
+                $result['warning'] = 'Collection has relation fields that may need to be reconfigured for this environment.';
+                Log::warning("Collection '{$created->name}' imported with relation fields. Manual reconfiguration may be required.");
+            }
+
+            return $result;
         }
+
+        $apiRulesToApply[$existing->name] = is_array($row['api_rules'] ?? null) ? $row['api_rules'] : [];
 
         if ($conflict === 'skip') {
             return [
@@ -334,14 +357,30 @@ class SchemaTransferService
             ];
         }
 
-        $updated = $this->updateCollectionAction->execute($existing, Arr::except($payload, ['type', 'is_system']));
+        $reservedFields = collect($existing->fields ?? [])
+            ->map(fn ($field) => is_array($field) ? $field : (array) $field)
+            ->filter(function (array $field) use ($isAuthCollection): bool {
+                return in_array($field['name'] ?? '', SchemaChangePlan::getAllReservedFields($isAuthCollection), true);
+            })
+            ->values()
+            ->all();
 
-        $apiRulesToApply[$updated->name] = is_array($row['api_rules'] ?? null) ? $row['api_rules'] : [];
+        $updatePayload = Arr::except($payload, ['type', 'is_system']);
+        $updatePayload['fields'] = array_merge($reservedFields, $filteredFields);
 
-        return [
+        $updated = $this->updateCollectionAction->execute($existing, $updatePayload);
+
+        $result = [
             'collection' => $updated->name,
             'action' => 'updated',
         ];
+
+        if ($hasRelationFields) {
+            $result['warning'] = 'Collection has relation fields that may need to be reconfigured for this environment.';
+            Log::warning("Collection '{$updated->name}' updated with relation fields during import. Manual reconfiguration may be required.");
+        }
+
+        return $result;
     }
 
     /**
