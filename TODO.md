@@ -1,6 +1,5 @@
 ## TODO
 
-- Add deployment documentation
 - Battle Testing
 - Ship
 
