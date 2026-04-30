@@ -54,7 +54,7 @@ class UpdateRecordAction
             }
         }
 
-        if ($isAuthCollection && ! $bypassApiRules && (isset($data['email']) || isset($data['password']))) {
+        if ($isAuthCollection && ! $bypassApiRules && (isset($data['email']) || isset($data['password']) || isset($data['verified']))) {
             $manageRule = $collection->api_rules['manage'] ?? null;
             $canManageAuthFields = false;
 
@@ -83,6 +83,8 @@ class UpdateRecordAction
                         'password' => 'Password cannot be changed directly. Use the password reset flow.',
                     ]);
                 }
+
+                unset($data['verified']);
             }
         }
 
