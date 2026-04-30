@@ -33,7 +33,7 @@ import {
     PaginationNext,
     PaginationPrevious,
 } from "@/components/ui/pagination";
-import { computed, watchEffect, ref, onMounted, onUnmounted } from "vue";
+import { computed, ref, onUnmounted } from "vue";
 import { getAuthToken } from "@/lib/tokenAuth";
 import { stripHtml } from "@/lib/utils";
 

@@ -11,8 +11,7 @@ import ApiTest from "@/pages/Settings/ApiTest.vue";
 import SchemaMaintenance from "@/pages/Settings/SchemaMaintenance.vue";
 import SchemaTransfer from "@/pages/Settings/SchemaTransfer.vue";
 import SettingsForm from "@/components/SettingsForm.vue";
-import { Database, FlaskConical, FileJson, Settings as SettingsIcon, Info } from "lucide-vue-next";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui";
+import { Database, FlaskConical, FileJson, Settings as SettingsIcon } from "lucide-vue-next";
 </script>
 
 <template>

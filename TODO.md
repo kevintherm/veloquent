@@ -1,12 +1,12 @@
 ## TODO
 
-- Replace email templates input from rich text to plain textarea
 - Add deployment documentation
 - Battle Testing
 - Ship
 
 ## Roadmap
 
+- Dark mode to admin panel
 - Schema SDK sync (Typed)
 - Add expand option to realtime
 - Add Select field type

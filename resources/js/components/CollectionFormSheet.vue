@@ -32,7 +32,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui";
 import { Plus, Trash2, Copy, ArrowDown, ArrowUp, Settings2, FileJson, MoreVertical, Wrench, Lock, Unlock, List, Eye, Pencil, CirclePlus, RotateCcw, Mail, Save } from "lucide-vue-next";
-import TiptapEditor from "./TiptapEditor.vue";
+import CodeEditor from "./CodeEditor.vue";
 import { useDashboardState } from "@/lib/dashboardState";
 import Select from "./ui/select/Select.vue";
 import SelectTrigger from "./ui/select/SelectTrigger.vue";
@@ -1799,7 +1799,7 @@ onMounted(async () => {
                       Save
                     </Button>
                   </div>
-                  <div class="p-0 bg-background min-h-62.5 relative">
+                  <div class="p-0 bg-background h-[400px] relative">
                     <div v-if="templates[action].loading"
                       class="absolute inset-0 flex items-center justify-center bg-background/50 z-10 backdrop-blur-[1px]">
                       <span
@@ -1813,7 +1813,7 @@ onMounted(async () => {
                         initially.
                       </p>
                     </div>
-                    <TiptapEditor v-if="!isCreating && activeTab === 'options' && !templates[action].loading"
+                    <CodeEditor v-if="!isCreating && activeTab === 'options' && !templates[action].loading"
                       v-model="templates[action].content" :placeholders="TEMPLATE_PLACEHOLDERS"
                       placeholder="Write your email template content here..." />
                   </div>
