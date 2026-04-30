@@ -1,5 +1,7 @@
 ## TODO
 
+- Fix: OAuth create account failed to set verified to true when email is present
+- Fix: OAuth callback does not return the exchange code
 - Fix: Schema Transfer silently fail but does not return appropriate message
 - Fix: Schema Transfer fails to update API Rules
 - Fix: Schema Transfer cannot add new fields for existing collections
