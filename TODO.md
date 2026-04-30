@@ -1,6 +1,6 @@
 ## TODO
 
-- Fix: OAuth create account failed to set verified to true when email is present
+- Fix: Ignore reserved field verified to be changed by non superuser
 - Fix: OAuth callback does not return the exchange code
 - Fix: Schema Transfer silently fail but does not return appropriate message
 - Fix: Schema Transfer fails to update API Rules
