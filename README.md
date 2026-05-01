@@ -4,47 +4,35 @@
 
 # Veloquent
 
-Veloquent is an open-source backend skeleton powered by Laravel. It provides standard BaaS features like real-time broadcasting, multi-provider authentication, and a flexible database abstraction layer, all within a developer-friendly ecosystem.
+Veloquent is an open-source Backend-as-a-Service (BaaS) built on Laravel. It provides authentication, database, storage, real-time capabilities, and multi-tenancy out of the box.
 
-## Core Features
+## Core Philosophy
 
-- **Dynamic Collection**: Create your schema on the fly.
-- **Authentication Ready**: Auth collection provide authentication ready-to-use out of the box.
-- **Real-time Broadcasting**: Native support for horizontal scaling with Reverb and custom workers.
+Veloquent is designed to power multiple applications from a single instance, bringing multi-tenant capabilities directly to your workflow. Built on Laravel, it can be deployed anywhere a Laravel application runs. It also includes a built-in admin panel for easy management of your applications.
 
-## Documentation
+## Key Features
 
-Comprehensive documentation is available in the `docs` directory:
+- **Dynamic Collections**: Create and manage your database tables through a simple UI or API.
+- **Rich Field Types**: Support for a variety of field types, including `Text`, `Number`, `Boolean`, `Datetime`, `Email`, `Relation`, and more.
+- **Expression-based Rules**: Secure your data with granular access control using Firebase-like rules.
+- **User Management**: Built-in authentication for your users with support for standard and OAuth flows.
+- **Real-time Subscriptions**: Build reactive applications with ease using WebSockets.
+- **Multi-tenancy**: Power multiple applications from a single instance.
 
-- [Introduction](docs/getting-started/introduction.md)
-- [Installation Guide](docs/getting-started/quickstart.md)
+## Agent Support
 
-## Installation Quick Start
+You can access the documentation in pure Markdown format by appending a `.md` extension to any page URL.
 
-Install using composer:
+Example:
+[https://velophp.com/docs/1.x/getting-started/introduction](https://velophp.com/docs/1.x/getting-started/introduction) → [https://velophp.com/docs/1.x/getting-started/introduction.md](https://velophp.com/docs/1.x/getting-started/introduction.md)
 
-```bash
-composer create-project veloquent/veloquent awesome-baas
-cd awesome-baas
-php artisan serve
-```
+Alternatively, you can use `/llms.txt` or `/llms-full.txt` to retrieve fully compiled Markdown documentation, ready for use in agent development.
 
-Veloquent post install script will automatically create a default tenant with the domain localhost, and then serve the project using PHP's built in server at port 8000. Make sure the port is not blocked.
-Next, visit [http://localhost:8000](http://localhost:8000).
+[https://velophp.com/llms.txt](https://velophp.com/llms.txt)
 
-> If you use port other than 8000, make sure to update your APP_URL port to use that port as well.
+## Getting Started
 
-Run these in separate terminals
-```
-./vendor/bin/sail artisan realtime:worker
-./vendor/bin/sail artisan queue:work
-```
-
-For more detailed instructions, see the [Installation Guide](https://velophp.com/docs/quickstart).
-
-## Known Issues
-
-- **Circular Dependencies**: Circular dependency and cascade on delete may cause infinite loops in certain edge cases. Use with caution during high-frequency schema modifications.
+To get started with Veloquent, the quickest path is following the [Quickstart Guide](../getting-started/quickstart.md).
 
 ## Roadmap & Progress
 
