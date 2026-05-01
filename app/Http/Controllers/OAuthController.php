@@ -49,6 +49,7 @@ class OAuthController extends ApiController
 
         $result = $this->oauthService->handleCallback(
             $request->input('state'),
+            $request->boolean('native'),
         );
 
         $payload = [

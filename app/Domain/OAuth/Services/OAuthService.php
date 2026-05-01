@@ -53,7 +53,7 @@ class OAuthService
      *
      * @return array{code: string}
      */
-    public function handleCallback(string $state): array
+    public function handleCallback(string $state, bool $isNative = false): array
     {
         $payload = Cache::pull("oauth_state:{$state}");
 
@@ -75,7 +75,8 @@ class OAuthService
         }
 
         try {
-            $driver = $this->driverFactory->make($collection->id, $provider);
+            $redirectOverride = $isNative ? '' : null;
+            $driver = $this->driverFactory->make($collection->id, $provider, $redirectOverride);
 
             /** @var SocialiteUser $socialiteUser */
             $socialiteUser = $driver->stateless()->user();

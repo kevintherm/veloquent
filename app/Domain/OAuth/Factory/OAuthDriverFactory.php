@@ -21,7 +21,7 @@ class OAuthDriverFactory
         'x' => TwitterProvider::class,
     ];
 
-    public function make(string $collectionId, string $provider): AbstractProvider
+    public function make(string $collectionId, string $provider, ?string $redirectOverride = null): AbstractProvider
     {
         $class = self::PROVIDERS[$provider]
             ?? abort(422, "Unsupported provider: {$provider}");
@@ -36,11 +36,13 @@ class OAuthDriverFactory
                 ->firstOrFail()
         );
 
+        $redirectUrl = $redirectOverride ?? (! empty($config->redirect_uri) ? $config->redirect_uri : route('oauth.callback'));
+
         return new $class(
             request: app(Request::class),
             clientId: $config->client_id,
             clientSecret: $config->client_secret,
-            redirectUrl: ! empty($config->redirect_uri) ? $config->redirect_uri : route('oauth.callback'),
+            redirectUrl: $redirectUrl,
         );
     }
 }
