@@ -39,7 +39,7 @@ class OAuthService
         Cache::put("oauth_state:{$state}", [
             'provider' => $provider,
             'collection' => $collection->id,
-        ], now()->addMinutes(15));
+        ], now()->addSeconds(config('velo.oauth.state_ttl', 300)));
 
         return $driver->stateless()
             ->with(['state' => $state])
@@ -86,7 +86,7 @@ class OAuthService
 
             $tokenData = $this->tokenService->generateToken($record);
             $exchangeCode = Str::random(60);
-            Cache::put("oauth_exchange:{$exchangeCode}", $tokenData, now()->addMinutes(5));
+            Cache::put("oauth_exchange:{$exchangeCode}", $tokenData, now()->addSeconds(config('velo.oauth.exchange_ttl', 90)));
 
             $oauthProvider = OAuthProvider::query()
                 ->where('collection_id', $collection->id)

@@ -77,6 +77,8 @@ return [
     */
     'oauth' => [
         'name_field_candidates' => ['name', 'username', 'fullname', 'full_name', 'first_name'],
+        'state_ttl' => (int) env('VELO_OAUTH_STATE_TTL', 300), // Seconds (5 Min default)
+        'exchange_ttl' => (int) env('VELO_OAUTH_EXCHANGE_TTL', 90), // Seconds (1.5 Min default)
     ],
 
     /*
