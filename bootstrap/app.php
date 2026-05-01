@@ -13,6 +13,8 @@ use Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull;
 use Illuminate\Http\Middleware\HandleCors;
 use Illuminate\Http\Request;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Validation\ValidationException;
 use Spatie\Multitenancy\Exceptions\NoCurrentTenant;
 use Spatie\Multitenancy\Http\Middleware\NeedsTenant;
@@ -53,7 +55,12 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->remove([
             ConvertEmptyStringsToNull::class,
+        ]);
+
+        $middleware->web(remove: [
             StartSession::class,
+            ShareErrorsFromSession::class,
+            ValidateCsrfToken::class,
         ]);
 
         $middleware->alias([
