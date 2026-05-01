@@ -28,13 +28,25 @@ class RedisRealtimeBus implements RealtimeBusDriver
 
     public function listen(callable $callback, Closure $shouldStop): void
     {
+        $connection = Redis::connection('realtime');
+
         while (! $shouldStop()) {
             try {
-                Redis::connection('realtime')->psubscribe(
+                $client = $connection->client();
+
+                if (method_exists($client, 'setOption')) {
+                    $client->setOption(\Redis::OPT_READ_TIMEOUT, 2.0);
+                }
+
+                $connection->psubscribe(
                     [self::CHANNEL_PATTERN],
-                    function (...$args) use ($callback, $shouldStop): void {
+                    function (...$args) use ($callback, $shouldStop, $connection): void {
                         if ($shouldStop()) {
-                            Redis::connection('realtime')->punsubscribe();
+                            try {
+                                $connection->punsubscribe();
+                            } catch (\Throwable) {
+                                //
+                            }
 
                             return;
                         }
@@ -60,16 +72,24 @@ class RedisRealtimeBus implements RealtimeBusDriver
                     }
                 );
             } catch (\Throwable $e) {
-                Log::warning('Realtime Redis listener failed. Retrying...', [
-                    'message' => $e->getMessage(),
-                ]);
+                $message = $e->getMessage();
+                $isTimeout = str_contains($message, 'read error on connection')
+                    || str_contains($message, 'timeout');
+
+                if (! $isTimeout) {
+                    Log::warning('Realtime Redis listener failed. Retrying...', [
+                        'message' => $message,
+                    ]);
+                }
 
                 try {
-                    Redis::connection('realtime')->disconnect();
+                    $connection->disconnect();
                 } catch (\Throwable) {
                 }
 
-                usleep(self::RECONNECT_DELAY_US);
+                if (! $isTimeout) {
+                    usleep(self::RECONNECT_DELAY_US);
+                }
             }
         }
     }
