@@ -29,7 +29,7 @@ class LogsServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        if ($this->app->runningInConsole()) {
+        if ($this->app->runningInConsole() && ! $this->app->runningUnitTests()) {
             return;
         }
 
@@ -111,7 +111,7 @@ class LogsServiceProvider extends ServiceProvider
                 'method' => $request->method(),
                 'url' => $request->fullUrl(),
                 'status' => $response->getStatusCode(),
-                'ip' => $request->ip(),
+                'ip' => config('velo.logs.ip_enabled') ? $request->ip() : null,
                 'headers' => collect($request->headers->all())
                     ->except(['authorization', 'cookie', 'x-xsrf-token'])
                     ->map(fn ($v) => $v[0] ?? $v)
