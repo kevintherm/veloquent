@@ -17,9 +17,13 @@ class RedisRealtimeBus implements RealtimeBusDriver
 
     public function publish(array $payload): void
     {
-        $encodedPayload = json_encode($payload);
+        $encodedPayload = json_encode($payload, JSON_INVALID_UTF8_SUBSTITUTE);
 
         if ($encodedPayload === false) {
+            Log::warning('Realtime payload JSON encoding failed.', [
+                'error' => json_last_error_msg(),
+            ]);
+
             return;
         }
 
