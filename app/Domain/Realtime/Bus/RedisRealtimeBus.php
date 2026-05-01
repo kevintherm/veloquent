@@ -9,11 +9,11 @@ use Illuminate\Support\Facades\Redis;
 
 class RedisRealtimeBus implements RealtimeBusDriver
 {
-    private const CHANNEL = 'realtime:events';
+    private const STREAM = 'realtime:events';
 
-    private const CHANNEL_PATTERN = '*realtime:events';
+    private const BLOCK_MS = 2000; // unblocks every 2s to check shouldStop()
 
-    private const RECONNECT_DELAY_US = 500_000;
+    private const MAX_MESSAGES = 10;
 
     public function publish(array $payload): void
     {
@@ -27,73 +27,49 @@ class RedisRealtimeBus implements RealtimeBusDriver
             return;
         }
 
-        Redis::connection('realtime')->publish(self::CHANNEL, $encodedPayload);
+        Redis::connection('realtime')->xadd(self::STREAM, '*', ['data' => $encodedPayload], 1000, true);
     }
 
     public function listen(callable $callback, Closure $shouldStop): void
     {
-        $connection = Redis::connection('realtime');
+        $lastId = '$';
 
         while (! $shouldStop()) {
             try {
-                $client = $connection->client();
-
-                if (method_exists($client, 'setOption')) {
-                    $client->setOption(\Redis::OPT_READ_TIMEOUT, 2.0);
-                }
-
-                $connection->psubscribe(
-                    [self::CHANNEL_PATTERN],
-                    function (...$args) use ($callback, $shouldStop, $connection): void {
-                        if ($shouldStop()) {
-                            try {
-                                $connection->punsubscribe();
-                            } catch (\Throwable) {
-                                //
-                            }
-
-                            return;
-                        }
-
-                        $message = null;
-
-                        foreach ($args as $arg) {
-                            if (is_string($arg) && ($arg[0] ?? null) === '{') {
-                                $message = $arg;
-                                break;
-                            }
-                        }
-
-                        if (! is_string($message)) {
-                            return;
-                        }
-
-                        $payload = json_decode($message, true);
-
-                        if (is_array($payload)) {
-                            $callback($payload);
-                        }
-                    }
+                $results = Redis::connection('realtime')->xread(
+                    [self::STREAM => $lastId],
+                    self::MAX_MESSAGES,
+                    self::BLOCK_MS,
                 );
-            } catch (\Throwable $e) {
-                $message = $e->getMessage();
-                $isTimeout = str_contains($message, 'read error on connection')
-                    || str_contains($message, 'timeout');
 
-                if (! $isTimeout) {
-                    Log::warning('Realtime Redis listener failed. Retrying...', [
-                        'message' => $message,
-                    ]);
+                if (empty($results)) {
+                    continue;
                 }
+
+                foreach ($results[self::STREAM] ?? [] as $id => $entry) {
+                    $lastId = $id;
+
+                    if (! isset($entry['data'])) {
+                        continue;
+                    }
+
+                    $payload = json_decode($entry['data'], true);
+
+                    if (is_array($payload)) {
+                        $callback($payload);
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Realtime Redis listener failed. Retrying...', [
+                    'message' => $e->getMessage(),
+                ]);
 
                 try {
-                    $connection->disconnect();
+                    Redis::connection('realtime')->disconnect();
                 } catch (\Throwable) {
                 }
 
-                if (! $isTimeout) {
-                    usleep(self::RECONNECT_DELAY_US);
-                }
+                usleep(500_000);
             }
         }
     }
