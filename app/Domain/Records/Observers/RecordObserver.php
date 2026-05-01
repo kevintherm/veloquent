@@ -7,6 +7,7 @@ use App\Domain\Records\Models\Record;
 use App\Domain\Records\Services\FileFieldProcessor;
 use App\Domain\Records\Services\RelationIntegrityService;
 use Spatie\Multitenancy\Contracts\IsTenant;
+use Spatie\Multitenancy\Landlord;
 
 class RecordObserver
 {
@@ -62,13 +63,15 @@ class RecordObserver
             return;
         }
 
-        app(RealtimeBusDriver::class)->publish([
-            'type' => 'record_event',
-            'event' => $event,
-            'tenant_id' => $tenantId,
-            'collection_id' => $collectionId,
-            'record' => $record->toArray(),
-        ]);
+        Landlord::execute(function () use ($event, $tenantId, $collectionId, $record) {
+            app(RealtimeBusDriver::class)->publish([
+                'type' => 'record_event',
+                'event' => $event,
+                'tenant_id' => $tenantId,
+                'collection_id' => $collectionId,
+                'record' => $record->toArray(),
+            ]);
+        });
     }
 
     private function resolveTenantId(): ?string
