@@ -1,0 +1,18 @@
+{
+    "name": "veloquent/core",
+    "description": "Core package of Veloquent.",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Veloquent\\Core\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Kevin",
+            "email": "kevindrm0@gmail.com"
+        }
+    ],
+    "require": {}
+}
