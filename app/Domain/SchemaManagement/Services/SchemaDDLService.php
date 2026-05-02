@@ -32,8 +32,8 @@ readonly class SchemaDDLService
                     $this->columnBlueprint($blueprint, $column);
                 }
 
-                $blueprint->timestamp('created_at')->useCurrent();
-                $blueprint->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
+                $blueprint->dateTime('created_at')->useCurrent();
+                $blueprint->dateTime('updated_at')->useCurrent()->useCurrentOnUpdate();
             });
         });
     }
@@ -74,7 +74,8 @@ readonly class SchemaDDLService
             CollectionFieldType::RichText => $blueprint->text($name),
             CollectionFieldType::Number => $blueprint->float($name),
             CollectionFieldType::Boolean => $blueprint->boolean($name),
-            CollectionFieldType::Datetime => $blueprint->timestamp($name),
+            CollectionFieldType::Datetime => $blueprint->dateTime($name),
+            CollectionFieldType::Date => $blueprint->date($name),
             CollectionFieldType::Email => $blueprint->string($name, 255),
             CollectionFieldType::Url => $blueprint->text($name),
             CollectionFieldType::Json => $blueprint->json($name),

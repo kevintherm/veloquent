@@ -31,6 +31,11 @@ class Field implements \ArrayAccess, \JsonSerializable
             ? $data['type']->value
             : $data['type'];
 
+        // Backward compability support
+        if ($typeValue === 'timestamp') {
+            $typeValue = 'datetime';
+        }
+
         $type = CollectionFieldType::from($typeValue);
         $shape = [
             ...CollectionFieldType::commonDefaults(),

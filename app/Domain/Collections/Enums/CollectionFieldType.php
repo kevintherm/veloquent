@@ -9,7 +9,8 @@ enum CollectionFieldType: string
     case RichText = 'richtext';
     case Number = 'number';
     case Boolean = 'boolean';
-    case Datetime = 'timestamp';
+    case Datetime = 'datetime';
+    case Date = 'date';
     case Email = 'email';
     case Url = 'url';
     case Json = 'json';
@@ -27,7 +28,7 @@ enum CollectionFieldType: string
             self::RichText => [],
             self::Relation => ['target_collection_id' => null, 'cascade_on_delete' => false],
             self::Number => ['min' => null, 'max' => null, 'allow_decimals' => false],
-            self::Boolean, self::Datetime, self::Json => [],
+            self::Boolean, self::Datetime, self::Date, self::Json => [],
         };
     }
 
@@ -72,7 +73,7 @@ enum CollectionFieldType: string
                 "{$prefix}.target_collection_id" => ['required', 'string', 'exists:collections,id'],
                 "{$prefix}.cascade_on_delete" => ['sometimes', 'boolean'],
             ],
-            self::LongText, self::RichText, self::Boolean, self::Datetime, self::Json => [],
+            self::LongText, self::RichText, self::Boolean, self::Datetime, self::Date, self::Json => [],
         };
     }
 
@@ -82,7 +83,7 @@ enum CollectionFieldType: string
             self::Text, self::LongText, self::RichText, self::Email => 'string',
             self::Number => 'numeric',
             self::Boolean => 'boolean',
-            self::Datetime => 'date',
+            self::Datetime, self::Date => 'date',
             self::Url => 'url',
             self::Json => 'json',
             self::File => 'array',
@@ -96,6 +97,7 @@ enum CollectionFieldType: string
             self::Number => 'float',
             self::Boolean => 'boolean',
             self::Datetime => 'datetime',
+            self::Date => 'date',
             self::Json => 'json',
             self::File => 'json',
             default => null,

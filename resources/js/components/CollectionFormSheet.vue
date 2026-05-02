@@ -31,9 +31,10 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui";
-import { Plus, Trash2, Copy, ArrowDown, ArrowUp, Settings2, FileJson, MoreVertical, Wrench, Lock, Unlock, List, Eye, Pencil, CirclePlus, RotateCcw, Mail, Save } from "lucide-vue-next";
+import { Plus, Trash2, Copy, ArrowDown, ArrowUp, Settings2, FileJson, MoreVertical, Wrench, Lock, Unlock, List, Eye, Pencil, CirclePlus, RotateCcw, Mail, Save, ChevronDown } from "lucide-vue-next";
 import CodeEditor from "./CodeEditor.vue";
 import { useDashboardState } from "@/lib/dashboardState";
+import { resolveCollectionFieldTypeIcon } from "@/lib/collectionFieldTypeIcons";
 import Select from "./ui/select/Select.vue";
 import SelectTrigger from "./ui/select/SelectTrigger.vue";
 import SelectValue from "./ui/select/SelectValue.vue";
@@ -90,7 +91,8 @@ const fieldTypes = [
   { value: "richtext", label: "Rich Text" },
   { value: "number", label: "Number" },
   { value: "boolean", label: "Boolean" },
-  { value: "timestamp", label: "Timestamp" },
+  { value: "datetime", label: "Datetime" },
+  { value: "date", label: "Date" },
   { value: "email", label: "Email" },
   { value: "url", label: "URL" },
   { value: "json", label: "JSON" },
@@ -1093,7 +1095,7 @@ onMounted(async () => {
                 <Input id="collectionDescription" v-model="formState.description" placeholder="Optional description"
                   @input="clearValidationError('description')" />
                 <p v-if="firstErrorFor('description')" class="text-xs text-destructive">{{ firstErrorFor('description')
-                }}</p>
+                  }}</p>
               </div>
 
               <div class="grid gap-2">
@@ -1132,12 +1134,34 @@ onMounted(async () => {
                   </div>
                   <div class="space-y-2">
                     <Label class="text-xs font-semibold tracking-wide text-primary/80 uppercase">Field Type</Label>
-                    <select v-model="newField.type"
-                      class="flex h-9 w-full items-center justify-between rounded-md border border-primary/20 bg-background px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring">
-                      <option v-for="ft in fieldTypes" :key="ft.value" :value="ft.value">
-                        {{ ft.label }}
-                      </option>
-                    </select>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger as-child>
+                        <Button variant="outline"
+                          class="w-full justify-between font-normal border-primary/20 bg-background hover:bg-background h-9">
+                          <div class="flex items-center gap-2 overflow-hidden">
+                            <component :is="resolveCollectionFieldTypeIcon(newField.type)"
+                              class="h-4 w-4 shrink-0 text-muted-foreground" />
+                            <span class="truncate">{{fieldTypes.find(ft => ft.value === newField.type)?.label ||
+                              'Select type...'}}</span>
+                          </div>
+                          <ChevronDown class="h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent class="w-80 sm:w-[480px] p-2 bg-background border shadow-lg" align="start">
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-1">
+                          <DropdownMenuItem v-for="ft in fieldTypes" :key="ft.value" as-child>
+                            <button type="button"
+                              class="flex flex-col items-center justify-center gap-2 p-3 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors group cursor-pointer"
+                              @click="newField.type = ft.value">
+                              <div class="p-2 rounded-full bg-muted group-hover:bg-background transition-colors">
+                                <component :is="resolveCollectionFieldTypeIcon(ft.value)" class="h-5 w-5" />
+                              </div>
+                              <span class="text-[11px] font-medium text-center truncate w-full">{{ ft.label }}</span>
+                            </button>
+                          </DropdownMenuItem>
+                        </div>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
 
@@ -1202,19 +1226,19 @@ onMounted(async () => {
                           class="h-9 focus-visible:ring-1 border-primary/20 bg-background" placeholder="Optional" />
                       </div>
                       <div class="space-y-2">
-                        <Label class="text-xs font-semibold tracking-wide text-primary/80 uppercase">Max Size (KB)</Label>
+                        <Label class="text-xs font-semibold tracking-wide text-primary/80 uppercase">Max Size
+                          (KB)</Label>
                         <Input v-model.number="newField.max_size_kb" type="number"
                           class="h-9 focus-visible:ring-1 border-primary/20 bg-background" placeholder="Optional" />
                       </div>
                     </div>
                     <div class="space-y-2">
-                      <Label class="text-xs font-semibold tracking-wide text-primary/80 uppercase">Allowed MIME Types</Label>
-                      <Input
-                        :model-value="(newField.allowed_mime_types ?? []).join(', ')"
+                      <Label class="text-xs font-semibold tracking-wide text-primary/80 uppercase">Allowed MIME
+                        Types</Label>
+                      <Input :model-value="(newField.allowed_mime_types ?? []).join(', ')"
                         class="h-9 focus-visible:ring-1 border-primary/20 bg-background"
                         placeholder="e.g. application/pdf, image/png"
-                        @update:model-value="(value) => { newField.allowed_mime_types = normalizeMimeTypeList(value); }"
-                      />
+                        @update:model-value="(value) => { newField.allowed_mime_types = normalizeMimeTypeList(value); }" />
                     </div>
                   </div>
                 </div>
@@ -1327,13 +1351,36 @@ onMounted(async () => {
                     <div class="space-y-2">
                       <Label class="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Field
                         Type</Label>
-                      <select v-model="field.type" :disabled="isExistingField(field)"
-                        class="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                        @change="clearValidationError(`fields.${index}.type`)">
-                        <option v-for="ft in fieldTypes" :key="ft.value" :value="ft.value">
-                          {{ ft.label }}
-                        </option>
-                      </select>
+                      <DropdownMenu :disabled="isExistingField(field)">
+                        <DropdownMenuTrigger as-child>
+                          <Button variant="outline"
+                            class="w-full justify-between font-normal border-input bg-transparent hover:bg-transparent h-9"
+                            :disabled="isExistingField(field)">
+                            <div class="flex items-center gap-2 overflow-hidden">
+                              <component :is="resolveCollectionFieldTypeIcon(field.type)"
+                                class="h-4 w-4 shrink-0 text-muted-foreground" />
+                              <span class="truncate">{{
+                                fieldTypes.find(ft => ft.value === field.type)?.label ||
+                                'Select type...'}}</span>
+                            </div>
+                            <ChevronDown class="h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent class="w-80 sm:w-[480px] p-2 bg-popover border shadow-lg" align="start">
+                          <div class="grid grid-cols-2 sm:grid-cols-4 gap-1">
+                            <DropdownMenuItem v-for="ft in fieldTypes" :key="ft.value" as-child>
+                              <button type="button"
+                                class="flex flex-col items-center justify-center gap-2 p-3 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors group cursor-pointer"
+                                @click="field.type = ft.value; clearValidationError(`fields.${index}.type`)">
+                                <div class="p-2 rounded-full bg-muted group-hover:bg-background transition-colors">
+                                  <component :is="resolveCollectionFieldTypeIcon(ft.value)" class="h-5 w-5" />
+                                </div>
+                                <span class="text-[11px] font-medium text-center truncate w-full">{{ ft.label }}</span>
+                              </button>
+                            </DropdownMenuItem>
+                          </div>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                       <p v-if="isExistingField(field)" class="text-xs text-muted-foreground">
                         Field type is locked for existing fields. Delete and recreate the field to use a different type.
                       </p>
@@ -1419,12 +1466,9 @@ onMounted(async () => {
                       <div class="space-y-2">
                         <Label class="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Allowed MIME
                           Types</Label>
-                        <Input
-                          :model-value="(field.allowed_mime_types ?? []).join(', ')"
-                          class="h-9 focus-visible:ring-1"
-                          placeholder="e.g. application/pdf, image/png"
-                          @update:model-value="(value) => { field.allowed_mime_types = normalizeMimeTypeList(value); }"
-                        />
+                        <Input :model-value="(field.allowed_mime_types ?? []).join(', ')"
+                          class="h-9 focus-visible:ring-1" placeholder="e.g. application/pdf, image/png"
+                          @update:model-value="(value) => { field.allowed_mime_types = normalizeMimeTypeList(value); }" />
                       </div>
                     </div>
                   </div>

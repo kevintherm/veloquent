@@ -30,7 +30,7 @@ beforeEach(function (): void {
 
 it('creates a tenant using generated domain and database names', function () {
     $tenantDriver = (string) config('database.connections.tenant.driver');
-    $uniqueName = 'Acme Team ' . microtime(true);
+    $uniqueName = 'Acme Team '.microtime(true);
 
     artisan('tenants:create', [
         'name' => $uniqueName,
@@ -52,12 +52,12 @@ it('creates a tenant using generated domain and database names', function () {
 });
 
 it('fails when the tenant domain already exists', function () {
-    $uniqueDomain = 'existing-' . microtime(true) . '.localhost';
+    $uniqueDomain = 'existing-'.microtime(true).'.localhost';
     Tenant::withoutEvents(function () use ($uniqueDomain): void {
         Tenant::query()->create([
             'name' => 'Existing Tenant',
             'domain' => $uniqueDomain,
-            'database' => 'tenant_existing_' . str_replace('.', '_', $uniqueDomain),
+            'database' => 'tenant_existing_'.str_replace('.', '_', $uniqueDomain),
         ]);
     });
 
@@ -74,7 +74,7 @@ it('does not insert a tenant row when tenant migrations fail', function () {
     ArtisanFacade::shouldReceive('call')->once()->andReturn(1);
 
     artisan('tenants:create', [
-        'name' => 'Broken Tenant ' . microtime(true),
+        'name' => 'Broken Tenant '.microtime(true),
     ])->assertExitCode(Command::FAILURE);
 
     expect(Tenant::query()->count())->toBe(0);

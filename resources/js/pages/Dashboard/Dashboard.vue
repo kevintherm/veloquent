@@ -162,11 +162,11 @@ const columnTypes = computed(() => {
     }
 
     if (!types.created_at) {
-        types.created_at = "timestamp";
+        types.created_at = "datetime";
     }
 
     if (!types.updated_at) {
-        types.updated_at = "timestamp";
+        types.updated_at = "datetime";
     }
 
     return types;

@@ -10,6 +10,24 @@ Each record is a JSON object that contains:
 - Automatically validated against your collection's field definitions
 - Secured by your collection's API rules
 
+## Working with Dates
+
+Veloquent treats all `datetime` and `date` fields with a strict "UTC First" policy to ensure data consistency across different client locales and timezones.
+
+### UTC Assumption
+The server **always assumes UTC** for any date or datetime value received without explicit timezone information. 
+
+> It is the client's responsibility to ensure that date and time values are sent as UTC. If you send a local datetime without an offset (e.g., `2026-05-02 12:00:00`), Veloquent will store it as `12:00:00 UTC`.
+
+### Recommended Format (ISO 8601)
+We strongly recommend sending all temporal data in **ISO 8601 UTC format** (e.g., `2024-01-15T10:30:00.000Z`). This format is unambiguous and prevents accidental timezone shifts during transmission.
+
+### Automatic Normalization
+- **Input with Offset**: If a client sends a datetime with an offset (e.g., `2026-05-02 12:00:00+07:00`), the server will automatically convert it to UTC (`2026-05-02 05:00:00Z`) before storage.
+- **Output**: All `datetime` fields returned by the API are formatted as ISO 8601 UTC strings.
+- **Date-only Fields**: `date` fields are stored and returned in `YYYY-MM-DD` format.
+
+
 ## List Records
 
 Retrieve a paginated list of records from a collection with optional filtering, sorting, and expansion.

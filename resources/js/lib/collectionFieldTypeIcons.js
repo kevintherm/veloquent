@@ -1,6 +1,7 @@
 import {
     AlignLeft,
     Binary,
+    Calendar,
     CalendarClock,
     FileText,
     Hash,
@@ -18,7 +19,8 @@ const fieldTypeIcons = {
     richtext: FileText,
     number: Hash,
     boolean: Binary,
-    timestamp: CalendarClock,
+    datetime: CalendarClock,
+    date: Calendar,
     email: Mail,
     url: Link2,
     json: WholeWord,

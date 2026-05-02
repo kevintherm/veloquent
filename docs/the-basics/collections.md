@@ -8,13 +8,6 @@ Veloquentsupports two main types of collections:
 - **Base Collections**: Standard tables for storing any kind of data.
 - **Auth Collections**: Specialized collections for user authentication. These collections include built-in fields for managing users and support standard and OAuth login flows.
 
-### System Protection
-
-Collections can be marked as `is_system`. These collections have additional protection:
-- **Locked Deletion**: Cannot be deleted via the standard API.
-- **Restricted Modification**: Certain core fields cannot be renamed or dropped to ensure application stability.
-- **Auth Lock**: The default authentication collection is always a system collection.
-
 ## Fields
 
 Each collection is made up of fields that define the structure of your records. Veloquentsupports a variety of rich field types:
@@ -26,8 +19,8 @@ Each collection is made up of fields that define the structure of your records. 
 | `richtext` | Same as longtext. Used to provide rich text editor for the admin panel. |
 | `number` | Floating point or integer numeric value. |
 | `boolean` | True/False value. |
-| `datetime` | Date and time value. |
-| `email` | Validated email address. |
+| `datetime` | Date and time value (Always stored and returned in UTC). |
+| `date` | Date-only value (YYYY-MM-DD). |
 | `url` | Validated URL. |
 | `json` | Arbitrary JSON data. |
 | `file` | Upload metadata (single or multiple files) with optional protected access. |
@@ -64,12 +57,6 @@ Relation fields allow you to create powerful connections between your data. When
 - **Collection**: The target collection to link to.
 - **Max Select**: The maximum number of records that can be linked.
 - **Cascade on Delete**: Toggle whether to automatically delete related records when a record is deleted.
-
-### Performance & Caching
-
-Veloquentuses an internal caching layer for collection metadata to minimize database overhead:
-- **`findByIdCached` / `findByNameCached`**: Models are cached based on the `velo.collection_cache_ttl` configuration.
-- **Cache Invalidation**: Caches are automatically cleared when a collection is updated or renamed.
 
 ## Next Steps
 

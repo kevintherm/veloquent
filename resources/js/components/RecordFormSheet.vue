@@ -119,6 +119,24 @@ const normalizeRecordsPayload = (payload) => {
   return [];
 };
 
+const formatDateLocal = (value) => {
+  if (!value) {
+    return "";
+  }
+
+  const parsedDate = value instanceof Date ? value : new Date(value);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "";
+  }
+
+  const year = parsedDate.getFullYear();
+  const month = String(parsedDate.getMonth() + 1).padStart(2, "0");
+  const day = String(parsedDate.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
 const formatDatetimeLocal = (value) => {
   if (!value) {
     return "";
@@ -168,8 +186,12 @@ const defaultFieldValue = (field) => {
       return formatJsonValue(existingValue);
     }
 
-    if (field.type === "timestamp") {
+    if (field.type === "datetime" || field.type === "timestamp") {
       return formatDatetimeLocal(existingValue);
+    }
+
+    if (field.type === "date") {
+      return formatDateLocal(existingValue);
     }
 
     if (field.type === "boolean") {
@@ -188,8 +210,12 @@ const defaultFieldValue = (field) => {
       return null;
     }
 
-    if (field.type === "timestamp") {
+    if (field.type === "datetime" || field.type === "timestamp") {
       return formatDatetimeLocal(field.default);
+    }
+
+    if (field.type === "date") {
+      return formatDateLocal(field.default);
     }
 
     if (field.type === "boolean") {
@@ -520,8 +546,12 @@ const resolveInputType = (field) => {
     return "password";
   }
 
-  if (field?.type === "timestamp") {
+  if (field?.type === "datetime" || field?.type === "timestamp") {
     return "datetime-local";
+  }
+
+  if (field?.type === "date") {
+    return "date";
   }
 
   if (field?.type === "number") {
@@ -711,11 +741,18 @@ const coerceFieldValue = (field, rawValue) => {
     return Boolean(rawValue);
   }
 
-  if (field.type === "timestamp") {
+  if (field.type === "datetime" || field.type === "timestamp" || field.type === "date") {
     const dateValue = new Date(rawValue);
 
     if (Number.isNaN(dateValue.getTime())) {
       return null;
+    }
+
+    if (field.type === "date") {
+      const year = dateValue.getUTCFullYear();
+      const month = String(dateValue.getUTCMonth() + 1).padStart(2, "0");
+      const day = String(dateValue.getUTCDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
     }
 
     return dateValue.toISOString();
