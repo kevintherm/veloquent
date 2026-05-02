@@ -18,6 +18,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui'
+import { oneDark } from '@codemirror/theme-one-dark'
+import { useTheme } from '@/lib/theme'
+import { Compartment } from '@codemirror/state'
 
 const props = defineProps({
   modelValue: {
@@ -40,9 +43,11 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue'])
 
+const { isDark } = useTheme()
 const editorContainer = ref(null)
 const copied = ref(false)
 let view = null
+const themeConfig = new Compartment()
 
 onMounted(() => {
   const startState = EditorState.create({
@@ -57,6 +62,7 @@ onMounted(() => {
           emit('update:modelValue', update.state.doc.toString())
         }
       }),
+      themeConfig.of(isDark.value ? oneDark : []),
       EditorView.theme({
         "&": { 
           height: "100%",
@@ -68,13 +74,13 @@ onMounted(() => {
         },
         "&.cm-focused": { outline: "none" },
         ".cm-gutters": {
-          backgroundColor: "#f9fafb",
-          color: "#9ca3af",
-          borderRight: "1px solid #e5e7eb"
+          backgroundColor: "var(--muted)",
+          color: "var(--muted-foreground)",
+          borderRight: "1px solid var(--border)"
         },
         ".cm-activeLineGutter": {
-          backgroundColor: "#f3f4f6",
-          color: "#4b5563"
+          backgroundColor: "var(--accent)",
+          color: "var(--accent-foreground)"
         },
         ".cm-content": {
           padding: "10px 0"
@@ -87,6 +93,14 @@ onMounted(() => {
     state: startState,
     parent: editorContainer.value
   })
+})
+
+watch(isDark, (dark) => {
+  if (view) {
+    view.dispatch({
+      effects: themeConfig.reconfigure(dark ? oneDark : [])
+    })
+  }
 })
 
 watch(() => props.modelValue, (value) => {

@@ -1,7 +1,8 @@
 <script setup>
 import { computed, ref, watch } from "vue";
 import { openCollectionSheet } from "@/lib/collectionFormSheet";
-import { Search, Plus, Settings, LogOut, ChevronDown, ChevronUp, FileText } from "lucide-vue-next";
+import { Search, Plus, Settings, LogOut, ChevronDown, ChevronUp, FileText, Sun, Moon } from "lucide-vue-next";
+import { useTheme } from "@/lib/theme";
 import { Button, Input } from "@/components/ui"
 import Collapsible from "@/components/ui/collapsible/Collapsible.vue";
 import CollapsibleTrigger from "@/components/ui/collapsible/CollapsibleTrigger.vue";
@@ -33,6 +34,8 @@ const props = defineProps({
         default: null,
     },
 })
+
+const { isDark, toggleDark } = useTheme();
 
 const emit = defineEmits(['update:collectionSearchQuery', 'update:activeCollection'])
 
@@ -164,11 +167,17 @@ watch(
                     <p class="text-xs text-muted-foreground truncate">{{ state.user.email }}</p>
                 </div>
             </div>
-            <Button @click="handleLogoutClick" variant="ghost"
-                class="w-full justify-start gap-2 h-9 text-muted-foreground">
-                <LogOut class="h-4 w-4" />
-                Logout
-            </Button>
+            <div class="flex items-center gap-2 mb-4">
+                <Button @click="handleLogoutClick" variant="ghost"
+                    class="flex-1 justify-start gap-2 h-9 text-muted-foreground">
+                    <LogOut class="h-4 w-4" />
+                    Logout
+                </Button>
+                <Button @click="toggleDark()" variant="ghost" size="icon" class="h-9 w-9 text-muted-foreground" title="Toggle theme">
+                    <Sun v-if="isDark" class="h-4 w-4" />
+                    <Moon v-else class="h-4 w-4" />
+                </Button>
+            </div>
         </div>
     </aside>
 </template>

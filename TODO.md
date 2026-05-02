@@ -1,7 +1,6 @@
 ## TODO
 
 - Add support for :changed, :isset, :length for api rules
-- Dark mode to admin panel
 - Battle Testing
 - Ship
 
