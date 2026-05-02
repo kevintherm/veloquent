@@ -8,6 +8,7 @@ use App\Domain\RuleEngine\Evaluators\UnifiedEvaluator;
 use App\Domain\RuleEngine\Evaluators\UnifiedInMemoryEvaluator;
 use App\Domain\RuleEngine\Resolvers\UnifiedFieldResolver;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 use Kevintherm\Exprc\Ast\ComparisonNode;
 use Kevintherm\Exprc\Ast\IdentifierNode;
 use Kevintherm\Exprc\Ast\LogicalNode;
@@ -254,6 +255,9 @@ class RuleEngine
         // Normalize date functions: date(field) -> field__date
         $filter = preg_replace('/(date|year|month|day|time)\(([^)]+)\)/i', '$2__$1', $filter);
 
+        // Evaluate dynamic date functions: daysago(30) -> "2024-04-02 12:00:00"
+        $filter = $this->normalizeDynamicDateFunctions($filter);
+
         $filter = str_replace('->', '_ARROW_', $filter); // Replace -> with something that looks like an underscore + arrow for lexer
         $filter = preg_replace('/@([A-Za-z0-9_.]+)/', '__sysvar__$1', $filter);
 
@@ -262,5 +266,63 @@ class RuleEngine
         }
 
         return $filter;
+    }
+
+    private function normalizeDynamicDateFunctions(string $filter): string
+    {
+        $simple = Tokenizer::getSimpleDateFunctions();
+        $param = Tokenizer::getParamDateFunctions();
+
+        // Handle parameterized functions first to avoid partial matches if names overlap
+        $paramPattern = '/\b('.implode('|', $param).')\((\d+)\)/i';
+        $filter = preg_replace_callback($paramPattern, function ($matches) {
+            return '"'.$this->evaluateDateFunction($matches[1], (int) $matches[2]).'"';
+        }, $filter);
+
+        // Handle simple functions
+        $simplePattern = '/\b('.implode('|', $simple).')\(\)/i';
+        $filter = preg_replace_callback($simplePattern, function ($matches) {
+            return '"'.$this->evaluateDateFunction($matches[1]).'"';
+        }, $filter);
+
+        return $filter;
+    }
+
+    private function evaluateDateFunction(string $name, ?int $value = null): string
+    {
+        $now = Carbon::now();
+
+        return match (strtolower($name)) {
+            'now' => $now->toDateTimeString(),
+            'today' => $now->toDateString(),
+            'yesterday' => $now->subDay()->toDateString(),
+            'tomorrow' => $now->addDay()->toDateString(),
+            'thisweek' => $now->startOfWeek()->toDateString(),
+            'lastweek' => $now->subWeek()->startOfWeek()->toDateString(),
+            'nextweek' => $now->addWeek()->startOfWeek()->toDateString(),
+            'thismonth' => $now->startOfMonth()->toDateString(),
+            'lastmonth' => $now->subMonth()->startOfMonth()->toDateString(),
+            'nextmonth' => $now->addMonth()->startOfMonth()->toDateString(),
+            'thisyear' => $now->startOfYear()->toDateString(),
+            'lastyear' => $now->subYear()->startOfYear()->toDateString(),
+            'nextyear' => $now->addYear()->startOfYear()->toDateString(),
+            'startofday' => $now->startOfDay()->toDateTimeString(),
+            'endofday' => $now->endOfDay()->toDateTimeString(),
+            'startofweek' => $now->startOfWeek()->toDateTimeString(),
+            'endofweek' => $now->endOfWeek()->toDateTimeString(),
+            'startofmonth' => $now->startOfMonth()->toDateTimeString(),
+            'endofmonth' => $now->endOfMonth()->toDateTimeString(),
+            'startofyear' => $now->startOfYear()->toDateTimeString(),
+            'endofyear' => $now->endOfYear()->toDateTimeString(),
+            'daysago' => $now->subDays($value)->toDateTimeString(),
+            'daysfromnow' => $now->addDays($value)->toDateTimeString(),
+            'weeksago' => $now->subWeeks($value)->toDateTimeString(),
+            'weeksfromnow' => $now->addWeeks($value)->toDateTimeString(),
+            'monthsago' => $now->subMonths($value)->toDateTimeString(),
+            'monthsfromnow' => $now->addMonths($value)->toDateTimeString(),
+            'yearsago' => $now->subYears($value)->toDateTimeString(),
+            'yearsfromnow' => $now->addYears($value)->toDateTimeString(),
+            default => throw new \RuntimeException("Unsupported date function: {$name}"),
+        };
     }
 }

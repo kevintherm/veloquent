@@ -21,8 +21,8 @@ Rules are written in a custom, human-readable expression language. For example:
 
 ### Evaluation Constraints
 
-- **SQL Evaluation**: SQL mode supports symmetric scalar comparisons for reversible operators (`=`, `!=`, `>`, `<`, `>=`, `<=`), including `field op value`, `value op field`, `field op field`, and `@request op @request`. Non-reversible operators (`like`, `not like`) require a field on the left side. See `docs/rule-engine/query-filter.md`.
-- **Memory Evaluation**: In-memory evaluation supports symmetric field and `@` variable comparisons and broader context resolution with `@request.body`, `@request.auth`, and `@request.query`. See `docs/rule-engine/rule-engine.md`.
+- **SQL Evaluation**: SQL mode supports symmetric scalar comparisons for reversible operators (`=`, `!=`, `>`, `<`, `>=`, `<=`), including `field op value`, `value op field`, `field op field`, and `@request op @request`. Non-reversible operators (`like`, `not like`) require a field on the left side. See `docs/database/query-filter.md`.
+- **Memory Evaluation**: In-memory evaluation supports symmetric field and `@` variable comparisons and broader context resolution with `@request.body`, `@request.auth`, and `@request.query`. See `docs/database/rule-engine.md`.
 
 ### Contextual Variables
 

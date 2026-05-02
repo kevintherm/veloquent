@@ -115,6 +115,18 @@ Veloquentsupports dynamic date calculations in expressions. Date functions are e
 - `monthsago(n)`, `monthsfromnow(n)`
 - `yearsago(n)`, `yearsfromnow(n)`
 
+### Field-based Functions
+
+These functions transform a datetime field into a specific part of the date for comparison.
+
+- `date(field)`: Extracts the date part (YYYY-MM-DD).
+- `year(field)`: Extracts the year as an integer.
+- `month(field)`: Extracts the month (1-12) as an integer.
+- `day(field)`: Extracts the day of the month (1-31) as an integer.
+- `time(field)`: Extracts the time part (HH:MM:SS).
+
+Example: `year(created_at) = 2024` or `date(created_at) = today()`
+
 ---
 
 ## Grammar Details
@@ -183,5 +195,5 @@ metadata->tags ?= "php"
 
 ## Related Standards
 
-- QueryFilter SQL standard: `docs/rule-engine/query-filter.md`
-- API rule usage context: `docs/api-rules.md`
+- QueryFilter SQL standard: `docs/database/query-filter.md`
+- API rule usage context: `docs/security/api-rules.md`

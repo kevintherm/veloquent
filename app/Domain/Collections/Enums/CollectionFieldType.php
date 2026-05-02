@@ -9,7 +9,7 @@ enum CollectionFieldType: string
     case RichText = 'richtext';
     case Number = 'number';
     case Boolean = 'boolean';
-    case Datetime = 'timestamp';
+    case Datetime = 'datetime';
     case Email = 'email';
     case Url = 'url';
     case Json = 'json';
