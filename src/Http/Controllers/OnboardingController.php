@@ -1,0 +1,59 @@
+<?php
+
+namespace Veloquent\Core\Http\Controllers;
+
+use Veloquent\Core\Domain\Collections\Enums\CollectionType;
+use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\Records\Models\Record;
+use Veloquent\Core\Infrastructure\Http\Controllers\ApiController;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
+
+class OnboardingController extends ApiController
+{
+    public function initialized(Request $request): JsonResponse
+    {
+        $collection = Collection::where('type', CollectionType::Auth)->where('name', 'superusers')->first();
+
+        if (! $collection) {
+            return $this->successResponse(false);
+        }
+
+        return $this->successResponse(Record::of($collection)->exists());
+    }
+
+    public function createSuperuser(Request $request): JsonResponse
+    {
+        $collection = Collection::where('type', CollectionType::Auth)->where('name', 'superusers')->first();
+
+        if (! $collection) {
+            return $this->errorResponse('Superusers collection not found', Response::HTTP_NOT_FOUND);
+        }
+
+        $superuser = Record::of($collection);
+
+        if ($superuser->exists()) {
+            return $this->errorResponse('Superuser already exists', Response::HTTP_CONFLICT);
+        }
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:superusers'],
+            'password' => ['required', 'string', 'min:8'],
+        ]);
+
+        $superuser = $superuser->create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => $validated['password'],
+        ]);
+
+        return $this->successResponse([
+            'id' => $superuser->id,
+            'name' => $superuser->name,
+            'email' => $superuser->email,
+            'created_at' => $superuser->created_at,
+        ], 'Superuser created successfully', Response::HTTP_CREATED);
+    }
+}
