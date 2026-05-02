@@ -44,7 +44,8 @@ class RecordController extends ApiController
     {
         $record = $this->createRecordAction->execute(
             $collection,
-            $request->getRecordData()
+            $request->getRecordData(),
+            $request
         );
 
         $record = new RecordResource($record);
@@ -67,6 +68,7 @@ class RecordController extends ApiController
             $collection,
             $recordId,
             $request->getRecordData(),
+            $request
         );
 
         $record = new RecordResource($updatedRecord);

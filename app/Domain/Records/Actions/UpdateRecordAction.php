@@ -10,6 +10,7 @@ use App\Domain\Records\Services\FileFieldProcessor;
 use App\Domain\Records\Services\RelationIntegrityService;
 use App\Domain\Records\Services\UpdateRuleContextBuilder;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -22,7 +23,7 @@ class UpdateRecordAction
         private readonly FileFieldProcessor $fileFieldProcessor,
     ) {}
 
-    public function execute(Collection $collection, string $recordId, array $data): Record
+    public function execute(Collection $collection, string $recordId, array $data, ?Request $request = null): Record
     {
         Gate::authorize('update-records', $collection);
 
@@ -43,7 +44,7 @@ class UpdateRecordAction
 
             if ($rule !== '') {
                 $context = app(UpdateRuleContextBuilder::class)
-                    ->build($collection, $record, $data, $authenticatedUser, request(), $rule);
+                    ->build($collection, $record, $data, $authenticatedUser, $request ?? request(), $rule);
 
                 $isAllowed = QueryFilter::for($record->newQuery(), array_keys($context))
                     ->evaluate($rule, $context);
@@ -64,7 +65,7 @@ class UpdateRecordAction
                     $canManageAuthFields = true;
                 } else {
                     $context = app(UpdateRuleContextBuilder::class)
-                        ->build($collection, $record, $data, $authenticatedUser, request(), $manageRule);
+                        ->build($collection, $record, $data, $authenticatedUser, $request ?? request(), $manageRule);
 
                     $canManageAuthFields = QueryFilter::for($record->newQuery(), array_keys($context))
                         ->evaluate($manageRule, $context);
@@ -97,7 +98,7 @@ class UpdateRecordAction
             $collection,
             $record,
             $data,
-            request(),
+            $request ?? request(),
         );
 
         try {

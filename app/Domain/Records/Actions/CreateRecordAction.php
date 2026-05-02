@@ -9,6 +9,7 @@ use App\Domain\Records\Services\CreateRuleContextBuilder;
 use App\Domain\Records\Services\FileFieldProcessor;
 use App\Domain\Records\Services\RelationIntegrityService;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Throwable;
@@ -20,7 +21,7 @@ class CreateRecordAction
         private readonly FileFieldProcessor $fileFieldProcessor,
     ) {}
 
-    public function execute(Collection $collection, array $data): Record
+    public function execute(Collection $collection, array $data, ?Request $request = null): Record
     {
         Gate::authorize('create-records', $collection);
 
@@ -38,7 +39,7 @@ class CreateRecordAction
 
             if ($rule !== '') {
                 $context = app(CreateRuleContextBuilder::class)
-                    ->build($collection, $data, $authenticatedUser, request(), $rule);
+                    ->build($collection, $data, $authenticatedUser, $request ?? request(), $rule);
 
                 $isAllowed = QueryFilter::for(Record::of($collection)->newQuery(), array_keys($context))
                     ->evaluate($rule, $context);
@@ -57,7 +58,7 @@ class CreateRecordAction
         $fileProcessing = $this->fileFieldProcessor->processForCreate(
             $collection,
             $data,
-            request(),
+            $request ?? request(),
         );
 
         try {

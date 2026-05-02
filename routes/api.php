@@ -2,13 +2,13 @@
 
 use App\Domain\Auth\Controllers\AuthController;
 use App\Domain\Collections\Controllers\CollectionController;
+use App\Domain\Emails\Controllers\EmailTemplateController;
 use App\Domain\Realtime\Controllers\SubscribeController;
 use App\Domain\Records\Controllers\RecordController;
 use App\Domain\Records\Controllers\RecordFileController;
 use App\Domain\SchemaManagement\Controllers\OrphanTableController;
 use App\Domain\SchemaManagement\Controllers\SchemaRecoveryController;
 use App\Domain\SchemaManagement\Controllers\SchemaTransferController;
-use App\Http\Controllers\EmailTemplateController;
 use App\Http\Controllers\LogViewerController;
 use App\Http\Controllers\OAuthController;
 use App\Http\Controllers\OAuthProviderController;
