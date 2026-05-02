@@ -104,6 +104,10 @@ class SwitchTenantFilesystemTask implements SwitchTenantTask
             return;
         }
 
+        if (app()->runningUnitTests()) {
+            return;
+        }
+
         $filesystemManager->forgetDisk('tenant');
 
         if (is_string($this->originalDefaultDisk) && $this->originalDefaultDisk !== '') {

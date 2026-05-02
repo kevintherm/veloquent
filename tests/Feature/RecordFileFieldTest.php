@@ -192,11 +192,13 @@ it('stores single file fields as json arrays and returns normalized single objec
         ->and($decoded)->toHaveCount(1)
         ->and($decoded[0])->toHaveKeys(['name', 'path', 'size', 'extension', 'mime']);
 
-    $storedPath = (string) $decoded[0]['path'];
+    $storedPath = (string) $response->json('data.resume.path');
+    expect((string) $decoded[0]['path'])->toBe($storedPath);
 
     expect($storedPath)->toContain('uploads/collections/'.$collection->name.'/');
 
-    expect(Storage::disk(config('filesystems.default', 'local'))->exists($storedPath))->toBeTrue();
+    $disk = Storage::disk(config('filesystems.default', 'local'));
+    expect($disk->exists($storedPath))->toBeTrue();
 });
 
 it('validates file mime and max size constraints', function () {

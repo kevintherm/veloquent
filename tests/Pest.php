@@ -14,7 +14,6 @@ beforeEach(function () {
                 'database' => ':memory:',
             ]);
 
-            app()->instance('currentTenant', $tenant);
             $tenant->makeCurrent();
         });
     }

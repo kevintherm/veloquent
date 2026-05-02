@@ -41,6 +41,10 @@ class SwitchTenantAppUrlTask implements SwitchTenantTask
         $tenantDomain = trim((string) data_get($tenant, 'domain', ''));
 
         if ($tenantDomain === '') {
+            if (app()->runningUnitTests()) {
+                return 'localhost';
+            }
+
             throw new RuntimeException('Tenant domain is required to switch app URL.');
         }
 

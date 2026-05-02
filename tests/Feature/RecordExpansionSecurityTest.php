@@ -109,6 +109,8 @@ it('logs a warning and returns null when expansion target collection is missing'
         'api_rules' => ['view' => '', 'list' => ''],
     ]);
 
+    Log::shouldReceive('forgetChannel')->zeroOrMoreTimes();
+    Log::shouldReceive('info')->zeroOrMoreTimes();
     Log::shouldReceive('warning')
         ->once()
         ->with('EXPANSION_TARGET_COLLECTION_MISSING', Mockery::on(function ($data) use ($sourceCollection) {

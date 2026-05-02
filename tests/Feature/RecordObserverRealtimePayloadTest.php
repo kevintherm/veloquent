@@ -13,7 +13,7 @@ uses(RefreshDatabase::class);
 
 beforeEach(function (): void {
     $tenant = new Tenant;
-    $tenant->forceFill(['id' => 1001]);
+    $tenant->forceFill(['id' => 1001, 'database' => ':memory:']);
 
     app()->instance((string) config('multitenancy.current_tenant_container_key'), $tenant);
 });

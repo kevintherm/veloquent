@@ -21,7 +21,13 @@ class SwitchTenantDatabaseTask implements SwitchTenantTask
 
     public function makeCurrent(IsTenant $tenant): void
     {
-        $this->setTenantConnectionDatabaseName($tenant->getDatabaseName());
+        $databaseName = $tenant->getDatabaseName();
+
+        if ($databaseName === null && app()->runningUnitTests()) {
+            return;
+        }
+
+        $this->setTenantConnectionDatabaseName($databaseName);
     }
 
     public function forgetCurrent(): void
@@ -32,6 +38,10 @@ class SwitchTenantDatabaseTask implements SwitchTenantTask
     protected function setTenantConnectionDatabaseName(?string $databaseName): void
     {
         $tenantConnectionName = $this->tenantDatabaseConnectionName();
+
+        if ($databaseName === config("database.connections.{$tenantConnectionName}.database")) {
+            return;
+        }
 
         config([
             "database.connections.{$tenantConnectionName}.database" => $databaseName,

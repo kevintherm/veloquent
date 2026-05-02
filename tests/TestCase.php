@@ -20,7 +20,6 @@ abstract class TestCase extends BaseTestCase
                 'database' => ':memory:',
             ]);
 
-            app()->instance('currentTenant', $tenant);
             $tenant->makeCurrent();
         });
     }

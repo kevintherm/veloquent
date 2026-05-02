@@ -2,7 +2,6 @@
 
 use App\Domain\Realtime\Bus\RedisRealtimeBus;
 use Illuminate\Support\Facades\Redis;
-use Mockery;
 
 it('publishes payloads with invalid utf-8 content', function () {
     $payload = [
@@ -15,14 +14,14 @@ it('publishes payloads with invalid utf-8 content', function () {
     $publishedMessage = null;
 
     $connection = Mockery::mock();
-    $connection->shouldReceive('publish')
+    $connection->shouldReceive('xadd')
         ->once()
-        ->with('realtime:events', Mockery::on(function ($message) use (&$publishedMessage): bool {
-            $publishedMessage = $message;
+        ->with('realtime:events', '*', Mockery::on(function ($message) use (&$publishedMessage): bool {
+            $publishedMessage = $message['data'];
 
-            return is_string($message);
-        }))
-        ->andReturn(1);
+            return is_string($publishedMessage);
+        }), 1000, true)
+        ->andReturn('123-0');
 
     Redis::shouldReceive('connection')
         ->once()

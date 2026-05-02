@@ -41,7 +41,7 @@ it('creates a tenant using generated domain and database names', function () {
     $rootHost = is_string($appUrlHost) && $appUrlHost !== '' ? $appUrlHost : 'localhost';
 
     expect($tenant->name)->toBe($uniqueName);
-    expect($tenant->domain)->toContain('localhost');
+    expect($tenant->domain)->toContain($rootHost);
     expect($tenant->database)->toContain('velo_tenant_');
 
     config(['database.connections.tenant.database' => $tenant->database]);

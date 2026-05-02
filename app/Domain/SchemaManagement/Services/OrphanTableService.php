@@ -24,7 +24,9 @@ class OrphanTableService
     public function getOrphans(): array
     {
         $db = DB::connection()->getDatabaseName();
-        $allTables = Schema::getTableListing(schema: $db);
+        $allTables = DB::connection()->getDriverName() === 'sqlite'
+            ? Schema::getTableListing()
+            : Schema::getTableListing(schema: $db);
         $prefix = $this->prefix;
 
         $collectionTables = Collection::pluck('table_name')->all();

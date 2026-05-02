@@ -15,7 +15,10 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     /** @var TestCase $this */
     $this->testDate = '2020-01-01';
-    $this->logPath = storage_path("logs/laravel-{$this->testDate}.log");
+    $dailyPath = config('logging.channels.daily.path', storage_path('logs/laravel.log'));
+    $logDir = dirname($dailyPath);
+    $logPrefix = pathinfo($dailyPath, PATHINFO_FILENAME);
+    $this->logPath = "{$logDir}/{$logPrefix}-{$this->testDate}.log";
 
     $content = [
         json_encode(['datetime' => '2020-01-01 00:00:01', 'level_name' => 'INFO', 'channel' => 'local', 'message' => 'First log', 'context' => ['key' => 'val']]),
@@ -25,7 +28,7 @@ beforeEach(function () {
         json_encode(['datetime' => '2020-01-01 03:30:01', 'level_name' => 'INFO', 'channel' => 'local', 'message' => 'Fifth log matching query', 'context' => null]),
     ];
 
-    File::ensureDirectoryExists(storage_path('logs'));
+    File::ensureDirectoryExists($logDir);
     File::put($this->logPath, implode("\n", $content));
 
     if (Schema::hasTable('superusers')) {
