@@ -1,6 +1,6 @@
 <?php
 
-use App\Infrastructure\Models\Tenant;
+use Veloquent\Core\Infrastructure\Models\Tenant;
 use Spatie\LaravelSettings\Migrations\SettingsMigration;
 
 return new class extends SettingsMigration

@@ -1,13 +1,13 @@
 <?php
 
-use App\Infrastructure\Models\Tenant;
-use App\Infrastructure\Multitenancy\Tasks\ApplyTenantSettingsTask;
-use App\Infrastructure\Multitenancy\Tasks\SwitchTenantAppUrlTask;
-use App\Infrastructure\Multitenancy\Tasks\SwitchTenantDatabaseTask;
-use App\Infrastructure\Multitenancy\Tasks\SwitchTenantFilesystemTask;
-use App\Infrastructure\Multitenancy\Tasks\SwitchTenantLogsTask;
-use App\Infrastructure\Multitenancy\Tasks\SwitchTenantRedisPrefixTask;
-use App\Infrastructure\Multitenancy\TenantFinders\CachedDomainTenantFinder;
+use Veloquent\Core\Infrastructure\Models\Tenant;
+use Veloquent\Core\Infrastructure\Multitenancy\Tasks\ApplyTenantSettingsTask;
+use Veloquent\Core\Infrastructure\Multitenancy\Tasks\SwitchTenantAppUrlTask;
+use Veloquent\Core\Infrastructure\Multitenancy\Tasks\SwitchTenantDatabaseTask;
+use Veloquent\Core\Infrastructure\Multitenancy\Tasks\SwitchTenantFilesystemTask;
+use Veloquent\Core\Infrastructure\Multitenancy\Tasks\SwitchTenantLogsTask;
+use Veloquent\Core\Infrastructure\Multitenancy\Tasks\SwitchTenantRedisPrefixTask;
+use Veloquent\Core\Infrastructure\Multitenancy\TenantFinders\CachedDomainTenantFinder;
 use Illuminate\Broadcasting\BroadcastEvent;
 use Illuminate\Events\CallQueuedListener;
 use Illuminate\Mail\SendQueuedMailable;

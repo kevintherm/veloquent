@@ -1,6 +1,6 @@
 <?php
 
-use App\Domain\Collections\Enums\CollectionFieldType;
+use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;

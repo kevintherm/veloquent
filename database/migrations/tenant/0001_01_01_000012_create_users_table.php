@@ -1,8 +1,8 @@
 <?php
 
-use App\Domain\Collections\Actions\CreateCollectionAction;
-use App\Domain\Collections\Enums\CollectionFieldType;
-use App\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\Collections\Actions\CreateCollectionAction;
+use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
+use Veloquent\Core\Domain\Collections\Models\Collection;
 use Illuminate\Database\Migrations\Migration;
 
 /**

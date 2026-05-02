@@ -1,8 +1,8 @@
 <?php
 
-use App\Domain\SchemaManagement\Exceptions\SchemaCorruptException;
-use App\Http\Middleware\SuperuserOnly;
-use App\Http\Middleware\TokenAuthMiddleware;
+use Veloquent\Core\Domain\SchemaManagement\Exceptions\SchemaCorruptException;
+use Veloquent\Core\Http\Middleware\SuperuserOnly;
+use Veloquent\Core\Http\Middleware\TokenAuthMiddleware;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -24,8 +24,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
-        web: __DIR__.'/../routes/web.php',
-        api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
@@ -43,10 +41,9 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->throttleWithRedis();
-        $middleware->append(TokenAuthMiddleware::class);
-
         $middleware->redirectGuestsTo(function (Request $request): ?string {
-            if ($request->is('api/*') || $request->expectsJson()) {
+            $apiPrefix = config('velo.api_prefix', 'api');
+            if ($request->is("{$apiPrefix}/*") || $request->expectsJson()) {
                 return null;
             }
 
@@ -73,7 +70,8 @@ return Application::configure(basePath: dirname(__DIR__))
                 return abort(Response::HTTP_NOT_FOUND);
             }
 
-            if ($request->is('api/*')) {
+            $apiPrefix = config('velo.api_prefix', 'api');
+            if ($request->is("{$apiPrefix}/*")) {
                 $errorResponse = static function (string $message, int $code, mixed $errors = null) {
                     return response()->json([
                         'message' => $message,

@@ -114,4 +114,12 @@ return [
         'slow_query_threshold' => (int) env('VELO_LOGS_SLOW_QUERY_THRESHOLD', 1000),
         'ip_enabled' => (bool) env('VELO_LOGS_IP_ENABLED', true),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Route Prefixes
+    |--------------------------------------------------------------------------
+    */
+    'api_prefix' => env('VELO_API_PREFIX', 'api'),
+    'admin_prefix' => env('VELO_ADMIN_PREFIX', 'admin'),
 ];

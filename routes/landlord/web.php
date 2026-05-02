@@ -1,3 +1,0 @@
-<?php
-
-// Landlord web routes

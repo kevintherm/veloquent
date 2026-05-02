@@ -1,7 +1,7 @@
 <?php
 
-use App\Domain\Collections\Enums\CollectionFieldType;
-use App\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
+use Veloquent\Core\Domain\Collections\Models\Collection;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;

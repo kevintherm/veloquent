@@ -2,14 +2,6 @@
 
 namespace App\Providers;
 
-use App\Domain\Auth\Services\TokenAuthService;
-use App\Domain\Collections\Models\Collection;
-use App\Domain\Records\Models\Record;
-use App\Infrastructure\Guards\TokenGuard;
-use Illuminate\Console\Events\CommandStarting;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
@@ -25,9 +17,6 @@ class AppServiceProvider extends ServiceProvider
         }
 
         URL::forceRootUrl(config('app.url'));
-
-        $this->registerGates();
-        $this->registerAuth();
     }
 
     /**
@@ -35,42 +24,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Event::listen(
-            CommandStarting::class,
-            function (CommandStarting $event) {
-                if ($event->command === 'migrate:fresh' || $event->command === 'db:wipe') {
-                    // drop tenant databases
-                }
-            }
-        );
-    }
-
-    private function registerAuth(): void
-    {
-        Auth::extend('opaque_token', function ($app, $name, array $config) {
-            return new TokenGuard(
-                $app->make(TokenAuthService::class),
-                $app->make('request'),
-            );
-        });
-    }
-
-    private function registerGates(): void
-    {
-        foreach (['list', 'view'] as $action) {
-            Gate::define("{$action}-collections", fn (?Record $user) => $user?->isSuperuser());
-        }
-
-        foreach (['create', 'update', 'delete'] as $action) {
-            Gate::define("{$action}-collections", fn (?Record $user, array|Collection $data) => $user?->isSuperuser() && ($data['is_system'] ?? false) === false);
-        }
-
-        Gate::define('truncate-collections', fn (?Record $user, Collection $collection) => $user?->isSuperuser() && $collection->is_system === false);
-
-        foreach (['list', 'view', 'create', 'update', 'delete'] as $action) {
-            Gate::define("{$action}-records", fn (?Record $user, Collection $collection) => $user?->isSuperuser() || $collection->is_system === false);
-        }
-
-        Gate::define('manage-schema', fn ($user) => $user?->isSuperuser());
+        //
     }
 }
