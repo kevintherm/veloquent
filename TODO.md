@@ -6,13 +6,13 @@
 
 ## Roadmap
 
-- Schema SDK sync (Typed)
-- Add expand option to realtime
 - Add Select field type
-- Add support for indexing json and file field
+- Add expand option to realtime
 - Bypass rule for superuser in realtime worker
-- Add octane support
 - Hooks system
+- Schema SDK sync (Typed)
+- Add support for indexing json and file field
+- Add octane support
 
 ## Issues
 
