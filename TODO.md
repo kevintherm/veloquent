@@ -1,7 +1,6 @@
 ## TODO
 
 - Add support for :changed, :isset, :length for api rules
-- Update filter parser to support date functions
 - Battle Testing
 - Ship
 
