@@ -1,6 +1,5 @@
 ## TODO
 
-- Fix: after running `artisan optimize` the app will somehow fail because sessions table not exists even though app does not use session
 - Add support for :changed, :isset, :length for api rules
 - Update filter parser to support date functions
 - Battle Testing
