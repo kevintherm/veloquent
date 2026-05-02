@@ -306,6 +306,17 @@ class UnifiedEvaluator implements EvaluatorInterface, VisitorInterface
     {
         $sqlOperator = $this->toSqlOperator($operator);
 
+        if (preg_match('/^(.+)__(date|year|month|day|time)$/i', $field, $matches)) {
+            $column = $matches[1];
+            $function = strtolower($matches[2]);
+
+            $method = ($boolean === 'or' ? 'orWhere' : 'where').ucfirst($function);
+
+            $builder->{$method}($column, $sqlOperator, $value);
+
+            return;
+        }
+
         $method = $boolean === 'or' ? 'orWhere' : 'where';
         $builder->{$method}($field, $sqlOperator, $value);
     }

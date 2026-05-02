@@ -89,9 +89,11 @@ class RuleEngine
 
         if ($node instanceof NullComparisonNode) {
             $field = $node->field;
-            if (! str_starts_with($field, '__sysvar__') && ! str_starts_with($field, '__numeric__')) {
-                if (! empty($this->allowedFields) && ! in_array($field, $this->allowedFields)) {
-                    throw new \RuntimeException(sprintf('Unknown field "%s"', $field));
+            $fieldForValidation = preg_replace('/__(date|year|month|day|time)$/i', '', $field);
+
+            if (! str_starts_with($fieldForValidation, '__sysvar__') && ! str_starts_with($fieldForValidation, '__numeric__')) {
+                if (! empty($this->allowedFields) && ! in_array($fieldForValidation, $this->allowedFields)) {
+                    throw new \RuntimeException(sprintf('Unknown field "%s"', $fieldForValidation));
                 }
             }
 
@@ -100,17 +102,18 @@ class RuleEngine
 
         if ($node instanceof ComparisonNode) {
             $field = $node->field;
+            $fieldForValidation = preg_replace('/__(date|year|month|day|time)$/i', '', $field);
 
             // Validate LHS if it's not a pseudo-sysvar or numeric
-            if (! str_starts_with($field, '__sysvar__') && ! str_starts_with($field, '__numeric__')) {
-                if (! empty($this->allowedFields) && ! in_array($field, $this->allowedFields)) {
-                    throw new \RuntimeException(sprintf('Unknown field "%s"', $field));
+            if (! str_starts_with($fieldForValidation, '__sysvar__') && ! str_starts_with($fieldForValidation, '__numeric__')) {
+                if (! empty($this->allowedFields) && ! in_array($fieldForValidation, $this->allowedFields)) {
+                    throw new \RuntimeException(sprintf('Unknown field "%s"', $fieldForValidation));
                 }
             }
 
             // If LHS is a sysvar, validate its prefix
-            if (str_starts_with($field, '__sysvar__')) {
-                $path = str_replace('__sysvar__', '', $field);
+            if (str_starts_with($fieldForValidation, '__sysvar__')) {
+                $path = str_replace('__sysvar__', '', $fieldForValidation);
                 if (! preg_match('/^(request|user|auth|collection)\./', $path)) {
                     throw new \RuntimeException(sprintf('Invalid system variable namespace: %s', $path));
                 }
@@ -247,6 +250,10 @@ class RuleEngine
         $filter = str_ireplace(' not in ', ' NOT IN ', $filter);
         $filter = str_replace('?=', ' LIKE ', $filter);
         $filter = str_replace('?&', ' NOT LIKE ', $filter);
+
+        // Normalize date functions: date(field) -> field__date
+        $filter = preg_replace('/(date|year|month|day|time)\(([^)]+)\)/i', '$2__$1', $filter);
+
         $filter = str_replace('->', '_ARROW_', $filter); // Replace -> with something that looks like an underscore + arrow for lexer
         $filter = preg_replace('/@([A-Za-z0-9_.]+)/', '__sysvar__$1', $filter);
 

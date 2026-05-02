@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\RuleEngine\Evaluators;
 
 use App\Domain\Collections\Models\Collection;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Kevintherm\Exprc\Ast\ComparisonNode;
 use Kevintherm\Exprc\Ast\IdentifierNode;
@@ -106,7 +107,7 @@ class UnifiedInMemoryEvaluator implements EvaluatorInterface, VisitorInterface
         }
 
         // Original logic
-        $left = $this->isSysvar($field) ? $this->getSysvarValue($field) : data_get($this->context, $field);
+        $left = $this->getValueWithSuffix($field);
 
         return $this->compare($left, $op, $rightValue);
     }
@@ -130,16 +131,44 @@ class UnifiedInMemoryEvaluator implements EvaluatorInterface, VisitorInterface
                 ->exists();
         }
 
-        $val = $this->isSysvar($node->field)
-            ? $this->getSysvarValue($node->field)
-            : data_get($this->context, $node->field);
+        $val = $this->getValueWithSuffix($node->field);
 
         return $node->isNot ? ! is_null($val) : is_null($val);
     }
 
     public function visitIdentifierNode(IdentifierNode $node): mixed
     {
-        return $this->isSysvar($node->name) ? $this->getSysvarValue($node->name) : data_get($this->context, $node->name);
+        return $this->getValueWithSuffix($node->name);
+    }
+
+    private function getValueWithSuffix(string $field): mixed
+    {
+        if (preg_match('/^(.+)__(date|year|month|day|time)$/i', $field, $matches)) {
+            $baseField = $matches[1];
+            $function = strtolower($matches[2]);
+            $value = $this->isSysvar($baseField) ? $this->getSysvarValue($baseField) : data_get($this->context, $baseField);
+
+            if ($value === null) {
+                return null;
+            }
+
+            try {
+                $carbon = Carbon::parse($value);
+
+                return match ($function) {
+                    'date' => $carbon->toDateString(),
+                    'year' => $carbon->year,
+                    'month' => $carbon->month,
+                    'day' => $carbon->day,
+                    'time' => $carbon->toTimeString(),
+                    default => $value,
+                };
+            } catch (\Throwable) {
+                return $value;
+            }
+        }
+
+        return $this->isSysvar($field) ? $this->getSysvarValue($field) : data_get($this->context, $field);
     }
 
     private function evaluateCrossCollectionExists(string $path, string $operator, mixed $otherValue): bool
