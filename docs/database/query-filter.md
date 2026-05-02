@@ -152,5 +152,5 @@ meta->settings ?& "theme"
 
 ## Related Standards
 
-- RuleEngine in-memory standard: `docs/rule-engine/rule-engine.md`
-- API rule usage context: `docs/api-rules.md`
+- RuleEngine in-memory standard: `docs/database/rule-engine.md`
+- API rule usage context: `docs/security/api-rules.md`
