@@ -1,12 +1,12 @@
 ## TODO
 
 - Add support for :changed, :isset, :length for api rules
+- Dark mode to admin panel
 - Battle Testing
 - Ship
 
 ## Roadmap
 
-- Dark mode to admin panel
 - Schema SDK sync (Typed)
 - Add expand option to realtime
 - Add Select field type
