@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="public/logo.svg" width="250" />
+    <img src="resources/assets/logo.svg" width="250" />
 </p>
 
 # Veloquent
