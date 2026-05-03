@@ -45,9 +45,19 @@ class ListTenantsCommand extends Command
             return self::SUCCESS;
         }
 
+        $rows = $tenants->map(function (Tenant $tenant) {
+            return [
+                $tenant->id,
+                $tenant->name,
+                $tenant->domain,
+                strlen($tenant->database) > 48 ? '...' . substr($tenant->database, -45) : $tenant->database,
+                $tenant->created_at,
+            ];
+        });
+
         $this->table(
             ['ID', 'Name', 'Domain', 'Database', 'Created At'],
-            $tenants->toArray()
+            $rows
         );
 
         return self::SUCCESS;
