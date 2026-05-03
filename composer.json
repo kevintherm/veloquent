@@ -23,10 +23,9 @@
         "php": "^8.3",
         "carbon-cli/carbon-cli": "^1.4",
         "kevintherm/exprc": "^0.0.2",
-        "laravel/framework": "^12.0",
+        "laravel/framework": "^13.0",
         "laravel/sanctum": "^4.0",
         "laravel/socialite": "^5.26",
-        "laravel/tinker": "^2.10.1",
         "league/flysystem-aws-s3-v3": "^3.32",
         "league/flysystem-path-prefixing": "^3.31",
         "spatie/laravel-multitenancy": "^4.1",
@@ -38,7 +37,7 @@
         "nunomaduro/collision": "^8.6",
         "pestphp/pest": "^4.4",
         "pestphp/pest-plugin-laravel": "^4.1",
-        "orchestra/testbench": "^10.0"
+        "orchestra/testbench": "^11.0"
     },
     "extra": {
         "laravel": {
