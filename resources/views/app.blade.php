@@ -14,7 +14,12 @@
     ]) }}">
 
 
-    @vite(['resources/css/app.css', 'resources/js/app.js'], 'vendor/velo')
+    @vite(
+        app()->isLocal() 
+            ? ['core/resources/css/app.css', 'core/resources/js/app.js'] 
+            : ['resources/css/app.css', 'resources/js/app.js'],
+        app()->isLocal() ? null : 'vendor/velo'
+    )
 </head>
 
 <body class="antialiased overflow-y-hidden">
