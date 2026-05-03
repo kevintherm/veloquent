@@ -3,6 +3,7 @@
 namespace Veloquent\Core;
 
 use Illuminate\Support\ServiceProvider;
+use Spatie\Multitenancy\Http\Middleware\NeedsTenant;
 use Veloquent\Core\Domain\Auth\Services\TokenAuthService;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Records\Models\Record;
@@ -26,6 +27,10 @@ class VeloquentServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(__DIR__ . '/../config/velo.php', 'velo');
         $this->mergeConfigFrom(__DIR__ . '/../config/multitenancy.php', 'multitenancy');
         
+        $this->app->bind(\Spatie\Multitenancy\Contracts\IsTenant::class, function ($app) {
+            return $app->make(config('multitenancy.tenant_model'));
+        });
+
         $veloAuth = config('velo.auth', []);
         config(['auth.guards' => array_merge(config('auth.guards', []), $veloAuth['guards'] ?? [])]);
         config(['auth.providers' => array_merge(config('auth.providers', []), $veloAuth['providers'] ?? [])]);
@@ -71,10 +76,6 @@ class VeloquentServiceProvider extends ServiceProvider
                 __DIR__ . '/../resources/assets/logo.svg' => public_path('vendor/velo/logo.svg'),
             ], 'velo-assets');
 
-            $this->publishes([
-                __DIR__ . '/../database/migrations/landlord' => database_path('migrations/landlord'),
-                __DIR__ . '/../database/migrations/tenant' => database_path('migrations/tenant'),
-            ], 'velo-migrations');
         }
     }
 
@@ -83,6 +84,11 @@ class VeloquentServiceProvider extends ServiceProvider
         $router = $this->app['router'];
         $router->aliasMiddleware('superuser', \Veloquent\Core\Http\Middleware\SuperuserOnly::class);
         $router->aliasMiddleware('token.auth', \Veloquent\Core\Http\Middleware\TokenAuthMiddleware::class);
+        
+        $this->app->booted(function () {
+            $kernel = $this->app->make(\Illuminate\Foundation\Http\Kernel::class);
+            $kernel->prependMiddleware(NeedsTenant::class);
+        });
     }
 
     protected function registerAuth(): void

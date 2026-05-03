@@ -47,12 +47,24 @@ class TokenAuthService
 
     public function authenticate(string $token): ?Record
     {
+        if (! app(\Veloquent\Core\Infrastructure\Models\Tenant::class)::current()) {
+            return null;
+        }
+
         $hashedToken = hash('sha256', $token);
 
-        $authToken = AuthToken::query()
-            ->where('token_hash', $hashedToken)
-            ->active()
-            ->first();
+        try {
+            $authToken = AuthToken::query()
+                ->where('token_hash', $hashedToken)
+                ->active()
+                ->first();
+        } catch (\Illuminate\Database\QueryException $e) {
+            if (str_contains($e->getMessage(), 'no such table: auth_tokens')) {
+                return null;
+            }
+            
+            throw $e;
+        }
 
         if (! $authToken) {
             return null;

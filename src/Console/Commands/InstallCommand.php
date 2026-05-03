@@ -17,32 +17,25 @@ class InstallCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'velo:install {--force : Overwrite existing files}';
+    protected $signature = 'velo:install {--force : Overwrite existing files} {--publish : Automatically publish stubs}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Install and initialize Veloquent Core';
+    protected $description = 'Install and initialize Veloquent';
 
     /**
      * Execute the console command.
      */
     public function handle(): void
     {
-        $this->components->info('Installing Veloquent Core...');
+        $this->components->info('Installing Veloquent...');
 
         $this->components->task('Publishing configuration...', function () {
             $this->call('vendor:publish', [
                 '--tag' => 'velo-config',
-                '--force' => $this->option('force'),
-            ]);
-        });
-
-        $this->components->task('Publishing migrations...', function () {
-            $this->call('vendor:publish', [
-                '--tag' => 'velo-migrations',
                 '--force' => $this->option('force'),
             ]);
         });
@@ -56,20 +49,22 @@ class InstallCommand extends Command
 
         $this->components->task('Running landlord migrations...', function () {
             $this->call('migrate', [
-                '--path' => 'database/migrations/landlord',
+                '--path' => 'vendor/veloquent/core/database/migrations/landlord',
                 '--force' => $this->option('force'),
             ]);
         });
 
-        if ($this->confirm('Would you like to create your first tenant?', true) || $this->option('--force')) {
-            $name = $this->ask('Tenant Name', 'Acme');
-            $domain = $this->ask('Tenant Domain', 'localhost');
+        if ($this->option('force') || $this->confirm('Would you like to create your first tenant?', true)) {
+            $name = $this->option('force') ? 'Acme' : $this->ask('Tenant Name', 'Acme');
+            $domain = $this->option('force') ? 'localhost' : $this->ask('Tenant Domain', 'localhost');
 
             $this->call('tenants:create', [
                 'name' => $name,
                 '--domain' => $domain,
             ]);
         }
+
+        $this->call('tenants:list');
 
         $this->components->info('Veloquent installed successfully!');
     }
