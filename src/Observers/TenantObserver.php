@@ -23,16 +23,16 @@ class TenantObserver
 
     public function saved(Tenant $tenant): void
     {
-        Cache::forget("tenant_domain_{$tenant->domain}");
+        Cache::forget("tenant_id_domain_{$tenant->domain}");
 
         if ($tenant->isDirty('domain')) {
-            Cache::forget("tenant_domain_{$tenant->getOriginal('domain')}");
+            Cache::forget("tenant_id_domain_{$tenant->getOriginal('domain')}");
         }
     }
 
     public function deleted(Tenant $tenant): void
     {
-        Cache::forget("tenant_domain_{$tenant->domain}");
+        Cache::forget("tenant_id_domain_{$tenant->domain}");
     }
 
     private function prepareTenantDatabaseAndRunMigrations(Tenant $tenant): void
@@ -195,7 +195,7 @@ class TenantObserver
 
         $exitCode = Artisan::call('migrate', [
             '--database' => $tenantConnectionName,
-            '--path' => database_path('migrations/tenant'),
+            '--path' => __DIR__ . '/../../database/migrations/tenant',
             '--realpath' => true,
             '--force' => true,
         ]);
