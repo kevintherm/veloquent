@@ -1,65 +1,52 @@
 {
-    "$schema": "https://getcomposer.org/schema.json",
-    "name": "veloquent/skeleton",
-    "type": "project",
-    "description": "Veloquent Skeleton Application.",
+    "name": "veloquent/core",
+    "description": "Core package of Veloquent.",
+    "type": "library",
     "license": "MIT",
-    "require": {
-        "php": "^8.3",
-        "laravel/framework": "^12.0",
-        "laravel/reverb": "^1.0",
-        "laravel/tinker": "^2.10.1",
-        "veloquent/core": "@dev"
-    },
-    "require-dev": {
-        "fakerphp/faker": "^1.23",
-        "laravel/boost": "^2.0",
-        "laravel/pail": "^1.2.2",
-        "laravel/pint": "^1.24",
-        "laravel/sail": "^1.53",
-        "mockery/mockery": "^1.6",
-        "nunomaduro/collision": "^8.6",
-        "pestphp/pest": "^4.4",
-        "pestphp/pest-plugin-laravel": "^4.1"
-    },
-    "repositories": [
-        {
-            "type": "path",
-            "url": "../core"
-        }
-    ],
     "autoload": {
         "psr-4": {
-            "App\\": "app/",
-            "Database\\Factories\\": "database/factories/",
-            "Database\\Seeders\\": "database/seeders/"
+            "Veloquent\\Core\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Tests\\": "tests/"
+            "Veloquent\\Core\\Tests\\": "tests/"
         }
     },
-    "scripts": {
-        "setup": [
-            "composer install",
-            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
-            "@php artisan key:generate",
-            "@php artisan velo:install --ansi --no-interaction",
-            "@php artisan migrate --force"
-        ],
-        "post-autoload-dump": [
-            "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
-            "@php artisan package:discover --ansi"
-        ],
-        "post-update-cmd": [
-            "@php artisan vendor:publish --tag=laravel-assets --ansi --force",
-            "@php artisan velo:install --ansi"
-        ]
+    "authors": [
+        {
+            "name": "Kevin",
+            "email": "kevindrm0@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^8.3",
+        "carbon-cli/carbon-cli": "^1.4",
+        "kevintherm/exprc": "^0.0.2",
+        "laravel/framework": "^13.0",
+        "laravel/sanctum": "^4.0",
+        "laravel/socialite": "^5.26",
+        "league/flysystem-aws-s3-v3": "^3.32",
+        "league/flysystem-path-prefixing": "^3.31",
+        "spatie/laravel-multitenancy": "^4.1",
+        "spatie/laravel-settings": "^3.7"
+    },
+    "require-dev": {
+        "fakerphp/faker": "^1.23",
+        "mockery/mockery": "^1.6",
+        "nunomaduro/collision": "^8.6",
+        "pestphp/pest": "^4.4",
+        "pestphp/pest-plugin-laravel": "^4.1",
+        "orchestra/testbench": "^11.0"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Veloquent\\Core\\VeloquentServiceProvider"
+            ]
+        }
     },
     "config": {
-        "optimize-autoloader": true,
-        "preferred-install": "dist",
         "sort-packages": true,
         "allow-plugins": {
             "pestphp/pest-plugin": true,

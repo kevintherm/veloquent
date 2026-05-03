@@ -122,4 +122,27 @@ return [
     */
     'api_prefix' => env('VELO_API_PREFIX', 'api'),
     'admin_prefix' => env('VELO_ADMIN_PREFIX', 'admin'),
+    
+    /*
+    |--------------------------------------------------------------------------
+    | Auth Configuration
+    |--------------------------------------------------------------------------
+    */
+    'auth' => [
+        'defaults' => [
+            'guard' => 'api',
+        ],
+        'guards' => [
+            'api' => [
+                'driver' => 'opaque_token',
+                'provider' => 'superusers',
+            ],
+        ],
+        'providers' => [
+            'superusers' => [
+                'driver' => 'eloquent',
+                'model' => \Veloquent\Core\Domain\Auth\Models\Superuser::class,
+            ],
+        ],
+    ],
 ];

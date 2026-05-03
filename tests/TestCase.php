@@ -1,10 +1,90 @@
 <?php
 
-namespace Tests;
+namespace Veloquent\Core\Tests;
 
-use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Veloquent\Core\Infrastructure\Models\Tenant;
+use Orchestra\Testbench\TestCase as OrchestraTestCase;
+use Veloquent\Core\VeloquentServiceProvider;
+use Spatie\Multitenancy\MultitenancyServiceProvider;
+use Spatie\LaravelSettings\LaravelSettingsServiceProvider;
+use Laravel\Sanctum\SanctumServiceProvider;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
 
-abstract class TestCase extends BaseTestCase
+abstract class TestCase extends OrchestraTestCase
 {
-    //
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->setUpTenancy();
+    }
+
+    protected function setUpTenancy()
+    {
+        Tenant::withoutEvents(function () {
+            $tenant = Tenant::create([
+                'name' => 'test-tenant',
+                'domain' => 'localhost',
+                'database' => ':memory:',
+            ]);
+
+            $tenant->makeCurrent();
+        });
+    }
+
+    protected function defineDatabaseMigrations()
+    {
+        $this->loadMigrationsFrom(realpath(__DIR__ . '/../database/migrations/landlord'));
+        $this->loadMigrationsFrom(realpath(__DIR__ . '/../database/migrations/tenant'));
+
+        $settingsMigrationPath = realpath(__DIR__ . '/../vendor/spatie/laravel-settings/database/migrations');
+        if ($settingsMigrationPath) {
+            $this->loadMigrationsFrom($settingsMigrationPath);
+        }
+    }
+
+    protected function getPackageProviders($app)
+    {
+        return [
+            VeloquentServiceProvider::class,
+            MultitenancyServiceProvider::class,
+            LaravelSettingsServiceProvider::class,
+            SanctumServiceProvider::class,
+        ];
+    }
+
+    protected function defineRoutes($router)
+    {
+        $router->get('login', fn () => 'login')->name('login');
+    }
+
+    protected function getEnvironmentSetUp($app)
+    {
+        $app['config']->set('app.key', 'base64:Xgs89rk/rM+8H/5X5A9U6fR/U0+5r/I/o/I/I/I/I/I=');
+        $app['config']->set('app.url', 'http://localhost');
+        $app['config']->set('database.default', 'testbench');
+        $app['config']->set('database.connections.testbench', [
+            'driver'   => 'sqlite',
+            'database' => ':memory:',
+            'prefix'   => '',
+        ]);
+
+        // For tests, we use the same connection for both to simplify
+        $app['config']->set('multitenancy.tenant_model', Tenant::class);
+        $app['config']->set('multitenancy.landlord_database_connection_name', 'testbench');
+        $app['config']->set('multitenancy.tenant_database_connection_name', 'testbench');
+    }
+
+    protected function tearDown(): void
+    {
+        if (app()->has('currentTenant')) {
+            app()->forgetInstance('currentTenant');
+            Tenant::forgetCurrent();
+        }
+
+        parent::tearDown();
+    }
 }

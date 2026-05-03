@@ -1,0 +1,24 @@
+<?php
+
+namespace Veloquent\Core\Domain\Records\Requests;
+
+class StoreRecordRequest extends BaseRecordRequest
+{
+    public function rules(): array
+    {
+        return $this->getDynamicValidationRules();
+    }
+
+    public function getRecordData(): array
+    {
+        $collection = $this->route('collection');
+        $data = $this->validated();
+
+        // Filter out null auto-fill fields (created_at, updated_at, etc.)
+        $data = $this->filterAutoFillFields($data, $collection);
+
+        $data = $this->normalizeRelationFieldsForWrite($data, $collection);
+
+        return $data;
+    }
+}

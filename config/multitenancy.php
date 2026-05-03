@@ -79,7 +79,7 @@ return [
     /*
      * The connection name to reach the landlord database.
      */
-    'landlord_database_connection_name' => env('LANDLORD_DB_CONNECTION', 'landlord'),
+    'landlord_database_connection_name' => env('DB_CONNECTION', 'sqlite'),
 
     /*
      * This key will be used to associate the current tenant in the context

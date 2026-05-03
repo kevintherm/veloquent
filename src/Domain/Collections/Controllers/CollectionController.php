@@ -1,0 +1,113 @@
+<?php
+
+namespace Veloquent\Core\Domain\Collections\Controllers;
+
+use Veloquent\Core\Domain\Collections\Actions\CreateCollectionAction;
+use Veloquent\Core\Domain\Collections\Actions\DeleteCollectionAction;
+use Veloquent\Core\Domain\Collections\Actions\GetCollectionsAction;
+use Veloquent\Core\Domain\Collections\Actions\TruncateCollectionAction;
+use Veloquent\Core\Domain\Collections\Actions\UpdateCollectionAction;
+use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\Collections\Requests\StoreCollectionRequest;
+use Veloquent\Core\Domain\Collections\Requests\UpdateCollectionRequest;
+use Veloquent\Core\Domain\Settings\GeneralSettings;
+use Veloquent\Core\Infrastructure\Http\Controllers\ApiController;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
+
+class CollectionController extends ApiController
+{
+    public function __construct(
+        private GetCollectionsAction $getCollectionsAction,
+        private CreateCollectionAction $createCollectionAction,
+        private UpdateCollectionAction $updateCollectionAction,
+        private DeleteCollectionAction $deleteCollectionAction,
+        private TruncateCollectionAction $truncateCollectionAction,
+        private GeneralSettings $settings,
+    ) {}
+
+    public function index(Request $request): JsonResponse
+    {
+        Gate::authorize('list-collections');
+
+        $collections = $this->getCollectionsAction->execute(
+            $request->input('filter') ?? '',
+            $request->input('sort') ?? ''
+        );
+
+        return $this->successResponse($collections);
+    }
+
+    public function show(Collection $collection): JsonResponse
+    {
+        Gate::authorize('view-collections');
+
+        return $this->successResponse($collection);
+    }
+
+    public function store(StoreCollectionRequest $request): JsonResponse
+    {
+        abort_if($this->settings->lock_schema_change, 403, 'Collection schema changes are locked.');
+        Gate::authorize('create-collections', [$request->validated()]);
+
+        $collection = $this->createCollectionAction->execute([
+            ...$request->validated(),
+            'fields' => $request->getFields(),
+            'indexes' => $request->getIndexes(),
+        ]);
+
+        return $this->successResponse($collection);
+    }
+
+    public function update(UpdateCollectionRequest $request, Collection $collection): JsonResponse
+    {
+        abort_if($this->settings->lock_schema_change, 403, 'Collection schema changes are locked.');
+        Gate::authorize('update-collections', [$collection->toArray()]);
+
+        $payload = $request->validated();
+        if ($request->has('fields')) {
+            $payload['fields'] = $request->getFields();
+        }
+
+        if ($request->has('indexes')) {
+            $payload['indexes'] = $request->getIndexes();
+        }
+
+        $collection = $this->updateCollectionAction->execute($collection, $payload);
+
+        return $this->successResponse($collection);
+    }
+
+    public function destroy(Collection $collection): JsonResponse
+    {
+        abort_if($this->settings->lock_schema_change, 403, 'Collection schema changes are locked.');
+        Gate::authorize('delete-collections', [$collection]);
+
+        $defaultAuthCollection = config('velo.default_auth_collection', 'users');
+        if ($collection->name === $defaultAuthCollection) {
+            return $this->errorResponse('Cannot delete default auth collection', 400);
+        }
+
+        $this->deleteCollectionAction->execute($collection);
+
+        return $this->successResponse([], 'Collection deleted successfully.');
+    }
+
+    public function truncate(Collection $collection): JsonResponse
+    {
+        abort_if($this->settings->lock_schema_change, 403, 'Collection schema changes are locked.');
+        Gate::authorize('truncate-collections', $collection);
+
+        $defaultAuthCollection = config('velo.default_auth_collection', 'users');
+        if ($collection->name === $defaultAuthCollection) {
+            return $this->errorResponse('Cannot truncate default auth collection', 400);
+        }
+
+        $deletedCount = $this->truncateCollectionAction->execute($collection);
+
+        return $this->successResponse([
+            'deleted' => $deletedCount,
+        ], 'Collection truncated successfully.');
+    }
+}
