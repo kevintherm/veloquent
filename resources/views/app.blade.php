@@ -14,11 +14,17 @@
     ]) }}">
 
 
+    @php
+        $useDevServer = app()->isLocal() && file_exists(public_path('hot'));
+    @endphp
+
     @vite(
-        app()->isLocal() 
-            ? ['core/resources/css/app.css', 'core/resources/js/app.js'] 
+        $useDevServer
+            ? (file_exists(base_path('core'))
+                ? ['core/resources/css/app.css', 'core/resources/js/app.js']
+                : ['vendor/veloquent/core/resources/css/app.css', 'vendor/veloquent/core/resources/js/app.js'])
             : ['resources/css/app.css', 'resources/js/app.js'],
-        app()->isLocal() ? null : 'vendor/velo'
+        $useDevServer ? null : 'vendor/velo'
     )
 </head>
 
