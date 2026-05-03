@@ -22,7 +22,7 @@ class TokenAuthMiddleware
         $user = $token ? $this->tokenService->authenticate($token) : null;
         
         if ($user) {
-            Auth::setUser($user);
+            Auth::guard('api')->setUser($user);
         }
 
         return $next($request);

@@ -315,12 +315,16 @@ class PurgeTenantCommand extends Command
         }
 
         try {
-            if ($tenantConnectionName === $landlordConnectionName && $driver === 'sqlite') {
-                // If sharing connection, don't try to delete the file
+            $landlordDatabase = (string) config("database.connections.{$landlordConnectionName}.database");
+
+            if ($tenantConnectionName === $landlordConnectionName && $driver === 'sqlite' && $databaseName === $landlordDatabase) {
+                // If sharing the exact same SQLite file as the landlord, don't try to delete it.
                 return;
             }
 
-            DB::purge($tenantConnectionName);
+            if ($tenantConnectionName !== $landlordConnectionName || $landlordDatabase !== ':memory:') {
+                DB::purge($tenantConnectionName);
+            }
 
             if ($driver === 'sqlite') {
                 if ($databaseName !== ':memory:' && File::exists($databaseName)) {

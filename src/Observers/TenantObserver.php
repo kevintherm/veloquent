@@ -85,9 +85,6 @@ class TenantObserver
             $tenantConnectionConfig
         );
 
-        config(["database.connections.{$tenantConnectionName}" => $tenantConnectionConfig]);
-        DB::purge($tenantConnectionName);
-
         $driver = (string) ($tenantConnectionConfig['driver'] ?? '');
 
         if (! in_array($driver, ['mysql', 'mariadb', 'pgsql', 'sqlite'], true)) {
@@ -95,6 +92,14 @@ class TenantObserver
         }
 
         $tenantDatabase = $this->resolveTenantDatabaseName($databaseName, $driver);
+        $currentDatabase = config("database.connections.{$tenantConnectionName}.database");
+
+        config(["database.connections.{$tenantConnectionName}" => $tenantConnectionConfig]);
+        
+        if ($currentDatabase !== $tenantDatabase) {
+            DB::purge($tenantConnectionName);
+        }
+
         $tenant->database = $tenantDatabase;
 
         $originalTenantDatabase = $tenantConnectionConfig['database'] ?? null;
@@ -126,8 +131,11 @@ class TenantObserver
                 previous: $exception,
             );
         } finally {
-            config(["database.connections.{$tenantConnectionName}.database" => $originalTenantDatabase]);
-            DB::purge($tenantConnectionName);
+            $currentDatabase = config("database.connections.{$tenantConnectionName}.database");
+            if ($currentDatabase !== $originalTenantDatabase) {
+                config(["database.connections.{$tenantConnectionName}.database" => $originalTenantDatabase]);
+                DB::purge($tenantConnectionName);
+            }
         }
     }
 
@@ -190,8 +198,12 @@ class TenantObserver
 
     private function runTenantMigrations(string $tenantConnectionName, string $tenantDatabase): void
     {
-        config(["database.connections.{$tenantConnectionName}.database" => $tenantDatabase]);
-        DB::purge($tenantConnectionName);
+        $currentDatabase = config("database.connections.{$tenantConnectionName}.database");
+        
+        if ($currentDatabase !== $tenantDatabase) {
+            config(["database.connections.{$tenantConnectionName}.database" => $tenantDatabase]);
+            DB::purge($tenantConnectionName);
+        }
 
         $exitCode = Artisan::call('migrate', [
             '--database' => $tenantConnectionName,

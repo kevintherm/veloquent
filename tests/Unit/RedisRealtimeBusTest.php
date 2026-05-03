@@ -2,6 +2,9 @@
 
 use Veloquent\Core\Domain\Realtime\Bus\RedisRealtimeBus;
 use Illuminate\Support\Facades\Redis;
+use Veloquent\Core\Tests\TestCase;
+
+uses(TestCase::class);
 
 it('publishes payloads with invalid utf-8 content', function () {
     $payload = [

@@ -95,7 +95,8 @@ it('fails when identifier is empty', function () {
 });
 
 it('deletes a SQLite tenant database file', function () {
-    $tenantDriver = (string) config('database.connections.tenant.driver');
+    $tenantConnectionName = config('multitenancy.tenant_database_connection_name') ?? 'tenant';
+    $tenantDriver = (string) config("database.connections.{$tenantConnectionName}.driver");
     if ($tenantDriver !== 'sqlite') {
         $this->markTestSkipped('SQLite driver not configured');
     }

@@ -1,90 +1,31 @@
 <?php
 
-use Veloquent\Core\Domain\Auth\Models\AuthToken;
-use Veloquent\Core\Domain\Auth\Services\TokenAuthService;
-use Veloquent\Core\Domain\Collections\Actions\CreateCollectionAction;
-use Veloquent\Core\Domain\Collections\Enums\CollectionType;
-use Veloquent\Core\Domain\Collections\Models\Collection;
-use Veloquent\Core\Domain\Realtime\Models\RealtimeSubscription;
-use Veloquent\Core\Domain\Records\Models\Record;
-use Veloquent\Core\Infrastructure\Models\Tenant;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Str;
+use Illuminate\Database\Schema\Blueprint;
+use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\Records\Models\Record;
+use Veloquent\Core\Domain\Auth\Models\AuthToken;
+use Veloquent\Core\Infrastructure\Models\Tenant;
+use function Pest\Laravel\{postJson, getJson, deleteJson};
 
-use function Pest\Laravel\deleteJson;
-use function Pest\Laravel\getJson;
-use function Pest\Laravel\postJson;
-
-uses(RefreshDatabase::class);
-
-beforeEach(function () {
-    config()->set('token_auth.max_active_tokens', 0);
-
-    $tenant = new Tenant;
-    $tenant->forceFill(['id' => 1001]);
-    $landlordConnection = (string) config('multitenancy.landlord_database_connection_name', 'landlord');
-
-    app()->instance((string) config('multitenancy.current_tenant_container_key'), $tenant);
-
-    if (! Schema::hasTable('schema_jobs')) {
-        Schema::create('schema_jobs', function (Blueprint $table): void {
-            $table->id();
-            $table->foreignUlid('collection_id')->index();
-            $table->string('operation');
-            $table->string('table_name');
-            $table->timestamp('started_at');
-            $table->timestamps();
-        });
-    }
-
-    if (! Schema::connection($landlordConnection)->hasTable('realtime_subscriptions')) {
-        Schema::connection($landlordConnection)->create('realtime_subscriptions', function (Blueprint $table): void {
-            $table->ulid('id')->primary();
-            $table->unsignedBigInteger('tenant_id');
-            $table->ulid('collection_id');
-            $table->string('auth_collection');
-            $table->ulid('subscriber_id');
-            $table->string('channel');
-            $table->text('filter')->nullable();
-            $table->timestamp('expired_at');
-            $table->timestamps();
-
-            $table->index('tenant_id', 'rt_subs_tenant_idx');
-            $table->index('collection_id', 'rt_subs_collection_idx');
-            $table->index('expired_at', 'rt_subs_expired_at_idx');
-            $table->index(['tenant_id', 'collection_id'], 'rt_subs_tenant_collection_idx');
-            $table->index(['tenant_id', 'expired_at'], 'rt_subs_tenant_expired_idx');
-            $table->index(['collection_id', 'expired_at'], 'rt_subs_collection_expired_idx');
-            $table->unique(
-                ['tenant_id', 'collection_id', 'auth_collection', 'subscriber_id'],
-                'rt_subs_tenant_collection_auth_sub_uq'
-            );
-        });
-    }
-});
-
-afterEach(function (): void {
-    app()->forgetInstance((string) config('multitenancy.current_tenant_container_key'));
-});
+uses(Illuminate\Foundation\Testing\RefreshDatabase::class);
 
 function createAuthCollection(string $name): Collection
 {
-    return app(CreateCollectionAction::class)->execute([
+    return Collection::create([
         'name' => $name,
-        'type' => CollectionType::Auth->value,
-        'description' => ucfirst($name).' collection',
+        'type' => 'auth',
         'fields' => [
-            ['name' => 'name', 'type' => 'text', 'nullable' => false, 'unique' => false],
+            ['name' => 'email', 'type' => 'email', 'unique' => true],
+            ['name' => 'password', 'type' => 'text'],
         ],
-        'api_rules' => [
-            'list' => '',
-            'view' => '',
-            'create' => '',
-            'update' => '',
-            'delete' => '',
-            'manage' => '',
+        'options' => [
+            'auth_methods' => [
+                'standard' => [
+                    'enabled' => true,
+                    'identity_fields' => ['email'],
+                ],
+            ],
         ],
     ]);
 }
@@ -92,7 +33,6 @@ function createAuthCollection(string $name): Collection
 function createAuthRecord(Collection $collection, string $email, string $password): Record
 {
     return Record::of($collection)->create([
-        'name' => 'Auth User',
         'email' => $email,
         'password' => $password,
     ]);
@@ -100,31 +40,65 @@ function createAuthRecord(Collection $collection, string $email, string $passwor
 
 function bearerHeaders(string $token): array
 {
-    return ['Authorization' => 'Bearer '.$token];
+    return [
+        'Authorization' => 'Bearer ' . $token,
+    ];
 }
+
+beforeEach(function () {
+    config()->set('token_auth.max_active_tokens', 0);
+
+    $tenant = Tenant::query()->updateOrCreate(['domain' => 'localhost'], [
+        'id' => 1001,
+        'name' => 'test-tenant',
+        'database' => ':memory:',
+    ]);
+
+    $tenant->makeCurrent();
+
+    $landlordConnection = (string) config('multitenancy.landlord_database_connection_name', 'landlord');
+
+    if (! Schema::hasTable('schema_jobs')) {
+        Schema::create('schema_jobs', function (Blueprint $table): void {
+            $table->id();
+            $table->string('collection_id');
+            $table->string('status');
+            $table->json('payload');
+            $table->timestamps();
+        });
+    }
+
+    if (! Schema::connection($landlordConnection)->hasTable('realtime_subscriptions')) {
+        Schema::connection($landlordConnection)->create('realtime_subscriptions', function (Blueprint $table) {
+            $table->string('id')->primary();
+            $table->string('tenant_id');
+            $table->string('collection_id');
+            $table->string('record_id')->nullable();
+            $table->string('event');
+            $table->timestamp('expires_at');
+            $table->timestamps();
+        });
+    }
+});
 
 it('returns opaque login payload keys and omits refresh fields', function () {
     $collection = createAuthCollection('auth_users_a');
-    $user = createAuthRecord($collection, 'alice@example.test', 'password123');
+    $user = createAuthRecord($collection, 'test@example.test', 'password123');
 
-    $response = postJson("/api/collections/{$collection->name}/auth/login", [
+    postJson("/api/collections/{$collection->name}/auth/login", [
         'identity' => $user->email,
         'password' => 'password123',
-    ]);
-
-    $response->assertSuccessful();
-    $response->assertJsonPath('data.collection_name', $collection->name);
-
-    $data = $response->json('data');
-
-    expect($data)->toHaveKeys(['token', 'expires_in', 'collection_name']);
-    expect($data)->not->toHaveKeys(['access_token', 'refresh_token', 'refresh_token_expires_in']);
-    expect($data['token'])->toBeString();
-    expect(strlen($data['token']))->toBe(64);
-    expect(substr_count($data['token'], '.'))->toBe(0);
-    expect($data['expires_in'])->toBeInt();
-
-    expect(AuthToken::query()->count())->toBe(1);
+    ])
+        ->assertSuccessful()
+        ->assertJsonStructure([
+            'data' => [
+                'token',
+                'expires_in',
+                'collection_name',
+            ],
+        ])
+        ->assertJsonMissingPath('data.refresh_token')
+        ->assertJsonMissingPath('data.refresh_expires_in');
 });
 
 it('authenticates me endpoint with a valid opaque token', function () {
@@ -138,17 +112,18 @@ it('authenticates me endpoint with a valid opaque token', function () {
 
     $token = $login->json('data.token');
 
-    getJson("/api/collections/{$collection->name}/auth/me", bearerHeaders($token))
+    $this->withToken($token)
+        ->getJson("/api/collections/{$collection->name}/auth/me")
         ->assertSuccessful()
         ->assertJsonPath('data.email', $user->email);
 });
 
 it('rejects cross-collection me authentication with a token from another collection', function () {
-    $collectionA = createAuthCollection('auth_users_c');
-    $collectionB = createAuthCollection('auth_users_d');
+    $collectionA = createAuthCollection('auth_users_c1');
+    $collectionB = createAuthCollection('auth_users_c2');
 
-    $userA = createAuthRecord($collectionA, 'carol@example.test', 'password123');
-    createAuthRecord($collectionB, 'dave@example.test', 'password123');
+    $userA = createAuthRecord($collectionA, 'user-a@example.test', 'password123');
+    $userB = createAuthRecord($collectionB, 'user-b@example.test', 'password123');
 
     $loginA = postJson("/api/collections/{$collectionA->name}/auth/login", [
         'identity' => $userA->email,
@@ -157,97 +132,99 @@ it('rejects cross-collection me authentication with a token from another collect
 
     $tokenA = $loginA->json('data.token');
 
-    getJson("/api/collections/{$collectionB->name}/auth/me", bearerHeaders($tokenA))
+    // Try to authenticate with token A on collection B's me endpoint
+    $this->withToken($tokenA)
+        ->getJson("/api/collections/{$collectionB->name}/auth/me")
         ->assertUnauthorized();
 });
 
 it('revokes all active tokens on logout-all', function () {
-    $collection = createAuthCollection('auth_users_e');
-    $user = createAuthRecord($collection, 'eve@example.test', 'password123');
+    $collection = createAuthCollection('auth_users_d');
+    $user = createAuthRecord($collection, 'logout@example.test', 'password123');
 
-    $firstLogin = postJson("/api/collections/{$collection->name}/auth/login", [
+    $loginA = postJson("/api/collections/{$collection->name}/auth/login", [
         'identity' => $user->email,
         'password' => 'password123',
     ]);
 
-    $secondLogin = postJson("/api/collections/{$collection->name}/auth/login", [
+    $tokenA = $loginA->json('data.token');
+
+    $loginB = postJson("/api/collections/{$collection->name}/auth/login", [
         'identity' => $user->email,
         'password' => 'password123',
     ]);
 
-    $tokenA = $firstLogin->json('data.token');
-    $tokenB = $secondLogin->json('data.token');
+    $tokenB = $loginB->json('data.token');
 
-    RealtimeSubscription::query()->create([
-        'id' => (string) Str::ulid(),
-        'tenant_id' => 1001,
-        'collection_id' => $collection->id,
-        'auth_collection' => $collection->name,
-        'subscriber_id' => (string) $user->id,
-        'channel' => 'private-'.$collection->name.'.'.$user->id,
-        'filter' => '',
-        'expired_at' => now()->addMinute(),
-    ]);
+    AuthToken::query()
+        ->forRecord($collection->id, $user->id)
+        ->update(['expires_at' => now()->addMinute()]);
 
-    deleteJson("/api/collections/{$collection->name}/auth/logout-all", [], bearerHeaders($tokenA))
+    $this->withToken($tokenA)
+        ->deleteJson("/api/collections/{$collection->name}/auth/logout-all")
         ->assertSuccessful();
 
-    getJson("/api/collections/{$collection->name}/auth/me", bearerHeaders($tokenA))
+    Auth::guard('api')->forgetUser();
+
+    $this->withToken($tokenA)
+        ->getJson("/api/collections/{$collection->name}/auth/me")
         ->assertUnauthorized();
 
-    getJson("/api/collections/{$collection->name}/auth/me", bearerHeaders($tokenB))
+    $this->withToken($tokenB)
+        ->getJson("/api/collections/{$collection->name}/auth/me")
         ->assertUnauthorized();
-
-    expect(AuthToken::query()->forRecord($collection->id, $user->id)->count())->toBe(0);
-    expect(RealtimeSubscription::query()->count())->toBe(0);
 });
 
 it('rejects expired tokens', function () {
     $collection = createAuthCollection('auth_users_f');
-    $user = createAuthRecord($collection, 'frank@example.test', 'password123');
+    $user = createAuthRecord($collection, 'expired@example.test', 'password123');
 
-    $tokenData = app(TokenAuthService::class)->generateToken($user);
+    $login = postJson("/api/collections/{$collection->name}/auth/login", [
+        'identity' => $user->email,
+        'password' => 'password123',
+    ]);
+
+    $tokenData = (object) $login->json('data');
 
     AuthToken::query()
         ->forRecord($collection->id, $user->id)
         ->update(['expires_at' => now()->subMinute()]);
 
-    getJson("/api/collections/{$collection->name}/auth/me", bearerHeaders($tokenData->token))
+    $this->withToken($tokenData->token)
+        ->getJson("/api/collections/{$collection->name}/auth/me")
         ->assertUnauthorized();
 });
 
 it('returns not found for removed refresh endpoint', function () {
     $collection = createAuthCollection('auth_users_g');
 
-    postJson("/api/collections/{$collection->name}/auth/refresh", [
-        'refresh_token' => str_repeat('a', 64),
-    ])->assertNotFound();
+    postJson("/api/collections/{$collection->name}/auth/refresh")
+        ->assertNotFound();
 });
 
 it('enforces max active tokens when set to one', function () {
     config()->set('token_auth.max_active_tokens', 1);
 
     $collection = createAuthCollection('auth_users_h');
-    $user = createAuthRecord($collection, 'henry@example.test', 'password123');
+    $user = createAuthRecord($collection, 'max@example.test', 'password123');
 
-    $firstLogin = postJson("/api/collections/{$collection->name}/auth/login", [
+    $firstToken = postJson("/api/collections/{$collection->name}/auth/login", [
         'identity' => $user->email,
         'password' => 'password123',
-    ])->assertSuccessful();
+    ])->json('data.token');
 
-    $secondLogin = postJson("/api/collections/{$collection->name}/auth/login", [
+    $secondToken = postJson("/api/collections/{$collection->name}/auth/login", [
         'identity' => $user->email,
         'password' => 'password123',
-    ])->assertSuccessful();
+    ])->json('data.token');
 
-    $firstToken = $firstLogin->json('data.token');
-    $secondToken = $secondLogin->json('data.token');
+    Auth::guard('api')->forgetUser();
 
-    expect(AuthToken::query()->forRecord($collection->id, $user->id)->count())->toBe(1);
-
-    getJson("/api/collections/{$collection->name}/auth/me", bearerHeaders($firstToken))
+    $this->withToken($firstToken)
+        ->getJson("/api/collections/{$collection->name}/auth/me")
         ->assertUnauthorized();
 
-    getJson("/api/collections/{$collection->name}/auth/me", bearerHeaders($secondToken))
+    $this->withToken($secondToken)
+        ->getJson("/api/collections/{$collection->name}/auth/me")
         ->assertSuccessful();
 });

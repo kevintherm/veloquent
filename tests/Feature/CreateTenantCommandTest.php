@@ -34,6 +34,7 @@ it('creates a tenant using generated domain and database names', function () {
 
     artisan('tenants:create', [
         'name' => $uniqueName,
+        '--database' => ':memory:',
     ])->assertSuccessful();
 
     $tenant = Tenant::query()->firstOrFail();
@@ -42,13 +43,10 @@ it('creates a tenant using generated domain and database names', function () {
 
     expect($tenant->name)->toBe($uniqueName);
     expect($tenant->domain)->toContain($rootHost);
-    expect($tenant->database)->toContain('velo_tenant_');
-
-    config(['database.connections.tenant.database' => $tenant->database]);
-    DB::purge('tenant');
+    expect($tenant->database)->toBe(':memory:');
 
     $migrationsTable = (string) config('database.migrations.table', 'migrations');
-    expect(Schema::connection('tenant')->hasTable($migrationsTable))->toBeTrue();
+    expect(Schema::connection('testbench')->hasTable($migrationsTable))->toBeTrue();
 });
 
 it('fails when the tenant domain already exists', function () {

@@ -96,7 +96,6 @@ class VeloquentServiceProvider extends ServiceProvider
         Auth::extend('opaque_token', function ($app, $name, array $config) {
             return new TokenGuard(
                 $app->make(TokenAuthService::class),
-                $app->make('request'),
             );
         });
     }

@@ -46,7 +46,14 @@ class CreateTenantCommand extends Command
         ], [
             'name' => ['required', 'string', 'max:255'],
             'domain' => ['required', 'string', 'max:255'],
-            'database' => ['required', 'string', 'max:64', 'regex:/^[A-Za-z0-9_]+$/'],
+            'database' => ['required', 'string', 'max:64', function ($attribute, $value, $fail) {
+                if ($value === ':memory:') {
+                    return;
+                }
+                if (! preg_match('/^[A-Za-z0-9_]+$/', $value)) {
+                    $fail("The {$attribute} field format is invalid.");
+                }
+            }],
         ]);
 
         if ($validator->fails()) {

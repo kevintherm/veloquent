@@ -60,14 +60,14 @@ it('deletes realtime subscriptions only for current tenant on logout-all', funct
         /** @var list<array{collection_id: string, record_id: string}> */
         public array $calls = [];
 
-        public function revokeRecordTokens(string $collectionId, string $recordId, ?string $tokenHash = null): int
+        public function revokeRecordTokens(string $collectionId, string $recordId, ?string $tokenHash = null): bool
         {
             $this->calls[] = [
                 'collection_id' => $collectionId,
                 'record_id' => $recordId,
             ];
 
-            return 1;
+            return true;
         }
     };
 

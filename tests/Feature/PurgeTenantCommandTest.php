@@ -101,7 +101,8 @@ it('requires both confirmations before proceeding', function () {
 });
 
 it('deletes SQLite tenant database files during purge', function () {
-    $tenantDriver = (string) config('database.connections.tenant.driver');
+    $tenantConnectionName = config('multitenancy.tenant_database_connection_name') ?? 'tenant';
+    $tenantDriver = (string) config("database.connections.{$tenantConnectionName}.driver");
     if ($tenantDriver !== 'sqlite') {
         $this->markTestSkipped('SQLite driver not configured');
     }
@@ -141,7 +142,8 @@ it('deletes SQLite tenant database files during purge', function () {
 });
 
 it('detects and deletes orphan SQLite databases', function () {
-    $tenantDriver = (string) config('database.connections.tenant.driver');
+    $tenantConnectionName = config('multitenancy.tenant_database_connection_name') ?? 'tenant';
+    $tenantDriver = (string) config("database.connections.{$tenantConnectionName}.driver");
     if ($tenantDriver !== 'sqlite') {
         $this->markTestSkipped('SQLite driver not configured');
     }

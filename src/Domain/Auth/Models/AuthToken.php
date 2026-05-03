@@ -28,14 +28,14 @@ class AuthToken extends Model
     protected function casts(): array
     {
         return [
-            'expires_at' => 'timestamp',
-            'last_used_at' => 'timestamp',
+            'expires_at' => 'datetime',
+            'last_used_at' => 'datetime',
         ];
     }
 
     public function scopeActive(Builder $query): Builder
     {
-        return $query->where('expires_at', '>', now());
+        return $query->where('expires_at', '>', now()->toDateTimeString());
     }
 
     public function scopeForRecord(Builder $query, string $collectionId, string $id): Builder

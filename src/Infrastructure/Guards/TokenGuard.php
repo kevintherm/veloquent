@@ -14,7 +14,6 @@ class TokenGuard implements Guard
 
     public function __construct(
         private TokenAuthService $tokenService,
-        private Request $request,
     ) {}
 
     public function user(): ?Authenticatable
@@ -23,7 +22,7 @@ class TokenGuard implements Guard
             return $this->user;
         }
 
-        $token = $this->request->bearerToken();
+        $token = $this->tokenService->extractTokenFromRequest(request());
 
         if (! $token) {
             return null;
@@ -38,14 +37,6 @@ class TokenGuard implements Guard
     public function validate(array $credentials = []): bool
     {
         return false;
-    }
-
-    public function setRequest(Request $request): static
-    {
-        $this->request = $request;
-        $this->forgetUser();
-
-        return $this;
     }
 
     public function logout(): void

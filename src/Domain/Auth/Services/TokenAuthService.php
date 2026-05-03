@@ -4,50 +4,51 @@ namespace Veloquent\Core\Domain\Auth\Services;
 
 use Veloquent\Core\Domain\Auth\Models\AuthToken;
 use Veloquent\Core\Domain\Auth\ValueObjects\TokenData;
-use Veloquent\Core\Domain\Collections\Enums\CollectionType;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Records\Models\Record;
+use Veloquent\Core\Infrastructure\Models\Tenant;
 use Illuminate\Http\Request;
 
 class TokenAuthService
 {
-    /**
-     * Issue a persisted opaque bearer token for an auth-collection record.
-     */
-    public function generateToken(Record $user): TokenData
+    public function extractTokenFromRequest(Request $request): ?string
     {
-        $ttlSeconds = $this->ttlSeconds();
-        $collectionName = $user->collection?->name;
-        $collectionId = $user->collection?->id;
+        return $request->bearerToken() ?? $request->input('token');
+    }
 
-        if ($collectionName === null || $collectionId === null) {
+    public function generateToken(Record $user, ?int $expiresIn = null): TokenData
+    {
+        $collection = $user->collection;
+
+        if (! $collection) {
             throw new \RuntimeException('Cannot issue token without collection context.');
         }
 
-        $this->enforceMaxActiveTokens($collectionId, $user->id);
-
+        $expiresIn = $expiresIn ?? (int) config('token_auth.expiration', 3600);
         $token = bin2hex(random_bytes(32));
 
         AuthToken::create([
-            'collection_name' => $collectionName,
-            'collection_id' => $collectionId,
+            'collection_name' => $collection->name,
+            'collection_id' => $collection->id,
             'record_id' => (string) $user->id,
             'token_hash' => hash('sha256', $token),
-            'expires_at' => now()->addSeconds($ttlSeconds),
+            'expires_at' => now()->addSeconds($expiresIn),
         ]);
+
+        $this->enforceMaxTokens($user);
 
         return new TokenData(
             token: $token,
-            expires_in: $ttlSeconds,
-            collection_id: $collectionId,
-            collection_name: $collectionName,
+            expires_in: $expiresIn,
+            collection_name: (string) $collection->name,
+            collection_id: (string) $collection->id,
             record_id: (string) $user->id,
         );
     }
 
     public function authenticate(string $token): ?Record
     {
-        if (! app(\Veloquent\Core\Infrastructure\Models\Tenant::class)::current()) {
+        if (! app(Tenant::class)::current()) {
             return null;
         }
 
@@ -62,7 +63,6 @@ class TokenAuthService
             if (str_contains($e->getMessage(), 'no such table: auth_tokens')) {
                 return null;
             }
-            
             throw $e;
         }
 
@@ -70,10 +70,7 @@ class TokenAuthService
             return null;
         }
 
-        $collection = Collection::query()
-            ->where('id', $authToken->collection_id)
-            ->where('type', CollectionType::Auth)
-            ->first();
+        $collection = Collection::find($authToken->collection_id);
 
         if (! $collection) {
             return null;
@@ -87,7 +84,6 @@ class TokenAuthService
             return null;
         }
 
-
         $user->setAttribute('collection_id', $collection->id);
         $user->setAttribute('collection_name', $collection->name);
 
@@ -96,76 +92,42 @@ class TokenAuthService
         return $user;
     }
 
-    /**
-     * Revoke ALL auth tokens for given record.
-     * If token hash is provided then it will revoke only that token.
-     *
-     * @param  mixed  $tokenHash
-     * @return bool|int|mixed|null
-     */
-    public function revokeRecordTokens(string $collectionId, string $recordId, ?string $tokenHash = null): int
+    public function revokeToken(string $token): bool
     {
-        return AuthToken::query()
-            ->forRecord($collectionId, $recordId)
-            ->when($tokenHash !== null, fn ($query) => $query->where('token_hash', $tokenHash))
-            ->delete();
+        $hashedToken = hash('sha256', $token);
+
+        return (bool) AuthToken::where('token_hash', $hashedToken)->delete();
     }
 
-    public function extractTokenFromRequest(Request $request): ?string
+    public function revokeRecordTokens(string $collectionId, string $recordId, ?string $tokenHash = null): bool
     {
-        return $request->bearerToken() ?: $request->input('token');
+        $query = AuthToken::query()->forRecord($collectionId, $recordId);
+
+        if ($tokenHash) {
+            $query->where('token_hash', $tokenHash);
+        }
+
+        return (bool) $query->delete();
     }
 
-    private function enforceMaxActiveTokens(string $collectionId, string $recordId): void
+    protected function enforceMaxTokens(Record $user): void
     {
-        $maxActiveTokens = (int) config('token_auth.max_active_tokens', 0);
+        $maxTokens = (int) config('token_auth.max_active_tokens', 0);
 
-        if ($maxActiveTokens <= 0) {
+        if ($maxTokens <= 0 || ! $user->collection) {
             return;
         }
 
-        $keepExisting = max(0, $maxActiveTokens - 1);
-
-        if ($keepExisting === 0) {
-            AuthToken::query()
-                ->forRecord($collectionId, $recordId)
-                ->active()
-                ->delete();
-
-            return;
-        }
-
-        $idsToKeep = AuthToken::query()
-            ->forRecord($collectionId, $recordId)
+        $tokens = AuthToken::query()
+            ->forRecord($user->collection->id, (string) $user->id)
             ->active()
-            ->latest('created_at')
-            ->take($keepExisting)
-            ->pluck('id');
+            ->orderBy('id', 'desc')
+            ->get();
 
-        if ($idsToKeep->isEmpty()) {
-            AuthToken::query()
-                ->forRecord($collectionId, $recordId)
-                ->active()
-                ->delete();
-
+        if ($tokens->count() <= $maxTokens) {
             return;
         }
 
-        $tokenIdsToPrune = AuthToken::query()
-            ->forRecord($collectionId, $recordId)
-            ->active()
-            ->whereNotIn('id', $idsToKeep)
-            ->pluck('id');
-
-        if ($tokenIdsToPrune->isNotEmpty()) {
-            AuthToken::query()->whereIn('id', $tokenIdsToPrune)->delete();
-        }
-    }
-
-    private function ttlSeconds(): int
-    {
-        $ttlMinutes = (int) config('token_auth.ttl', 60);
-
-        return max(1, $ttlMinutes) * 60;
+        AuthToken::whereIn('id', $tokens->slice($maxTokens)->pluck('id'))->delete();
     }
 }
