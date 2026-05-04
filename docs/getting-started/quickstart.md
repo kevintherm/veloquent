@@ -191,3 +191,5 @@ await sdk.records.delete('posts', newPost.id);
 - Learn about [Authentication](../security/authentication.md) and user management
 - Set up [Real-time Subscriptions](../realtime/realtime.md) for live data updates
 - Secure your data with [API Rules](../security/api-rules.md)
+- Learn more about [Veloquent JS SDK](https://github.com/kevintherm/veloquent-js)
+- Learn more about [Veloquent Flutter SDK](https://github.com/kevintherm/veloquent-dart)
