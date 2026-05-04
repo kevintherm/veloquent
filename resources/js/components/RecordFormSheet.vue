@@ -27,6 +27,11 @@ import { resolveCollectionFieldTypeIcon } from "@/lib/collectionFieldTypeIcons";
 import { openRecordForm } from "@/lib/recordFormSheet";
 import { useDashboardState } from "@/lib/dashboardState";
 import TiptapEditor from "./TiptapEditor.vue";
+import Select from "./ui/select/Select.vue";
+import SelectTrigger from "./ui/select/SelectTrigger.vue";
+import SelectValue from "./ui/select/SelectValue.vue";
+import SelectContent from "./ui/select/SelectContent.vue";
+import SelectItem from "./ui/select/SelectItem.vue";
 
 const props = defineProps({
   sheetId: {
@@ -1188,6 +1193,19 @@ onMounted(async () => {
               </p>
             </div>
 
+            <div v-else-if="field.type === 'select'" class="grid gap-2">
+              <Select v-model="formState[field.name]" @update:model-value="modifyRecord">
+                <SelectTrigger :id="`field-${sheetId}-${field.name}`" :disabled="isDisabledField(field)">
+                  <SelectValue :placeholder="`Select ${displayFieldName(field.name)}...`" />
+                </SelectTrigger>
+                <SelectContent class="bg-background">
+                  <SelectItem v-for="option in (field.options ?? [])" :key="option" :value="option">
+                    {{ option }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <Input v-else-if="field.type !== 'boolean' && field.type !== 'relation'"
               :id="`field-${sheetId}-${field.name}`" v-model="formState[field.name]" :type="resolveInputType(field)"
               :disabled="isDisabledField(field)" :placeholder="`Enter ${displayFieldName(field.name)}...`"
@@ -1195,7 +1213,7 @@ onMounted(async () => {
 
             <div v-else-if="field.type === 'boolean'" class="flex items-center gap-2 pt-1">
               <Switch :model-value="Boolean(formState[field.name])"
-                @update:model-value="(value) => { formState[field.name] = value; }" />
+                @update:model-value="(value) => { formState[field.name] = value; modifyRecord(); }" />
             </div>
 
             <div v-else class="space-y-2">

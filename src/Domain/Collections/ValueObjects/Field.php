@@ -23,6 +23,7 @@ class Field implements \ArrayAccess, \JsonSerializable
         public ?string $target_collection_id = null,
         public bool $cascade_on_delete = false,
         public ?bool $allow_decimals = null,
+        public array $options = [],
     ) {}
 
     public static function fromArray(array $data): self
@@ -64,6 +65,7 @@ class Field implements \ArrayAccess, \JsonSerializable
             target_collection_id: isset($shape['target_collection_id']) ? (is_null($shape['target_collection_id']) ? null : (string) $shape['target_collection_id']) : null,
             cascade_on_delete: (bool) ($shape['cascade_on_delete'] ?? false),
             allow_decimals: isset($shape['allow_decimals']) ? (is_null($shape['allow_decimals']) ? null : (bool) $shape['allow_decimals']) : null,
+            options: (array) ($shape['options'] ?? []),
         );
     }
 
@@ -88,6 +90,7 @@ class Field implements \ArrayAccess, \JsonSerializable
             'target_collection_id' => $this->target_collection_id,
             'cascade_on_delete' => $this->cascade_on_delete,
             'allow_decimals' => $this->allow_decimals,
+            'options' => $this->options,
         ];
 
         if ($type !== CollectionFieldType::File) {
@@ -216,6 +219,12 @@ class Field implements \ArrayAccess, \JsonSerializable
 
         if ($key === 'allow_decimals') {
             $this->allow_decimals = is_null($value) ? null : (bool) $value;
+
+            return;
+        }
+
+        if ($key === 'options') {
+            $this->options = (array) $value;
         }
     }
 

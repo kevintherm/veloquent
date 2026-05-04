@@ -98,6 +98,7 @@ const fieldTypes = [
   { value: "json", label: "JSON" },
   { value: "file", label: "File" },
   { value: "relation", label: "Relation" },
+  { value: "select", label: "Select" },
 ];
 
 const collectionTypes = [
@@ -240,6 +241,7 @@ const newField = ref({
   protected: false,
   target_collection_id: null,
   cascade_on_delete: false,
+  options: [],
   order: 0,
 });
 
@@ -307,6 +309,10 @@ const normalizeFieldForForm = (field) => {
     normalized.allow_decimals = normalized.allow_decimals ?? false;
     normalized.min = normalized.min ?? null;
     normalized.max = normalized.max ?? null;
+  }
+
+  if (normalized.type === "select") {
+    normalized.options = Array.isArray(normalized.options) ? [...normalized.options] : [];
   }
 
   return normalized;
@@ -564,6 +570,7 @@ const addField = () => {
     target_collection_id: null,
     cascade_on_delete: false,
     allow_decimals: false,
+    options: [],
     order: 0,
   };
 
@@ -601,6 +608,19 @@ const reorderFields = () => {
       field.order = activeIdx++;
     }
   });
+};
+
+const addOption = (field) => {
+  if (!field.options) {
+    field.options = [];
+  }
+  field.options.push("");
+  isCollectionModified.value = true;
+};
+
+const removeOption = (field, index) => {
+  field.options.splice(index, 1);
+  isCollectionModified.value = true;
 };
 
 const isExistingField = (field) => {
@@ -776,6 +796,12 @@ const buildPayload = () => {
         delete cleaned.allow_decimals;
       } else {
         cleaned.allow_decimals = Boolean(cleaned.allow_decimals ?? false);
+      }
+
+      if (cleaned.type !== "select") {
+        delete cleaned.options;
+      } else {
+        cleaned.options = Array.isArray(cleaned.options) ? cleaned.options : [];
       }
 
       return cleaned;
@@ -1185,6 +1211,29 @@ onMounted(async () => {
                     </select>
                   </div>
 
+                  <div v-if="newField.type === 'select'" class="space-y-2 col-span-1 sm:col-span-2">
+                    <div class="flex items-center justify-between mb-2">
+                      <Label class="text-xs font-semibold tracking-wide text-primary/80 uppercase">Options</Label>
+                      <Button variant="outline" size="xs" class="px-3" @click="addOption(newField)">
+                        <Plus class="h-3 w-3 mr-1" />
+                        Add Option
+                      </Button>
+                    </div>
+                    <div class="space-y-2">
+                      <div v-for="(option, idx) in newField.options" :key="idx" class="flex gap-2 items-center">
+                        <div class="flex-1">
+                          <Input v-model="newField.options[idx]" placeholder="Option value (e.g. published)" class="h-8 text-xs" />
+                        </div>
+                        <Button variant="ghost" size="icon" class="h-8 w-8 text-destructive" @click="removeOption(newField, idx)">
+                          <Trash2 class="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <p v-if="newField.options.length === 0" class="text-xs text-muted-foreground text-center py-2 bg-muted/20 rounded border border-dashed">
+                        No options added yet.
+                      </p>
+                    </div>
+                  </div>
+
 
                   <div v-if="['text', 'email', 'url'].includes(newField.type)"
                     class="space-y-2 grid grid-cols-2 gap-3 col-span-1 border-border/50">
@@ -1409,6 +1458,29 @@ onMounted(async () => {
                         </option>
                       </select>
                     </div>
+
+                      <div v-if="field.type === 'select'" class="space-y-2 col-span-1 sm:col-span-2">
+                        <div class="flex items-center justify-between mb-2">
+                          <Label class="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Options</Label>
+                          <Button variant="outline" size="xs" class="px-3" @click="addOption(field)">
+                            <Plus class="h-3 w-3 mr-1" />
+                            Add Option
+                          </Button>
+                        </div>
+                        <div class="space-y-2">
+                          <div v-for="(option, idx) in field.options" :key="idx" class="flex gap-2 items-center">
+                            <div class="flex-1">
+                              <Input v-model="field.options[idx]" placeholder="Option value" class="h-8 text-xs" />
+                            </div>
+                            <Button variant="ghost" size="icon" class="h-8 w-8 text-destructive" @click="removeOption(field, idx)">
+                              <Trash2 class="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <p v-if="(field.options ?? []).length === 0" class="text-xs text-muted-foreground text-center py-2 bg-muted/20 rounded border border-dashed">
+                            No options added yet.
+                          </p>
+                        </div>
+                      </div>
 
 
                     <div v-if="['text', 'email', 'url'].includes(field.type)"

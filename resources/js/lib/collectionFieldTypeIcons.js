@@ -11,6 +11,7 @@ import {
     Paperclip,
     Type,
     WholeWord,
+    List,
 } from "lucide-vue-next";
 
 const fieldTypeIcons = {
@@ -26,6 +27,7 @@ const fieldTypeIcons = {
     json: WholeWord,
     file: Paperclip,
     relation: ListTree,
+    select: List,
 };
 
 export const resolveCollectionFieldTypeIcon = (fieldType) => {
