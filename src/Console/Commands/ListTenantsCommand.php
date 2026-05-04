@@ -40,7 +40,7 @@ class ListTenantsCommand extends Command
         $tenants = Tenant::all(['id', 'name', 'domain', 'database', 'created_at']);
 
         if ($tenants->isEmpty()) {
-            $this->info('No tenants found.');
+            $this->info('  No tenants found.');
 
             return self::SUCCESS;
         }

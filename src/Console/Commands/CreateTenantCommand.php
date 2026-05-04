@@ -88,10 +88,10 @@ class CreateTenantCommand extends Command
             return self::FAILURE;
         }
 
-        $this->info("Tenant [{$tenant->name}] created successfully.");
-        $this->line("- id: {$tenant->id}");
-        $this->line("- domain: {$tenant->domain}");
-        $this->line("- database: {$tenant->database}");
+        $this->info("  Tenant [{$tenant->name}] created successfully.");
+        $this->line("  - id: {$tenant->id}");
+        $this->line("  - domain: {$tenant->domain}");
+        $this->line("  - database: {$tenant->database}");
 
         return self::SUCCESS;
     }

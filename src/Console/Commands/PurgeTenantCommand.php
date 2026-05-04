@@ -33,7 +33,7 @@ class PurgeTenantCommand extends Command
         $orphanDatabases = $this->findOrphanDatabases($tenants);
 
         if ($tenants->isEmpty() && $orphanDatabases->isEmpty()) {
-            $this->info('No tenants or orphan databases to purge.');
+            $this->info('  No tenants or orphan databases to purge.');
 
             return self::SUCCESS;
         }
@@ -47,14 +47,14 @@ class PurgeTenantCommand extends Command
         }
 
         if (! $this->option('force')) {
-            if (! $this->confirm('Are you sure you want to delete all these tenants'.($orphanDatabases->isNotEmpty() ? ' and orphan databases' : '').'?', false)) {
-                $this->info('Purge canceled.');
+            if (! $this->confirm('  Are you sure you want to delete all these tenants'.($orphanDatabases->isNotEmpty() ? ' and orphan databases' : '').'?', false)) {
+                $this->info('  Purge canceled.');
 
                 return self::SUCCESS;
             }
 
-            if (! $this->confirm('This action cannot be undone. Are you absolutely sure?', false)) {
-                $this->info('Purge canceled.');
+            if (! $this->confirm('  This action cannot be undone. Are you absolutely sure?', false)) {
+                $this->info('  Purge canceled.');
 
                 return self::SUCCESS;
             }
@@ -65,10 +65,10 @@ class PurgeTenantCommand extends Command
             try {
                 $this->deleteTenantDatabase($tenant);
                 $tenant->delete();
-                $this->line("✓ Deleted: {$tenant->name} ({$tenant->database})");
+                $this->line("  ✓ Deleted: {$tenant->name} ({$tenant->database})");
             } catch (Throwable $exception) {
                 $failed++;
-                $this->error("✗ Failed to delete {$tenant->name}: {$exception->getMessage()}");
+                $this->error("  ✗ Failed to delete {$tenant->name}: {$exception->getMessage()}");
                 Log::error('Tenant purge failed for tenant.', [
                     'tenant_id' => $tenant->id,
                     'tenant_name' => $tenant->name,
@@ -80,10 +80,10 @@ class PurgeTenantCommand extends Command
         foreach ($orphanDatabases as $databaseName) {
             try {
                 $this->deleteOrphanDatabase($databaseName);
-                $this->line("✓ Deleted orphan database: {$databaseName}");
+                $this->line("  ✓ Deleted orphan database: {$databaseName}");
             } catch (Throwable $exception) {
                 $failed++;
-                $this->error("✗ Failed to delete orphan database {$databaseName}: {$exception->getMessage()}");
+                $this->error("  ✗ Failed to delete orphan database {$databaseName}: {$exception->getMessage()}");
                 Log::error('Orphan database deletion failed.', [
                     'database' => $databaseName,
                     'error' => $exception->getMessage(),
@@ -95,13 +95,13 @@ class PurgeTenantCommand extends Command
 
         if ($failed > 0) {
             $successful = ($tenants->count() + $orphanDatabases->count()) - $failed;
-            $this->warn("Purge completed with {$failed} failure(s). {$successful} database(s) deleted successfully.");
+            $this->warn("  Purge completed with {$failed} failure(s). {$successful} database(s) deleted successfully.");
 
             return self::FAILURE;
         }
 
         $totalCount = $tenants->count() + $orphanDatabases->count();
-        $this->info("All {$totalCount} database(s) purged successfully.");
+        $this->info("  All {$totalCount} database(s) purged successfully.");
 
         return self::SUCCESS;
     }
@@ -109,7 +109,7 @@ class PurgeTenantCommand extends Command
     private function displayTenants($tenants): void
     {
         $this->line('');
-        $this->info('The following tenants will be deleted:');
+        $this->info('  The following tenants will be deleted:');
         $this->line('');
 
         foreach ($tenants as $tenant) {
@@ -125,7 +125,7 @@ class PurgeTenantCommand extends Command
     private function displayOrphanDatabases($orphanDatabases): void
     {
         $this->line('');
-        $this->warn('The following orphan databases will be deleted:');
+        $this->warn('  The following orphan databases will be deleted:');
         $this->line('');
 
         foreach ($orphanDatabases as $databaseName) {

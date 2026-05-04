@@ -40,20 +40,20 @@ class DeleteTenantCommand extends Command
         $tenant = $this->findTenant($identifier);
 
         if ($tenant === null) {
-            $this->error("Tenant [{$identifier}] not found.");
+            $this->error("  Tenant [{$identifier}] not found.");
 
             return self::FAILURE;
         }
 
         if (! $this->option('force')) {
-            $this->info("About to delete tenant: {$tenant->name}");
-            $this->line("- id: {$tenant->id}");
-            $this->line("- domain: {$tenant->domain}");
-            $this->line("- database: {$tenant->database}");
+            $this->info("  About to delete tenant: {$tenant->name}");
+            $this->line("  - id: {$tenant->id}");
+            $this->line("  - domain: {$tenant->domain}");
+            $this->line("  - database: {$tenant->database}");
             $this->line('');
 
-            if (! $this->confirm('Are you sure you want to delete this tenant and purge its database?', false)) {
-                $this->info('Deletion canceled.');
+            if (! $this->confirm('  Are you sure you want to delete this tenant and purge its database?', false)) {
+                $this->info('  Deletion canceled.');
 
                 return self::SUCCESS;
             }
@@ -62,11 +62,11 @@ class DeleteTenantCommand extends Command
         try {
             $this->deleteTenantDatabase($tenant);
             $tenant->delete();
-            $this->info("Tenant [{$tenant->name}] deleted successfully.");
+            $this->info("  Tenant [{$tenant->name}] deleted successfully.");
 
             return self::SUCCESS;
         } catch (Throwable $exception) {
-            $this->error("Failed to delete tenant: {$exception->getMessage()}");
+            $this->error("  Failed to delete tenant: {$exception->getMessage()}");
             Log::error('Tenant deletion failed.', [
                 'tenant_id' => $tenant->id,
                 'tenant_name' => $tenant->name,
