@@ -16,6 +16,7 @@ enum CollectionFieldType: string
     case Json = 'json';
     case File = 'file';
     case Relation = 'relation';
+    case Select = 'select';
 
     public function typeProperties(): array
     {
@@ -28,6 +29,7 @@ enum CollectionFieldType: string
             self::RichText => [],
             self::Relation => ['target_collection_id' => null, 'cascade_on_delete' => false],
             self::Number => ['min' => null, 'max' => null, 'allow_decimals' => false],
+            self::Select => ['options' => []],
             self::Boolean, self::Datetime, self::Date, self::Json => [],
         };
     }
@@ -73,6 +75,10 @@ enum CollectionFieldType: string
                 "{$prefix}.target_collection_id" => ['required', 'string', 'exists:collections,id'],
                 "{$prefix}.cascade_on_delete" => ['sometimes', 'boolean'],
             ],
+            self::Select => [
+                "{$prefix}.options" => ['required', 'array', 'min:1'],
+                "{$prefix}.options.*" => ['required', 'string', 'min:1', 'max:255'],
+            ],
             self::LongText, self::RichText, self::Boolean, self::Datetime, self::Date, self::Json => [],
         };
     }
@@ -87,7 +93,7 @@ enum CollectionFieldType: string
             self::Url => 'url',
             self::Json => 'json',
             self::File => 'array',
-            self::Relation => 'string',
+            self::Relation, self::Select => 'string',
         };
     }
 

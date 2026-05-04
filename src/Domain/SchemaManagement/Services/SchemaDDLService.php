@@ -81,6 +81,7 @@ readonly class SchemaDDLService
             CollectionFieldType::Json => $blueprint->json($name),
             CollectionFieldType::File => $blueprint->json($name),
             CollectionFieldType::Relation => $blueprint->char($name, 26),
+            CollectionFieldType::Select => $blueprint->string($name, 255),
             default => throw new InvalidArgumentException('Unsupported column type: '.$type)
         };
 

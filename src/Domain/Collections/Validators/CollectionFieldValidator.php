@@ -150,6 +150,18 @@ class CollectionFieldValidator
                     "fields.{$index}.name must match /^[a-zA-Z_]+$/ and fields.{$index}.type must be one of: {$allowedTypes}."
                 );
             }
+
+            $typeRules = $type->typeValidationRules("fields.{$index}");
+            if ($typeRules !== []) {
+                $validator = \Illuminate\Support\Facades\Validator::make(
+                    ['fields' => [$index => $field]],
+                    $typeRules
+                );
+
+                if ($validator->fails()) {
+                    $errors = $this->mergeErrors($errors, $validator->errors()->toArray());
+                }
+            }
         }
 
         return $errors;
