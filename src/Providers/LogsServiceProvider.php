@@ -25,7 +25,8 @@ class LogsServiceProvider extends ServiceProvider
             return;
         }
 
-        $isDaily = config('logging.default') === 'daily' || in_array('daily', explode(',', (string) config('logging.channels.stack.channels', '')));
+        $stackChannels = config('logging.channels.stack.channels');
+        $isDaily = config('logging.default') === 'daily' || (is_array($stackChannels) && in_array('daily', $stackChannels));
         $isJson = config('logging.channels.daily.formatter') === \Monolog\Formatter\JsonFormatter::class;
 
         if (! $isDaily || ! $isJson) {
