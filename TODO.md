@@ -1,12 +1,12 @@
 ## TODO
 
+- Add Select field type
 - Add support for :changed, :isset, :length for api rules
 - Battle Testing
 - Ship
 
 ## Roadmap
 
-- Add Select field type
 - Add expand option to realtime
 - Bypass rule for superuser in realtime worker
 - Hooks system
