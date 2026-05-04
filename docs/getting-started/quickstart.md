@@ -19,8 +19,8 @@ The easiest way to get started is to create a new Veloquent project:
 1. **Create a new Veloquent project**
 ```bash
 composer create-project veloquent/veloquent app-name
-# The composer post install script will run the migrations and seed the database automatically.
-# By default, the script will instantiate a tenant with the domain localhost, and it is recommended to use localhost in your browser as 127.0.0.1 can be unreliable.
+# The composer post-install script will automatically run 'php artisan velo:install', 
+# which handles migrations, assets, and initial tenant setup.
 ```
 
 2. **Start the server**
@@ -45,9 +45,9 @@ php artisan key:generate
 composer install
 ```
 
-3. **Instantiate the first tenant**
+3. **Initialize Veloquent**
 ```bash
-php artisan tenant:create my-app --domain=localhost --database=myapp
+php artisan velo:install
 ```
 
 4. **Start the server**

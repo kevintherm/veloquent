@@ -20,7 +20,7 @@ Veloquent is designed to power multiple applications from a single instance, bri
 You can access the documentation in pure Markdown format by appending a `.md` extension to any page URL.
 
 Example:
-[https://velophp.com/docs/1.x/getting-started/introduction](https://velophp.com/docs/1.x/getting-started/introduction) → [https://velophp.com/docs/1.x/getting-started/introduction.md](https://velophp.com/docs/1.x/getting-started/introduction.md)
+[.../docs/2.x/getting-started/introduction](https://velophp.com/docs/2.x/getting-started/introduction) → [.../docs/2.x/getting-started/introduction.md](https://velophp.com/docs/2.x/getting-started/introduction.md)
 
 Alternatively, you can use `/llms.txt` or `/llms-full.txt` to retrieve fully compiled Markdown documentation, ready for use in agent development.
 

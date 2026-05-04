@@ -1,6 +1,5 @@
 ## TODO
 
-- Add Select field type
 - Add support for :changed, :isset, :length for api rules
 - Battle Testing
 - Ship

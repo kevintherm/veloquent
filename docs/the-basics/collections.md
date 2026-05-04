@@ -25,6 +25,7 @@ Each collection is made up of fields that define the structure of your records. 
 | `json` | Arbitrary JSON data. |
 | `file` | Upload metadata (single or multiple files) with optional protected access. |
 | `relation` | Link to a record in another collection. |
+| `select` | Dropdown selection with predefined options. |
 
 ### File Fields
 
