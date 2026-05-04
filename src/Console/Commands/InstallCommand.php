@@ -67,5 +67,16 @@ class InstallCommand extends Command
         $this->call('tenants:list');
 
         $this->components->info('Veloquent installed successfully!');
+
+        $folder = basename(base_path());
+
+        $this->line('');
+        $this->line('  To get started, run:');
+        $this->line("    <comment>cd {$folder}</comment>");
+        $this->line('    <comment>php artisan serve</comment>');
+        $this->line('');
+        $this->line("  The app will be available at: <link>http://localhost:8000</link>");
+        $this->line("  Find more documentation at: <link>https://velophp.com/docs</link>");
+        $this->line('');
     }
 }

@@ -21,7 +21,16 @@ class LogsServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        if ($this->app->runningInConsole() && ! $this->app->runningUnitTests()) {
+            return;
+        }
+
+        $isDaily = config('logging.default') === 'daily' || in_array('daily', explode(',', (string) config('logging.channels.stack.channels', '')));
+        $isJson = config('logging.channels.daily.formatter') === \Monolog\Formatter\JsonFormatter::class;
+
+        if (! $isDaily || ! $isJson) {
+            Log::warning('Veloquent Log Viewer might not work correctly. Please ensure the default log channel is "daily" and uses "\Monolog\Formatter\JsonFormatter".');
+        }
     }
 
     /**
