@@ -75,8 +75,8 @@ class InstallCommand extends Command
         $this->line("    <comment>cd {$folder}</comment>");
         $this->line('    <comment>php artisan serve</comment>');
         $this->line('');
-        $this->line("  The app will be available at: <link>http://localhost:8000</link>");
-        $this->line("  Find more documentation at: <link>https://velophp.com/docs</link>");
+        $this->line("  The app will be available at: <href=http://localhost:8000>http://localhost:8000</>");
+        $this->line("  Find more documentation at: <href=https://velophp.com/docs>https://velophp.com/docs</>");
         $this->line('');
     }
 }
