@@ -121,7 +121,7 @@ return [
     |--------------------------------------------------------------------------
     */
     'api_prefix' => env('VELO_API_PREFIX', 'api'),
-    'admin_prefix' => env('VELO_ADMIN_PREFIX', 'admin'),
+    'admin_prefix' => env('VELO_ADMIN_PREFIX', ''),
     
     /*
     |--------------------------------------------------------------------------
