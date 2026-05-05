@@ -32,7 +32,14 @@ const buildEchoConnectionConfig = () => {
 	if (broadcastConnection === 'pusher') {
 		const pusher = realtime?.pusher;
 		const pusherScheme = pusher?.scheme ?? import.meta.env.VITE_PUSHER_SCHEME ?? 'https';
-		const pusherHost = pusher?.host || import.meta.env.VITE_PUSHER_HOST || undefined;
+		let pusherHost = pusher?.host || import.meta.env.VITE_PUSHER_HOST || undefined;
+
+		// If the host is explicitly set to a Pusher API endpoint, it's likely a misconfiguration
+		// for WebSocket connections. Official Pusher users should rely on the cluster.
+		if (pusherHost && pusherHost.includes('pusher.com') && pusherHost.startsWith('api-')) {
+			pusherHost = undefined;
+		}
+
 		const pusherPort = Number(pusher?.port ?? import.meta.env.VITE_PUSHER_PORT ?? (pusherScheme === 'https' ? 443 : 80));
 		const pusherKey = pusher?.key ?? import.meta.env.VITE_PUSHER_APP_KEY;
 
