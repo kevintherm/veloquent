@@ -25,6 +25,7 @@
         "kevintherm/exprc": "^0.0.2",
         "laravel/framework": "^13.0",
         "laravel/sanctum": "^4.0",
+        "pusher/pusher-php-server": "^7.2",
         "laravel/socialite": "^5.26",
         "league/flysystem-aws-s3-v3": "^3.32",
         "league/flysystem-path-prefixing": "^3.31",

@@ -56,6 +56,10 @@ class VeloquentServiceProvider extends ServiceProvider
         $this->registerRouteBindings();
         $this->registerRateLimiters();
 
+        if (file_exists(__DIR__ . '/../routes/channels.php')) {
+            require __DIR__ . '/../routes/channels.php';
+        }
+
         if ($this->app->runningInConsole()) {
             $this->commands([
                 \Veloquent\Core\Console\Commands\CreateTenantCommand::class,

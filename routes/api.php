@@ -15,6 +15,7 @@ use Veloquent\Core\Http\Controllers\OAuthProviderController;
 use Veloquent\Core\Http\Controllers\OnboardingController;
 use Veloquent\Core\Http\Controllers\Settings\SettingsController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Broadcasting\BroadcastController;
 
 /*
 |--------------------------------------------------------------------------
@@ -166,3 +167,11 @@ Route::middleware(['auth:api', 'superuser'])->group(function () {
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
     Route::patch('/settings', [SettingsController::class, 'update'])->name('settings.update');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Broadcasting
+|--------------------------------------------------------------------------
+*/
+Route::post('/broadcasting/auth', [BroadcastController::class, 'authenticate'])
+    ->middleware(['auth:api']);
