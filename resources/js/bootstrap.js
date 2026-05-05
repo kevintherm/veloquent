@@ -24,20 +24,24 @@ window.axios.interceptors.request.use((config) => {
 	return config;
 });
 
-const broadcastConnection = (import.meta.env.VITE_BROADCAST_CONNECTION ?? 'reverb').toLowerCase();
+const broadcastConnection = (VELO_CONFIG.realtime?.type ?? import.meta.env.VITE_BROADCAST_CONNECTION ?? 'reverb').toLowerCase();
 
 const buildEchoConnectionConfig = () => {
+	const realtime = VELO_CONFIG.realtime;
+
 	if (broadcastConnection === 'pusher') {
-		const pusherScheme = import.meta.env.VITE_PUSHER_SCHEME ?? 'https';
-		const pusherHost = import.meta.env.VITE_PUSHER_HOST || undefined;
-		const pusherPort = Number(import.meta.env.VITE_PUSHER_PORT ?? (pusherScheme === 'https' ? 443 : 80));
+		const pusher = realtime?.pusher;
+		const pusherScheme = pusher?.scheme ?? import.meta.env.VITE_PUSHER_SCHEME ?? 'https';
+		const pusherHost = pusher?.host || import.meta.env.VITE_PUSHER_HOST || undefined;
+		const pusherPort = Number(pusher?.port ?? import.meta.env.VITE_PUSHER_PORT ?? (pusherScheme === 'https' ? 443 : 80));
+		const pusherKey = pusher?.key ?? import.meta.env.VITE_PUSHER_APP_KEY;
 
 		return {
-			key: import.meta.env.VITE_PUSHER_APP_KEY,
+			key: pusherKey,
 			config: {
 				broadcaster: 'pusher',
-				key: import.meta.env.VITE_PUSHER_APP_KEY,
-				cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER,
+				key: pusherKey,
+				cluster: pusher?.cluster ?? import.meta.env.VITE_PUSHER_APP_CLUSTER,
 				wsHost: pusherHost,
 				wsPort: pusherPort,
 				wssPort: pusherPort,
@@ -47,15 +51,17 @@ const buildEchoConnectionConfig = () => {
 		};
 	}
 
-	const reverbScheme = import.meta.env.VITE_REVERB_SCHEME ?? (window.location.protocol === 'https:' ? 'https' : 'http');
-	const reverbHost = import.meta.env.VITE_REVERB_HOST ?? window.location.hostname;
-	const reverbPort = Number(import.meta.env.VITE_REVERB_PORT ?? (reverbScheme === 'https' ? 443 : 80));
+	const reverb = realtime?.reverb;
+	const reverbScheme = reverb?.scheme ?? import.meta.env.VITE_REVERB_SCHEME ?? (window.location.protocol === 'https:' ? 'https' : 'http');
+	const reverbHost = reverb?.host ?? import.meta.env.VITE_REVERB_HOST ?? window.location.hostname;
+	const reverbPort = Number(reverb?.port ?? import.meta.env.VITE_REVERB_PORT ?? (reverbScheme === 'https' ? 443 : 80));
+	const reverbKey = reverb?.key ?? import.meta.env.VITE_REVERB_APP_KEY;
 
 	return {
-		key: import.meta.env.VITE_REVERB_APP_KEY,
+		key: reverbKey,
 		config: {
 			broadcaster: 'pusher',
-			key: import.meta.env.VITE_REVERB_APP_KEY,
+			key: reverbKey,
 			cluster: 'mt1',
 			wsHost: reverbHost,
 			wsPort: reverbPort,
