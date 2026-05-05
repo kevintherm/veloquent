@@ -8,10 +8,15 @@
     <link rel="icon" type="image/x-icon" href="{{ asset('vendor/velo/favicon.ico') }}">
     <link rel="icon" type="image/svg+xml" href="{{ asset('vendor/velo/logo.svg') }}">
     <meta name="velo-config" content="{{ json_encode([
-        'api_prefix' => config('velo.api_prefix', 'api'),
-        'admin_prefix' => config('velo.admin_prefix', 'admin'),
-        'logo_url' => asset('vendor/velo/logo.svg'),
-    ]) }}">
+    'api_prefix' => config('velo.api_prefix', 'api'),
+    'admin_prefix' => config('velo.admin_prefix', 'admin'),
+    'logo_url' => asset('vendor/velo/logo.svg'),
+    'is_demo' => env('VELO_IS_DEMO', false),
+    'demo_creds' => [
+        'email' => env('VELO_DEMO_EMAIL', 'demo@velophp.com'),
+        'password' => env('VELO_DEMO_PASSWORD', 'demo@123123'),
+    ]
+]) }}">
 
 
     @php
@@ -20,10 +25,10 @@
 
     @vite(
         $useDevServer
-            ? (file_exists(base_path('core'))
-                ? ['core/resources/css/app.css', 'core/resources/js/app.js']
-                : ['vendor/veloquent/core/resources/css/app.css', 'vendor/veloquent/core/resources/js/app.js'])
-            : ['resources/css/app.css', 'resources/js/app.js'],
+        ? (file_exists(base_path('core'))
+            ? ['core/resources/css/app.css', 'core/resources/js/app.js']
+            : ['vendor/veloquent/core/resources/css/app.css', 'vendor/veloquent/core/resources/js/app.js'])
+        : ['resources/css/app.css', 'resources/js/app.js'],
         $useDevServer ? null : 'vendor/velo'
     )
 </head>

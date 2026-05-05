@@ -23,6 +23,11 @@ const loading = ref(false);
 const onboardingInitialized = ref(true);
 
 onMounted(async () => {
+  if (VELO_CONFIG.is_demo) {
+    email.value = VELO_CONFIG.demo_creds?.email || "";
+    password.value = VELO_CONFIG.demo_creds?.password || "";
+  }
+
   try {
     onboardingInitialized.value = await isOnboardingInitialized();
   } catch {

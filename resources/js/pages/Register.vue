@@ -16,10 +16,10 @@ import { VELO_CONFIG } from "@/lib/config";
 
 const router = useRouter();
 const { fetchUser, login } = useAuth();
-const name = ref("Admin");
-const email = ref("admin@velophp.com");
-const password = ref("password");
-const password_confirmation = ref("password");
+const name = ref("");
+const email = ref("");
+const password = ref("");
+const password_confirmation = ref("");
 const error = ref("");
 const loading = ref(false);
 
@@ -72,7 +72,8 @@ const handleSubmit = async () => {
         <form @submit.prevent="handleSubmit" class="space-y-4">
           <div class="space-y-2">
             <Label for="name">Name</Label>
-            <Input id="name" name="name" type="text" v-model="name" autocomplete="name" required :disabled="loading" />
+            <Input id="name" name="name" type="text" v-model="name" autocomplete="name" required :disabled="loading"
+              placeholder="John Doe" />
           </div>
           <div class="space-y-2">
             <Label for="email">Email</Label>
