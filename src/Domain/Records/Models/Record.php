@@ -235,14 +235,20 @@ class Record extends Authenticatable
             return $path;
         }
 
+        $disk = Storage::disk((string) config('filesystems.default', 'local'));
+
+        if ($disk->getConfig()['driver'] === 'local') {
+            return '/storage/'.ltrim($path, '/');
+        }
+
         try {
-            return Storage::temporaryUrl($path, now()->addMinutes(15));
+            return $disk->temporaryUrl($path, now()->addMinutes(15));
         } catch (\Throwable) {
             //
         }
 
         try {
-            return Storage::url($path);
+            return $disk->url($path);
         } catch (\Throwable) {
             return null;
         }
