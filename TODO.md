@@ -15,4 +15,5 @@
 
 ## Issues
 
+- Admin panel: switching collections very quickly can trigger race conditions causing correct data to missplaced
 - Admin panel: recreating a field will add "expand" object to the datatable columns
