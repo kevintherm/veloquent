@@ -6,6 +6,7 @@
 
 ## Roadmap
 
+- Validate json field strictly
 - Add expand option to realtime
 - Bypass rule for superuser in realtime worker
 - Hooks system
