@@ -8,6 +8,8 @@ use Veloquent\Core\Domain\Records\Services\FileFieldProcessor;
 use Veloquent\Core\Domain\Records\Services\RelationIntegrityService;
 use Spatie\Multitenancy\Contracts\IsTenant;
 use Spatie\Multitenancy\Landlord;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class RecordObserver
 {
@@ -64,13 +66,21 @@ class RecordObserver
         }
 
         Landlord::execute(function () use ($event, $tenantId, $collectionId, $record) {
-            app(RealtimeBusDriver::class)->publish([
-                'type' => 'record_event',
-                'event' => $event,
-                'tenant_id' => $tenantId,
-                'collection_id' => $collectionId,
-                'record' => $record->toArray(),
-            ]);
+            try {
+                app(RealtimeBusDriver::class)->publish([
+                    'type' => 'record_event',
+                    'event' => $event,
+                    'tenant_id' => $tenantId,
+                    'collection_id' => $collectionId,
+                    'record' => $record->toArray(),
+                ]);
+            } catch (Throwable $e) {
+                Log::error("Failed to publish {$event} event for record {$record->id}: {$e->getMessage()}", [
+                    'exception' => $e,
+                    'tenant_id' => $tenantId,
+                    'collection_id' => $collectionId,
+                ]);
+            }
         });
     }
 
