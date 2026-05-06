@@ -142,7 +142,10 @@ readonly class SchemaDDLService
     private function runDDL(callable $operation): void
     {
         try {
-            if (DB::getDriverName() === 'mysql') {
+            $driverName = DB::getDriverName();
+            $supportsTransactionalDDL = !in_array($driverName, ['mysql', 'mariadb']);
+            
+            if ($supportsTransactionalDDL) {
                 $operation();
 
                 return;
