@@ -240,11 +240,20 @@ class RealtimeWorker extends Command
                 if ($matched) {
                     $matchedCount++;
 
-                    broadcast(new RecordChanged(
-                        channel: (string) $subscription['channel'],
-                        event: $event,
-                        record: array_merge(array_intersect_key($record, array_flip(array_keys($record))), ['_collection' => $collection->name]),
-                    ));
+                    try {
+                        broadcast(new RecordChanged(
+                            channel: (string) $subscription['channel'],
+                            event: $event,
+                            record: array_merge(array_intersect_key($record, array_flip(array_keys($record))), ['_collection' => $collection->name]),
+                        ));
+                    } catch (\Throwable $e) {
+                        $this->debug('[realtime:worker] Broadcast failed: '.$e->getMessage(), [
+                            'exception' => $e,
+                            'tenant_id' => $tenantId,
+                            'collection_id' => $collectionId,
+                            'channel' => (string) $subscription['channel'],
+                        ]);
+                    }
                 }
             }
 
