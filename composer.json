@@ -22,7 +22,7 @@
     "require": {
         "php": "^8.3",
         "carbon-cli/carbon-cli": "^1.4",
-        "kevintherm/exprc": "^0.0.2",
+        "kevintherm/exprc": "^0.0.3",
         "laravel/framework": "^13.0",
         "laravel/sanctum": "^4.0",
         "pusher/pusher-php-server": "^7.2",

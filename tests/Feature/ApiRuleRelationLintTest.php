@@ -1,12 +1,12 @@
 <?php
 
+use Illuminate\Validation\ValidationException;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Veloquent\Core\Domain\Collections\Enums\CollectionType;
+use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
 use Veloquent\Core\Domain\Collections\Actions\CreateCollectionAction;
 use Veloquent\Core\Domain\Collections\Actions\UpdateCollectionAction;
-use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
-use Veloquent\Core\Domain\Collections\Enums\CollectionType;
 use Veloquent\Core\Domain\QueryCompiler\Exceptions\InvalidRuleExpressionException;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Validation\ValidationException;
 
 uses(RefreshDatabase::class);
 
@@ -77,7 +77,7 @@ it('allows relation field access in api rule lint during collection update', fun
     ]))->not->toThrow(InvalidRuleExpressionException::class);
 });
 
-it('still rejects unknown relation field access in api rule lint', function () {
+it('allows unknown relation field access in api rule lint (silent fail at runtime)', function () {
     $users = app(CreateCollectionAction::class)->execute([
         'name' => 'users_'.alphaSuffix(),
         'type' => CollectionType::Base->value,
@@ -100,7 +100,7 @@ it('still rejects unknown relation field access in api rule lint', function () {
             'update' => '',
             'delete' => '',
         ],
-    ]))->toThrow(InvalidRuleExpressionException::class);
+    ]))->not->toThrow(InvalidRuleExpressionException::class);
 });
 
 it('requires manage api rule for auth collections and returns array-shaped errors', function () {

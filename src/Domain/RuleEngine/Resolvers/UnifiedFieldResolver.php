@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Veloquent\Core\Domain\RuleEngine\Resolvers;
 
-use Veloquent\Core\Domain\Records\Services\RelationJoinResolver;
 use Illuminate\Database\Eloquent\Builder;
 use Kevintherm\Exprc\Resolvers\FieldResolverInterface;
+use Veloquent\Core\Domain\Records\Services\RelationJoinResolver;
 
 final class UnifiedFieldResolver implements FieldResolverInterface
 {
@@ -30,7 +30,7 @@ final class UnifiedFieldResolver implements FieldResolverInterface
 
     public function resolve(string $field): string
     {
-        if (str_starts_with($field, '__sysvar__') || str_starts_with($field, '__numeric__')) {
+        if (str_starts_with($field, '@') || str_starts_with($field, '__numeric__')) {
             return $field;
         }
 

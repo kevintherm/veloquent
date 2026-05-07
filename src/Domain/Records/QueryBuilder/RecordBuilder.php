@@ -2,13 +2,13 @@
 
 namespace Veloquent\Core\Domain\Records\QueryBuilder;
 
-use Veloquent\Core\Domain\QueryCompiler\Services\AllowedFieldsResolver;
-use Veloquent\Core\Domain\QueryCompiler\Services\QueryFilter;
-use Veloquent\Core\Domain\Records\Services\RelationJoinResolver;
-use Veloquent\Core\Domain\Records\Services\RuleContextBuilder;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Arr;
 use RuntimeException;
+use Illuminate\Support\Arr;
+use Illuminate\Database\Eloquent\Builder;
+use Veloquent\Core\Domain\QueryCompiler\Services\QueryFilter;
+use Veloquent\Core\Domain\Records\Services\RuleContextBuilder;
+use Veloquent\Core\Domain\Records\Services\RelationJoinResolver;
+use Veloquent\Core\Domain\QueryCompiler\Services\AllowedFieldsResolver;
 
 class RecordBuilder extends Builder
 {
@@ -54,7 +54,6 @@ class RecordBuilder extends Builder
         $allowedFields = app(AllowedFieldsResolver::class)->resolveFromCollection($collection);
         $resolver = new RelationJoinResolver($collection, $this);
 
-        // Ensure we select only the base table columns to avoid collisions with joined tables
         $this->select($collection->getPhysicalTableName().'.*');
 
         $context = app(RuleContextBuilder::class)->build();
@@ -78,7 +77,6 @@ class RecordBuilder extends Builder
         $allowedFields = app(AllowedFieldsResolver::class)->resolveFromCollection($collection);
         $resolver = new RelationJoinResolver($collection, $this);
 
-        // Ensure we select only the base table columns to avoid collisions with joined tables
         $this->select($collection->getPhysicalTableName().'.*');
 
         $context = app(RuleContextBuilder::class)->build();

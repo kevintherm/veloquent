@@ -35,7 +35,7 @@ class UnifiedEvaluator implements EvaluatorInterface, VisitorInterface
 
     private function isSysvar(string $field): bool
     {
-        return str_starts_with($field, '__sysvar__') || str_starts_with($field, '__numeric__');
+        return str_starts_with($field, '@') || str_starts_with($field, '__numeric__');
     }
 
     private function getSysvarValue(mixed $field): mixed
@@ -50,7 +50,7 @@ class UnifiedEvaluator implements EvaluatorInterface, VisitorInterface
             return is_numeric($val) ? (str_contains($val, '.') ? (float) $val : (int) $val) : $val;
         }
 
-        $path = str_replace('__sysvar__', '', $field);
+        $path = ltrim($field, '@');
 
         return data_get($this->sysvars, $path);
     }
@@ -163,14 +163,14 @@ class UnifiedEvaluator implements EvaluatorInterface, VisitorInterface
         $operator = strtoupper($node->operator);
         $value = $node->value;
 
-        $leftIsCollectionSysvar = is_string($field) && str_starts_with($field, '__sysvar__collection.');
+        $leftIsCollectionSysvar = is_string($field) && str_starts_with($field, '@collection.');
 
         $rightIsCollectionSysvar = false;
         if ($value instanceof IdentifierNode) {
             $rightValue = $this->isSysvar($value->name) ? $this->getSysvarValue($value->name) : $value->name;
             $rightIsSysvar = $this->isSysvar($value->name);
             $rightIsField = ! $rightIsSysvar;
-            $rightIsCollectionSysvar = str_starts_with($value->name, '__sysvar__collection.');
+            $rightIsCollectionSysvar = str_starts_with($value->name, '@collection.');
         } else {
             $rightValue = $value;
             $rightIsSysvar = false;
@@ -179,14 +179,14 @@ class UnifiedEvaluator implements EvaluatorInterface, VisitorInterface
 
         // Handle cross-collection lookups
         if ($leftIsCollectionSysvar) {
-            $collectionPath = str_replace('__sysvar__collection.', '', $field);
+            $collectionPath = str_replace('@collection.', '', $field);
             $this->applyCrossCollectionComparison($builder, $collectionPath, $operator, $rightValue, $rightIsField, $boolean);
 
             return;
         }
 
         if ($rightIsCollectionSysvar) {
-            $collectionPath = str_replace('__sysvar__collection.', '', $value->name);
+            $collectionPath = str_replace('@collection.', '', $value->name);
             $leftValue = $this->isSysvar($field) ? $this->getSysvarValue($field) : $field;
             $leftIsField = ! $this->isSysvar($field);
 
@@ -208,16 +208,17 @@ class UnifiedEvaluator implements EvaluatorInterface, VisitorInterface
             return;
         }
 
-        if ($operator === 'CONTAINS') {
+        if ($operator === 'CONTAINS' || $operator === 'NOT CONTAINS') {
             $method = $boolean === 'or' ? 'orWhereJsonContains' : 'whereJsonContains';
-            $builder->{$method}($this->resolver->resolve($field), $rightValue);
+            $builder->{$method}($this->resolver->resolve($field), $rightValue, 'and', $operator === 'NOT CONTAINS');
 
             return;
         }
 
-        if ($operator === 'HASKEY') {
+        if ($operator === 'HASKEY' || $operator === 'NOT HASKEY') {
+            $column = $this->resolver->resolve($field) . '->' . $rightValue;
             $method = $boolean === 'or' ? 'orWhereJsonContainsKey' : 'whereJsonContainsKey';
-            $builder->{$method}($this->resolver->resolve($field), $rightValue);
+            $builder->{$method}($column, 'and', $operator === 'NOT HASKEY');
 
             return;
         }
@@ -287,8 +288,15 @@ class UnifiedEvaluator implements EvaluatorInterface, VisitorInterface
                 } else {
                     $q->whereNotIn($tableName.'.'.$collectionField, $inValues);
                 }
+            } elseif ($operator === 'CONTAINS') {
+                $q->whereJsonContains($tableName.'.'.$collectionField, $otherValue);
+            } elseif ($operator === 'NOT CONTAINS') {
+                $q->whereJsonContains($tableName.'.'.$collectionField, $otherValue, 'and', true);
+            } elseif ($operator === 'HASKEY') {
+                $q->whereJsonContainsKey($tableName.'.'.$collectionField . '->' . $otherValue);
+            } elseif ($operator === 'NOT HASKEY') {
+                $q->whereJsonContainsKey($tableName.'.'.$collectionField . '->' . $otherValue, 'and', true);
             } elseif ($otherIsField) {
-                // Determine the parent table name to prefix the other value
                 $parentTable = $builder instanceof Builder ? $builder->getModel()->getTable() : null;
                 $resolvedOtherValue = $this->resolver->resolve((string) $otherValue);
                 if ($parentTable && ! str_contains($resolvedOtherValue, '.')) {
@@ -323,8 +331,8 @@ class UnifiedEvaluator implements EvaluatorInterface, VisitorInterface
 
     private function applyNullComparison(object $builder, string $field, bool $isNot, string $boolean): void
     {
-        if (str_starts_with($field, '__sysvar__collection.')) {
-            $collectionPath = str_replace('__sysvar__collection.', '', $field);
+        if (str_starts_with($field, '@collection.')) {
+            $collectionPath = str_replace('@collection.', '', $field);
             $parts = explode('.', $collectionPath, 2);
             if (count($parts) < 2) {
                 throw new RuntimeException('Invalid collection sysvar.');
@@ -431,6 +439,10 @@ class UnifiedEvaluator implements EvaluatorInterface, VisitorInterface
             'NOT LIKE' => 'LIKE',
             'IN' => 'NOT IN',
             'NOT IN' => 'IN',
+            'CONTAINS' => 'NOT CONTAINS',
+            'NOT CONTAINS' => 'CONTAINS',
+            'HASKEY' => 'NOT HASKEY',
+            'NOT HASKEY' => 'HASKEY',
             default => throw new RuntimeException(sprintf('Unsupported operator "%s" for negation.', $operator)),
         };
     }
@@ -449,7 +461,7 @@ class UnifiedEvaluator implements EvaluatorInterface, VisitorInterface
     private function toSqlOperator(string $operator): string
     {
         return match (strtoupper($operator)) {
-            '=', '!=', '>', '>=', '<', '<=', 'LIKE', 'NOT LIKE', 'CONTAINS', 'HASKEY', 'IN', 'NOT IN' => $operator,
+            '=', '!=', '>', '>=', '<', '<=', 'LIKE', 'NOT LIKE', 'CONTAINS', 'NOT CONTAINS', 'HASKEY', 'NOT HASKEY', 'IN', 'NOT IN' => $operator,
             default => throw new RuntimeException(sprintf('Unsupported operator "%s" for query builder.', $operator)),
         };
     }
