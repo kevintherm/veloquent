@@ -2,6 +2,22 @@
 
 All notable changes to Veloquent will be documented in this file.
 
+## [2.2.0] - 2026-05-07
+
+### Added
+- **Rule Engine Hardening**:
+    - Support for JSON operators: `?=` (CONTAINS) and `?&` (HASKEY) for both in-memory and SQL evaluation.
+    - Support for cross-collection lookups using the `@collection.[collection].[field]` syntax.
+    - Boolean negation support via the `!` (NOT) operator.
+    - Optimized SQL translation using nested `EXISTS` subqueries for cross-collection JSON checks.
+    - Unified prefix standard using `@` for all system variables and collection lookups.
+- **Documentation Revamp**:
+    - Rewrite of `api-rules.md` to be more end-user friendly, including cookbooks and function reference tables.
+    - Updated `rule-engine.md` and `query-filter.md` with new grammar and technical standards.
+
+### Changed
+- Upgraded `kevintherm/exprc` dependency to `^0.0.3` for improved parsing stability and extensibility.
+
 ## [2.1.0] - 2026-05-04
 
 ### Added

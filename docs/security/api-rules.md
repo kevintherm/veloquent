@@ -1,125 +1,157 @@
 # API Rules & Access Control
 
-Veloquent provides powerful, expression-based access control to secure your data at the collection level. You can define rules for various actions, ensuring that only authorized users or requests can access or modify your records.
+Veloquent provides powerful, expression-based access control to secure your data. You can define rules for various actions, ensuring that only authorized users or requests can access or modify your records.
+
+This guide is designed to help you quickly understand and write rules for your collections without needing deep technical knowledge of the underlying engine.
+
+---
 
 ## Action Rules
 
-Each collection can have rules for the following actions:
-- **`list`**: Controls which records are returned in a paginated list.
-- **`view`**: Controls whether a single record can be retrieved.
+Each collection can have specific rules defined for the following actions:
+
+- **`list`**: Controls which records are returned when fetching multiple records via the API.
+- **`view`**: Controls whether a specific single record can be retrieved.
 - **`create`**: Controls who can create new records in the collection.
 - **`update`**: Controls who can modify existing records.
 - **`delete`**: Controls who can delete records.
-- **`manage`**: (Auth collections only) Controls direct updates to sensitive fields like `email` or `password`.
+- **`manage`**: (Auth collections only) Controls direct updates to sensitive authentication fields like `email` or `password`.
 
-## Rule Expressions
+If an action's rule is `null` (or undefined), the default behavior is to **deny** access. To make an action fully public, set the rule to an empty string (`""`).
 
-Rules are written in a custom, human-readable expression language. For example:
-- `active = true`: Only records where the `active` field is true are visible.
-- `@request.auth.id = creator_id`: Only the user who created the record can access it.
-- `@request.auth.isAdmin = true`: Only admins can perform the action.
+---
 
-### Evaluation Constraints
+## Contextual Variables (`@request`)
 
-- **SQL Evaluation**: SQL mode supports symmetric scalar comparisons for reversible operators (`=`, `!=`, `>`, `<`, `>=`, `<=`), including `field op value`, `value op field`, `field op field`, and `@request op @request`. Non-reversible operators (`like`, `not like`) require a field on the left side. See `docs/database/query-filter.md`.
-- **Memory Evaluation**: In-memory evaluation supports symmetric field and `@` variable comparisons and broader context resolution with `@request.body`, `@request.auth`, and `@request.query`. See `docs/database/rule-engine.md`.
+Rules can dynamically reference the current context of the API request using the `@request` prefix.
 
-### Contextual Variables
+| Variable | Description | Example Use Case |
+|---|---|---|
+| `@request.auth.*` | Access fields of the currently authenticated user. | `@request.auth.id = owner_id` |
+| `@request.body.*` | Access data from the incoming request payload. | `@request.body.status = "published"` |
+| `@request.query.*` | Access URL query string parameters (e.g., `?token=...`). | `@request.query.token = "x"` |
+| `@request.param.*` | Access named route parameters (e.g., `{id}`). | `@request.param.id = x` |
 
-The behavior of bare variables (variables without a prefix) depends on the action being performed:
+### "Bare" Variables vs `@request.body`
 
-- **On Create**: Bare variables (e.g., `name`) refer to the incoming payload in `@request.body`.
-- **On Update**: Bare variables refer to the **existing** record's values, while `@request.body` explicitly refers to the incoming payload. This allows you to compare current and new values (e.g., `@request.body.status != status`).
+When you write a field name without any prefix (e.g., `status`), its meaning changes slightly depending on the action:
 
-### Common Operators
+- **On Create**: Bare variables refer to the **incoming data** you are trying to save (equivalent to `@request.body`).
+- **On Update**: Bare variables refer to the **existing** record in the database. To access the incoming changes, you *must* use `@request.body`.
+  - *Example*: `@request.body.status != status` (Only allow the update if the status is actually changing).
 
-Veloquentsupports a wide range of operators for building rules:
+---
 
-| Operator | Description |
+## Cross-Collection Lookups (`@collection`)
+
+Sometimes, determining access requires checking data in a completely different collection. You can do this using the `@collection` prefix, which acts as a subquery.
+
+**Syntax**: `@collection.[collection_name].[field] = value`
+
+**Examples**:
+- Only allow users to comment if they have an active subscription:
+  `@collection.subscriptions.user_id = @request.auth.id`
+- Check if the current user has the "admin" role in a separate `users` collection:
+  `@collection.users.id = @request.auth.id && @collection.users.roles ?= "admin"`
+
+---
+
+## Supported Operators
+
+Veloquent supports a wide range of operators to build complex logic:
+
+| Operator | Description | Example |
+|---|---|---|
+| `=`, `!=` | Equals, Does not equal | `status = "active"` |
+| `>`, `<` | Greater than, Less than | `age > 18` |
+| `>=`, `<=` | Greater than or equal, Less than or equal | `score >= 100` |
+| `&&`, `||` | Logical AND, Logical OR | `active = true && verified = true` |
+| `!` | Logical NOT (negation) | `!(tags ?= "banned")` |
+| `?=`, `?&` | JSON Contains (array), JSON Has Key (object) | `tags ?= "php"` |
+| `in`, `not in` | Check if value exists (or not) in a list | `role in ("admin", "editor")` |
+| `like`, `not like`| String pattern matching (`%` for wildcard) | `email like "%@example.com"` |
+| `is null`, `is not null` | Check if a field is empty | `deleted_at is null` |
+
+---
+
+## Supported Functions
+
+You can use dynamic functions, particularly for date calculations, directly in your rules:
+
+### Value Functions
+These functions generate a dynamic value that you can compare your fields against.
+
+| Function | Description |
 |---|---|
-| `=`, `!=` | Equals, Does not equal. |
-| `>`, `<` | Greater than, Less than. |
-| `>=`, `<=` | Greater than or equal, Less than or equal. |
-| `&&`, `||` | Logical AND, Logical OR. |
-| `like`, `not like` | SQL LIKE pattern matching (e.g., `name like "%john%"`). |
-| `in`, `not in` | Check if a value exists in a list (e.g., `status in ("active", "pending")`). |
-| `is null`, `is not null` | Check for null values. |
+| `now()`, `today()` | Current date/time, Current start of day. |
+| `yesterday()`, `tomorrow()` | Start of yesterday, Start of tomorrow. |
+| `thisweek()`, `lastweek()`, `nextweek()` | Start of the respective week. |
+| `thismonth()`, `lastmonth()`, `nextmonth()` | Start of the respective month. |
+| `thisyear()`, `lastyear()`, `nextyear()` | Start of the respective year. |
+| `daysago(n)`, `daysfromnow(n)` | Date exactly `n` days ago / from now. |
+| `weeksago(n)`, `weeksfromnow(n)` | Date exactly `n` weeks ago / from now. |
+| `monthsago(n)`, `monthsfromnow(n)` | Date exactly `n` months ago / from now. |
+| `yearsago(n)`, `yearsfromnow(n)` | Date exactly `n` years ago / from now. |
 
-### Relation ID comparisons
+### Field Functions
+These functions are used to wrap a field name to extract or transform its value before comparing it.
 
-When comparing related record IDs, use an explicit ID path on the related object. For example:
+| Function | Description | Example |
+|---|---|---|
+| `date(field)` | Extracts the date part (YYYY-MM-DD). | `date(created_at) = today()` |
+| `year(field)` | Extracts the year as an integer. | `year(created_at) = 2024` |
+| `month(field)` | Extracts the month (1-12) as an integer. | `month(created_at) = 5` |
+| `day(field)` | Extracts the day of the month (1-31). | `day(created_at) = 15` |
+| `time(field)` | Extracts the time part (HH:MM:SS). | `time(created_at) > "12:00:00"` |
 
+---
+
+## Practical Examples
+
+Here are some common rule patterns you can copy and adapt for your project:
+
+**1. Public Read-Only Access**
 ```text
-user = @request.auth.id && (parent_comment = null || post = parent_comment.post.id)
+""
 ```
 
-In runtime rule context, a path such as `parent_comment.post` may resolve to a hydrated related object or array, so using `.id` is required when matching scalar relation IDs.
+**2. Only the Creator Can Access / Modify**
+```text
+user = @request.auth.id
+```
 
-### System References (`@request`)
+**3. Only Admins Can Access**
+```text
+@request.auth.role = "admin"
+```
 
-Rules can reference the current request context using the `@request` prefix:
+**4. Prevent Editing Specific Fields**
+*(On Update Action)*
+```text
+@request.body.is_verified = is_verified
+```
+*(This ensures the incoming `is_verified` value exactly matches the existing one, preventing tampering).*
 
-| Reference | Description |
-|---|---|
-| `@request.auth.*` | Access fields of the authenticated user (e.g., `@request.auth.id`, `@request.auth.email`). |
-| `@request.body.*` | Access fields from the incoming request body (useful for `create` and `update` rules). |
-| `@request.query.*` | Access query parameters from the request. |
+**5. Must Be Published or Authored by Current User**
+```text
+status = "published" || user = @request.auth.id
+```
 
-### Cross-Collection Checks (`@collection`)
+**6. Block Banned Users (Using JSON Tags)**
+```text
+!( @request.auth.tags ?= "banned" )
+```
 
-You can perform existence checks against other collections using the `@collection` prefix. This acts as a subquery, allowing you to validate data against records outside your immediate collection.
-
-Syntax: `@collection.[collection_name].[field] = value`
-
-For example, to ensure a user only can edit comments if they have an active subscription record in another collection:
-- `@collection.subscriptions.user_id = @request.auth.id`
-
-Or to enforce unique constraint validations via data stored elsewhere:
-- `@collection.bans.user_id != @request.auth.id` (Where the user's ID does not appear in a bans collection).
-
-### Relation Joins
-
-You can access fields of related records using dot notation. For example, if a `posts` collection has a `userId` relation field pointing to `users`, you can write:
-- `userId.active = true`: Only posts whose user is active are visible.
-
-When a related record is expanded in API output, the foreign key remains at the top level and the expanded payload appears under `expand`.
-If the expanded record is blocked by the target collection's `view` rule or the related record cannot be found, the `expand` entry is explicitly `null`.
-
-## Default Behavior
-
-If no rule is defined for an action, the default behavior is to **deny** access (except for superusers, who have full access). To allow public access, you can set a rule to `true`.
+**7. Only authenticated user can access**
+```text
+@request.auth.id != null
+```
 
 ---
 
-## Error Handling
+## Deep Dives for Developers
 
-Standardized API error responses:
-
-```json
-{
-  "message": "Validation error",
-  "errors": {
-    "email": ["The email has already been taken."]
-  }
-}
-```
-
-### Critical Errors
-
-Some errors include an `error_type` for programmatic handling:
-
-- **`SCHEMA_CORRUPT`** (`409 Conflict`): DB table doesn't match metadata.
-  ```json
-  {
-    "message": "The collection schema is corrupt.",
-    "error_type": "SCHEMA_CORRUPT",
-    "activity": "Read",
-    "collection_id": "01JAB..."
-  }
-  ```
-
----
-
-## Next Steps
-
-After securing your data with rules, you're ready to start using the [Records API](../the-basics/records.md) to interact with your data.
+If you want to understand exactly how the Veloquent Rule Engine evaluates these expressions or translates them into SQL queries under the hood, check out the these documentation or checkout our repository directly:
+- [Rule Engine Standard](../database/rule-engine.md) (In-memory evaluation details)
+- [Query Filter Standard](../database/query-filter.md) (SQL compilation details)
+- [Veloquent Rule Engine](https://github.com/kevintherm/veloquent/blob/main/src/Domain/RuleEngine/RuleEngine.php)

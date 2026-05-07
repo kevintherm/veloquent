@@ -30,6 +30,12 @@ Use this mode for rule types that are evaluated in memory.
 
 ## SQL Grammar Standard
 
+### Boolean Negation
+
+The `!` operator is supported for negating any expression or condition.
+- `!(status = "active")`
+- `!(tags ?= "admin")`
+
 ### Scalar token classes
 
 For scalar comparisons, either side may be one of:
@@ -74,6 +80,7 @@ For `?=` and `?&` in SQL mode:
 - Left side must be `FIELD` or `SYSVAR`
 - Left side must resolve to a JSON-path capable field (for example using `->` notation)
 - Right side must be a scalar token
+- Supports negation: `NOT CONTAINS` and `NOT HASKEY` (via `!`)
 
 ## SQL Normalization Standard
 
@@ -101,6 +108,8 @@ This includes expressions such as:
 - `5 > score`
 - `id = updated_at`
 - `@request.body.user = @request.auth.id`
+- `@collection.users.email = "test@example.com"` (Compiles to `whereExists` subquery)
+- `@collection.users.roles ?= "admin"` (Compiles to nested `whereExists` + `whereJsonContains`)
 
 ## Context and System Variable Standard
 

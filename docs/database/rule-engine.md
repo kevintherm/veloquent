@@ -38,14 +38,14 @@ list           := '(' scalar ( ',' scalar )* ')'
 - `VALUE`: literal (`string`, number, `true`, `false`, `null`)
 - `DATE_FUNC`: date helper call (`today()`, `daysago(7)`, etc.)
 - `OP`: comparison operator
-- `AND`, `OR`, `LPAREN`, `RPAREN`, `COMMA`
+- `AND`, `OR`, `NOT` (`!`), `LPAREN`, `RPAREN`, `COMMA`
 
 ## Supported Operators
 
 - Scalar operators: `=`, `!=`, `>`, `<`, `>=`, `<=`, `like`, `not like`
 - List operators: `in`, `not in`
 - JSON operators: `?=`, `?&`
-- Logical operators: `&&`, `||`
+- Logical operators: `&&`, `||`, `!` (NOT)
 
 Note: `&&` and `||` are accepted syntax and are normalized to `AND` and `OR` before parsing.
 
@@ -89,6 +89,7 @@ Allowed prefixes:
 - `@request.body.`
 - `@request.param.`
 - `@request.query.`
+- `@collection.<collection_name>.<field_name>` (Cross-collection reference)
 
 Any other `@` prefix is invalid during lint.
 
@@ -141,7 +142,8 @@ String literals support backslash escaping for quotes:
 
 JSON-specific operators (`?=`, `?&`) are supported in both in-memory and SQL modes:
 - `meta->tags ?= "php"` (Check if JSON array contains value)
-- `meta->tags ?& ("php", "laravel")` (Check if JSON array contains all values)
+- `meta->tags ?& "php"` (Check if JSON object has key "php")
+- `@collection.users.roles ?= "admin"` (Check if any user has the "admin" role)
 
 > [!NOTE]
 > When using `?=` and `?&` in SQL mode (via `QueryFilter`), the underlying database must support JSON path operations.
@@ -162,8 +164,8 @@ JSON-specific operators (`?=`, `?&`) are supported in both in-memory and SQL mod
 - Carbon operands are compared by Unix timestamp
 - If either side is `null`, `=` uses strict null equality and `!=` is its inverse
 - `like` and `not like` use SQL-like wildcard semantics (`%`, `_`)
-- `?=` checks JSON array containment
-- `?&` checks JSON object key existence
+- `?=` checks JSON array containment (supports `NOT CONTAINS`)
+- `?&` checks JSON object key existence (supports `NOT HASKEY`)
 
 ## Lint vs Evaluate
 
@@ -191,6 +193,8 @@ role in ("admin", "editor")
 created_at >= daysago(30)
 settings ?& "theme"
 metadata->tags ?= "php"
+!(@collection.users.status = "banned")
+@collection.users.roles ?= "admin"
 ```
 
 ## Related Standards
