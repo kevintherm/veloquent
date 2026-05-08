@@ -104,7 +104,7 @@ enum CollectionFieldType: string
             self::Boolean => 'boolean',
             self::Datetime => 'datetime',
             self::Date => 'date',
-            self::Json => 'json',
+            self::Json => 'object',
             self::File => 'json',
             default => null,
         };

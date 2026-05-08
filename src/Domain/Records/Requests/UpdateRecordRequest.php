@@ -42,6 +42,7 @@ class UpdateRecordRequest extends BaseRecordRequest
         $data = $this->filterAutoFillFields($data, $collection);
 
         $data = $this->normalizeRelationFieldsForWrite($data, $collection);
+        $data = $this->normalizeJsonFieldsForWrite($data, $collection);
 
         return $data;
     }

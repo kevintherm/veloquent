@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import axios from "axios";
 import { toast } from "vue-sonner";
 import {
@@ -239,6 +239,22 @@ const defaultFieldValue = (field) => {
   }
 
   return "";
+};
+
+const handleJsonBlur = (field) => {
+  const value = formState.value[field.name];
+  if (!value || typeof value !== "string") return;
+
+  try {
+    const parsed = JSON.parse(value);
+    formState.value[field.name] = JSON.stringify(parsed, null, 2);
+    nextTick(() => {
+      const el = document.getElementById(`field-${props.sheetId}-${field.name}`);
+      adjustTextareaHeight(el);
+    });
+  } catch {
+    //
+  }
 };
 
 const initializeFormState = () => {
@@ -764,15 +780,7 @@ const coerceFieldValue = (field, rawValue) => {
   }
 
   if (field.type === "json") {
-    if (rawValue === null) {
-      return null;
-    }
-
-    if (typeof rawValue !== "string") {
-      return rawValue;
-    }
-
-    return JSON.parse(rawValue);
+    return rawValue;
   }
 
   if (field.type === "relation") {
@@ -1122,8 +1130,10 @@ onMounted(async () => {
             <textarea v-if="field.type === 'longtext' || field.type === 'json'" :id="`field-${sheetId}-${field.name}`"
               v-model="formState[field.name]"
               class="min-h-24 rounded-md border border-input bg-background px-3 py-2 text-sm"
-              :class="[isDisabledField(field) ? 'cursor-not-allowed bg-muted' : '', field.type === 'json' ? 'overflow-hidden' : '']" :disabled="isDisabledField(field)"
-              :placeholder="`Enter ${displayFieldName(field.name)}...`" @input="(e) => { modifyRecord(); adjustTextareaHeight(e.target); }"></textarea>
+              :class="[isDisabledField(field) ? 'cursor-not-allowed bg-muted' : '', field.type === 'json' ? 'overflow-hidden' : '']"
+              :disabled="isDisabledField(field)" :placeholder="`Enter ${displayFieldName(field.name)}...`"
+              @input="(e) => { modifyRecord(); adjustTextareaHeight(e.target); }"
+              @blur="field.type === 'json' ? handleJsonBlur(field) : null"></textarea>
 
             <TiptapEditor v-else-if="field.type === 'richtext'" v-model="formState[field.name]"
               :placeholder="`Write ${displayFieldName(field.name)}...`" @update:model-value="modifyRecord" />
@@ -1136,13 +1146,14 @@ onMounted(async () => {
                     class="flex items-center justify-between rounded-md border p-2 text-sm"
                     :class="isFileMarkedForDeletion(field, file) ? 'bg-destructive/10 border-destructive/20 opacity-70' : 'bg-muted/30'">
                     <div class="flex items-center gap-2 min-w-0">
-                      <component :is="resolveCollectionFieldTypeIcon(field.type)" class="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <component :is="resolveCollectionFieldTypeIcon(field.type)"
+                        class="h-4 w-4 shrink-0 text-muted-foreground" />
                       <span class="truncate font-medium">{{ file.name ?? file.path }}</span>
-                      <span v-if="isFileMarkedForDeletion(field, file)" class="text-[10px] font-bold text-destructive uppercase">Deleting</span>
+                      <span v-if="isFileMarkedForDeletion(field, file)"
+                        class="text-[10px] font-bold text-destructive uppercase">Deleting</span>
                     </div>
-                    <Button variant="ghost" size="icon" class="h-7 w-7" 
-                      :class="isFileMarkedForDeletion(field, file) ? 'text-primary' : 'text-destructive'"
-                      type="button"
+                    <Button variant="ghost" size="icon" class="h-7 w-7"
+                      :class="isFileMarkedForDeletion(field, file) ? 'text-primary' : 'text-destructive'" type="button"
                       @click="toggleFileDeletion(field, file)">
                       <X v-if="isFileMarkedForDeletion(field, file)" class="h-4 w-4" />
                       <Trash2 v-else class="h-4 w-4" />
@@ -1160,7 +1171,8 @@ onMounted(async () => {
                       <Plus class="h-4 w-4 shrink-0 text-primary" />
                       <span class="truncate font-medium">{{ file.name }}</span>
                     </div>
-                    <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground" type="button" @click="removeAppendedFile(field, index)">
+                    <Button variant="ghost" size="icon" class="h-7 w-7 text-muted-foreground" type="button"
+                      @click="removeAppendedFile(field, index)">
                       <X class="h-4 w-4" />
                     </Button>
                   </div>
@@ -1172,20 +1184,18 @@ onMounted(async () => {
                   <Button variant="outline" size="sm" class="w-full relative cursor-pointer" type="button">
                     <Plus class="h-4 w-4 mr-2" />
                     Add Files
-                    <input type="file" multiple class="absolute inset-0 opacity-0 cursor-pointer" @change="(event) => handleFileAppendChange(field, event)" />
+                    <input type="file" multiple class="absolute inset-0 opacity-0 cursor-pointer"
+                      @change="(event) => handleFileAppendChange(field, event)" />
                   </Button>
                   <Button variant="ghost" size="sm" class="relative cursor-pointer" type="button">
                     Replace
-                    <input type="file" :multiple="Boolean(field.multiple)" class="absolute inset-0 opacity-0 cursor-pointer" @change="(event) => handleFileInputChange(field, event)" />
+                    <input type="file" :multiple="Boolean(field.multiple)"
+                      class="absolute inset-0 opacity-0 cursor-pointer"
+                      @change="(event) => handleFileInputChange(field, event)" />
                   </Button>
                 </div>
-                <Input v-else
-                  :id="`field-${sheetId}-${field.name}`"
-                  type="file"
-                  :multiple="Boolean(field.multiple)"
-                  :disabled="isDisabledField(field)"
-                  @change="(event) => handleFileInputChange(field, event)"
-                />
+                <Input v-else :id="`field-${sheetId}-${field.name}`" type="file" :multiple="Boolean(field.multiple)"
+                  :disabled="isDisabledField(field)" @change="(event) => handleFileInputChange(field, event)" />
               </div>
 
               <p class="text-xs text-muted-foreground">
@@ -1223,7 +1233,7 @@ onMounted(async () => {
               </Button>
               <p v-if="relationLoading[field.name]" class="text-xs text-muted-foreground">Loading related records...</p>
               <p v-else-if="relationErrors[field.name]" class="text-xs text-destructive">{{ relationErrors[field.name]
-              }}</p>
+                }}</p>
               <p v-else-if="relationSelectionLabels(field).length" class="text-xs text-muted-foreground">
                 Selected: {{ relationSelectionLabels(field).join(", ") }}
               </p>

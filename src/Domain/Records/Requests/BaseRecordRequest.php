@@ -91,8 +91,17 @@ abstract class BaseRecordRequest extends FormRequest
             $fieldType = CollectionFieldType::tryFrom((string) $field['type']);
             $fieldRules = [];
 
-            if (! in_array($fieldName, $autoFillFields) && (! $field['nullable'] ?? false)) {
-                $fieldRules[] = 'required';
+            if (! in_array($fieldName, $autoFillFields) && (! ($field['nullable'] ?? false))) {
+                if ($fieldType === CollectionFieldType::Json) {
+                    $fieldRules[] = 'present';
+                    $fieldRules[] = function (string $attribute, mixed $value, callable $fail): void {
+                        if ($value === null) {
+                            $fail("The {$attribute} field is required.");
+                        }
+                    };
+                } else {
+                    $fieldRules[] = 'required';
+                }
             } else {
                 $fieldRules[] = 'nullable';
             }
@@ -155,6 +164,35 @@ abstract class BaseRecordRequest extends FormRequest
                     if (! $exists) {
                         $fail('The selected related record does not exist.');
                     }
+                };
+
+                if ($intervene) {
+                    $intervene($fieldName, $fieldRules);
+                }
+
+                $rules[$fieldName] = $fieldRules;
+
+                continue;
+            }
+
+            if ($fieldType === CollectionFieldType::Json) {
+                $fieldRules[] = function (string $attribute, mixed $value, callable $fail): void {
+                    if ($value === null) {
+                        return;
+                    }
+
+                    if (is_array($value) || is_object($value)) {
+                        return;
+                    }
+
+                    if (is_string($value)) {
+                        json_decode($value);
+                        if (json_last_error() === JSON_ERROR_NONE) {
+                            return;
+                        }
+                    }
+
+                    $fail('The :attribute must be a valid JSON structure or string.');
                 };
 
                 if ($intervene) {
@@ -256,6 +294,19 @@ abstract class BaseRecordRequest extends FormRequest
         return $data;
     }
 
+    protected function normalizeJsonFieldsForWrite(array $data, Collection $collection): array
+    {
+        foreach ($this->getJsonFields($collection) as $fieldName => $field) {
+            if (! array_key_exists($fieldName, $data)) {
+                continue;
+            }
+
+            $data[$fieldName] = $this->normalizeJsonInputValue($data[$fieldName]);
+        }
+
+        return $data;
+    }
+
     private function getRelationFields(Collection $collection): array
     {
         return collect($collection->fields ?? [])
@@ -278,6 +329,29 @@ abstract class BaseRecordRequest extends FormRequest
             ->filter(fn (Field|array $field): bool => ($field['type'] ?? null) === CollectionFieldType::Number->value)
             ->keyBy(fn (Field|array $field): string => (string) $field['name'])
             ->all();
+    }
+
+    private function getJsonFields(Collection $collection): array
+    {
+        return collect($collection->fields ?? [])
+            ->filter(fn (Field|array $field): bool => ($field['type'] ?? null) === CollectionFieldType::Json->value)
+            ->keyBy(fn (Field|array $field): string => (string) $field['name'])
+            ->all();
+    }
+
+    private function normalizeJsonInputValue(mixed $value): mixed
+    {
+        if (! is_string($value) || trim($value) === '') {
+            return $value;
+        }
+
+        $decoded = json_decode($value, false);
+
+        if (json_last_error() === JSON_ERROR_NONE) {
+            return $decoded;
+        }
+
+        return $value;
     }
 
     private function normalizeRelationInputValue(mixed $value): mixed
