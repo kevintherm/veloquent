@@ -2,19 +2,20 @@
 
 namespace Veloquent\Core\Domain\Records\Models;
 
-use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
-use Veloquent\Core\Domain\Collections\Enums\CollectionType;
-use Veloquent\Core\Domain\Collections\Models\Collection;
-use Veloquent\Core\Domain\Records\Observers\RecordObserver;
-use Veloquent\Core\Domain\Records\QueryBuilder\RecordBuilder;
-use Veloquent\Core\Domain\Records\Resources\RecordResource;
-use Illuminate\Database\Eloquent\Attributes\ObservedBy;
-use Illuminate\Database\Eloquent\Attributes\UseEloquentBuilder;
-use Illuminate\Database\Eloquent\Attributes\UseResource;
-use Illuminate\Database\Eloquent\Concerns\HasUlids;
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Support\Facades\Storage;
 use RuntimeException;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Attributes\UseResource;
+use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\Collections\Enums\CollectionType;
+use Veloquent\Core\Domain\Records\Observers\RecordObserver;
+use Veloquent\Core\Domain\Records\Resources\RecordResource;
+use Veloquent\Core\Domain\Records\QueryBuilder\RecordBuilder;
+use Illuminate\Database\Eloquent\Attributes\UseEloquentBuilder;
+use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
 
 #[UseResource(RecordResource::class)]
 #[UseEloquentBuilder(RecordBuilder::class)]
@@ -237,7 +238,7 @@ class Record extends Authenticatable
 
         $disk = Storage::disk((string) config('filesystems.default', 'local'));
 
-        if ($disk->getConfig()['driver'] === 'local') {
+        if (Arr::get($disk->getConfig(), 'driver') === 'local') {
             return '/storage/'.ltrim($path, '/');
         }
 
