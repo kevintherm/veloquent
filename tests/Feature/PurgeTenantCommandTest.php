@@ -93,8 +93,8 @@ it('requires both confirmations before proceeding', function () {
     expect(Tenant::query()->count())->toBe(1);
 
     artisan('tenants:purge')
-        ->expectsQuestion('Are you sure you want to delete all these tenants?', 'yes')
-        ->expectsQuestion('This action cannot be undone. Are you absolutely sure?', 'yes')
+        ->expectsQuestion('  Are you sure you want to delete all these tenants?', 'yes')
+        ->expectsQuestion('  This action cannot be undone. Are you absolutely sure?', 'yes')
         ->assertSuccessful();
 
     expect(Tenant::query()->count())->toBe(0);
