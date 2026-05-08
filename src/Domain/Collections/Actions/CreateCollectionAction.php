@@ -18,7 +18,7 @@ class CreateCollectionAction
         private readonly AuthOptionsValidator $authOptionsValidator
     ) {}
 
-    public function execute(array $data): Collection
+    public function execute(array $data, bool $skipRelationExists = false): Collection
     {
         $collectionType = $data['type'] ?? null;
 
@@ -34,6 +34,7 @@ class CreateCollectionAction
             $data['fields'] ?? [],
             $indexes,
             $isAuthCollection,
+            $skipRelationExists,
         );
 
         if (isset($data['api_rules'])) {

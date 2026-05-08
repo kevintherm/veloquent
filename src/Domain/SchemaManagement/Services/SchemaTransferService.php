@@ -331,32 +331,32 @@ class SchemaTransferService
         $existing = Collection::query()->where('name', $name)->first();
 
         if (! $existing instanceof Collection) {
-            $created = $this->createCollectionAction->execute($payload);
-
+            $created = $this->createCollectionAction->execute($payload, true);
+ 
             $apiRulesToApply[$created->name] = is_array($row['api_rules'] ?? null) ? $row['api_rules'] : [];
-
+ 
             $result = [
                 'collection' => $created->name,
                 'action' => 'created',
             ];
-
+ 
             if ($hasRelationFields) {
                 $result['warning'] = 'Collection has relation fields that may need to be reconfigured for this environment.';
                 Log::warning("Collection '{$created->name}' imported with relation fields. Manual reconfiguration may be required.");
             }
-
+ 
             return $result;
         }
-
+ 
         $apiRulesToApply[$existing->name] = is_array($row['api_rules'] ?? null) ? $row['api_rules'] : [];
-
+ 
         if ($conflict === 'skip') {
             return [
                 'collection' => $existing->name,
                 'action' => 'skipped',
             ];
         }
-
+ 
         $reservedFields = collect($existing->fields ?? [])
             ->map(fn ($field) => is_array($field) ? $field : (array) $field)
             ->filter(function (array $field) use ($isAuthCollection): bool {
@@ -364,11 +364,11 @@ class SchemaTransferService
             })
             ->values()
             ->all();
-
+ 
         $updatePayload = Arr::except($payload, ['type', 'is_system']);
         $updatePayload['fields'] = array_merge($reservedFields, $filteredFields);
-
-        $updated = $this->updateCollectionAction->execute($existing, $updatePayload);
+ 
+        $updated = $this->updateCollectionAction->execute($existing, $updatePayload, true);
 
         $result = [
             'collection' => $updated->name,

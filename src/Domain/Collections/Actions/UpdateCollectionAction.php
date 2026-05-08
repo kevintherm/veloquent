@@ -19,7 +19,7 @@ class UpdateCollectionAction
         private readonly AuthOptionsValidator $authOptionsValidator
     ) {}
 
-    public function execute(Collection $collection, array $data): Collection
+    public function execute(Collection $collection, array $data, bool $skipRelationExists = false): Collection
     {
         $defaultUsersCollectionName = config('velo.default_auth_collection', 'users');
         if (isset($data['name']) && $collection->name === $defaultUsersCollectionName && $data['name'] !== $defaultUsersCollectionName) {
@@ -47,6 +47,7 @@ class UpdateCollectionAction
             $existingFields,
             $indexesForValidation,
             $collection->type === CollectionType::Auth,
+            $skipRelationExists,
         );
 
         if (isset($data['fields']) && is_array($data['fields'])) {

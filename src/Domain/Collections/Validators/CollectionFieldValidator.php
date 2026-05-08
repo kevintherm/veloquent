@@ -20,13 +20,13 @@ class CollectionFieldValidator
      * @param  array<int, array<string, mixed>>  $fields
      * @param  array<int, Index|array<string, mixed>>  $indexes
      */
-    public function validateForCreate(array $fields, array $indexes, bool $isAuthCollection): void
+    public function validateForCreate(array $fields, array $indexes, bool $isAuthCollection, bool $skipRelationExists = false): void
     {
         $errors = [];
 
         $errors = $this->mergeErrors($errors, $this->checkReservedNames($fields, $isAuthCollection));
         $errors = $this->mergeErrors($errors, $this->checkDuplicateNames($fields));
-        $errors = $this->mergeErrors($errors, $this->checkFieldShapes($fields));
+        $errors = $this->mergeErrors($errors, $this->checkFieldShapes($fields, $skipRelationExists));
         $errors = $this->mergeErrors($errors, $this->checkIndexes($indexes, $fields, $isAuthCollection));
 
         if ($errors !== []) {
@@ -39,12 +39,12 @@ class CollectionFieldValidator
      * @param  array<int, array<string, mixed>>  $storedFields
      * @param  array<int, Index|array<string, mixed>>  $incomingIndexes
      */
-    public function validateForUpdate(array $incomingFields, array $storedFields, array $incomingIndexes, bool $isAuthCollection): void
+    public function validateForUpdate(array $incomingFields, array $storedFields, array $incomingIndexes, bool $isAuthCollection, bool $skipRelationExists = false): void
     {
         $errors = [];
 
         $errors = $this->mergeErrors($errors, $this->checkDuplicateNames($incomingFields));
-        $errors = $this->mergeErrors($errors, $this->checkFieldShapes($incomingFields));
+        $errors = $this->mergeErrors($errors, $this->checkFieldShapes($incomingFields, $skipRelationExists));
         $errors = $this->mergeErrors($errors, $this->checkTypeChanges($incomingFields, $storedFields));
         $errors = $this->mergeErrors($errors, $this->checkAuthFieldIntegrity($incomingFields, $isAuthCollection));
         $errors = $this->mergeErrors($errors, $this->checkDropConstraints($incomingFields, $storedFields, $isAuthCollection));
@@ -115,7 +115,7 @@ class CollectionFieldValidator
      * @param  array<int, array<string, mixed>>  $fields
      * @return array<string, array<int, string>>
      */
-    private function checkFieldShapes(array $fields): array
+    private function checkFieldShapes(array $fields, bool $skipRelationExists = false): array
     {
         $errors = [];
         $allowedTypes = collect(CollectionFieldType::cases())
@@ -151,7 +151,7 @@ class CollectionFieldValidator
                 );
             }
 
-            $typeRules = $type->typeValidationRules("fields.{$index}");
+            $typeRules = $type->typeValidationRules("fields.{$index}", $skipRelationExists);
             if ($typeRules !== []) {
                 $validator = \Illuminate\Support\Facades\Validator::make(
                     ['fields' => [$index => $field]],

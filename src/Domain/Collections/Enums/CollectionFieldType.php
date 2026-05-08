@@ -50,7 +50,7 @@ enum CollectionFieldType: string
         return array_merge(self::commonDefaults(), $this->typeProperties());
     }
 
-    public function typeValidationRules(string $prefix): array
+    public function typeValidationRules(string $prefix, bool $skipRelationExists = false): array
     {
         return match ($this) {
             self::Text, self::Email, self::Url => [
@@ -72,7 +72,10 @@ enum CollectionFieldType: string
                 "{$prefix}.allow_decimals" => ['sometimes', 'boolean'],
             ],
             self::Relation => [
-                "{$prefix}.target_collection_id" => ['required', 'string', 'exists:collections,id'],
+                "{$prefix}.target_collection_id" => array_merge(
+                    ['required', 'string'],
+                    $skipRelationExists ? [] : ['exists:collections,id']
+                ),
                 "{$prefix}.cascade_on_delete" => ['sometimes', 'boolean'],
             ],
             self::Select => [

@@ -45,7 +45,7 @@ it('enforces view rules on expanded records', function () {
     Record::of($sourceCollection)->create(['title' => 'Allowed', 'target' => $allowed->id]);
     Record::of($sourceCollection)->create(['title' => 'Denied', 'target' => $denied->id]);
 
-    getJson("/api/collections/{$sourceCollection->id}/records?expand=target")
+    getJson("/api/collections/{$sourceCollection->id}/records?expand=target&sort=title")
         ->assertSuccessful()
         ->assertJsonPath('data.0.title', 'Allowed')
         ->assertJsonPath('data.0.target', $allowed->id)
