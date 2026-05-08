@@ -33,9 +33,19 @@ class UnifiedEvaluator implements EvaluatorInterface, VisitorInterface
         return $this;
     }
 
+    private function isContextVariable(string $field): bool
+    {
+        return str_starts_with($field, '@');
+    }
+
+    private function isNumericLiteral(string $field): bool
+    {
+        return str_starts_with($field, '__numeric__');
+    }
+
     private function isSysvar(string $field): bool
     {
-        return str_starts_with($field, '@') || str_starts_with($field, '__numeric__');
+        return $this->isContextVariable($field) || $this->isNumericLiteral($field);
     }
 
     private function getSysvarValue(mixed $field): mixed
@@ -44,15 +54,19 @@ class UnifiedEvaluator implements EvaluatorInterface, VisitorInterface
             return $field;
         }
 
-        if (str_starts_with($field, '__numeric__')) {
+        if ($this->isNumericLiteral($field)) {
             $val = str_replace('__numeric__', '', $field);
 
             return is_numeric($val) ? (str_contains($val, '.') ? (float) $val : (int) $val) : $val;
         }
 
-        $path = ltrim($field, '@');
+        if ($this->isContextVariable($field)) {
+            $path = ltrim($field, '@');
 
-        return data_get($this->sysvars, $path);
+            return data_get($this->sysvars, $path);
+        }
+
+        return $field;
     }
 
     public function evaluate(Node $node): mixed
@@ -159,104 +173,114 @@ class UnifiedEvaluator implements EvaluatorInterface, VisitorInterface
 
     private function applyComparisonNode(object $builder, ComparisonNode $node, string $boolean): void
     {
-        $field = $node->field;
+        $left = $this->resolveOperand($node->field, true);
+        $right = $this->resolveOperand($node->value);
         $operator = strtoupper($node->operator);
-        $value = $node->value;
 
-        $leftIsCollectionSysvar = is_string($field) && str_starts_with($field, '@collection.');
-
-        $rightIsCollectionSysvar = false;
-        if ($value instanceof IdentifierNode) {
-            $rightValue = $this->isSysvar($value->name) ? $this->getSysvarValue($value->name) : $value->name;
-            $rightIsSysvar = $this->isSysvar($value->name);
-            $rightIsField = ! $rightIsSysvar;
-            $rightIsCollectionSysvar = str_starts_with($value->name, '@collection.');
-        } else {
-            $rightValue = $value;
-            $rightIsSysvar = false;
-            $rightIsField = false;
-        }
-
-        // Handle cross-collection lookups
-        if ($leftIsCollectionSysvar) {
-            $collectionPath = str_replace('@collection.', '', $field);
-            $this->applyCrossCollectionComparison($builder, $collectionPath, $operator, $rightValue, $rightIsField, $boolean);
+        // Cross-collection lookups
+        if ($left->isCollection) {
+            $collectionPath = str_replace('@collection.', '', $node->field);
+            $this->applyCrossCollectionComparison($builder, $collectionPath, $operator, $right->value, $right->isField, $boolean);
 
             return;
         }
 
-        if ($rightIsCollectionSysvar) {
-            $collectionPath = str_replace('@collection.', '', $value->name);
-            $leftValue = $this->isSysvar($field) ? $this->getSysvarValue($field) : $field;
-            $leftIsField = ! $this->isSysvar($field);
-
-            $this->applyCrossCollectionComparison($builder, $collectionPath, $this->invertOrderedOperator($operator), $leftValue, $leftIsField, $boolean);
+        if ($right->isCollection) {
+            $collectionPath = str_replace('@collection.', '', $node->value instanceof IdentifierNode ? $node->value->name : '');
+            $this->applyCrossCollectionComparison($builder, $collectionPath, $this->invertOrderedOperator($operator), $left->value, $left->isField, $boolean);
 
             return;
         }
 
-        // Symmetric check
-        $leftIsSysvar = $this->isSysvar($field);
-        $leftValue = $leftIsSysvar ? $this->getSysvarValue($field) : null;
-
-        // List operators (Priority)
-        if ($operator === 'IN' || $operator === 'NOT IN') {
-            $inValues = is_array($value) ? $value : [$value];
-
-            $this->applyInClause($builder, $this->resolver->resolve($field), $inValues, $boolean, $operator === 'NOT IN');
+        // Null comparisons
+        if ($right->value === null && in_array($operator, ['=', '!='])) {
+            $this->applyNullComparison($builder, (string) $node->field, $operator === '!=', $boolean);
 
             return;
         }
 
-        if ($operator === 'CONTAINS' || $operator === 'NOT CONTAINS') {
+        // List operators
+        if (in_array($operator, ['IN', 'NOT IN'])) {
+            $inValues = is_array($right->value) ? $right->value : [$right->value];
+            $this->applyInClause($builder, $this->resolver->resolve($node->field), $inValues, $boolean, $operator === 'NOT IN');
+
+            return;
+        }
+
+        // JSON operators
+        if (in_array($operator, ['CONTAINS', 'NOT CONTAINS'])) {
             $method = $boolean === 'or' ? 'orWhereJsonContains' : 'whereJsonContains';
-            $builder->{$method}($this->resolver->resolve($field), $rightValue, 'and', $operator === 'NOT CONTAINS');
+            $builder->{$method}($this->resolver->resolve($node->field), $right->value, 'and', $operator === 'NOT CONTAINS');
 
             return;
         }
 
-        if ($operator === 'HASKEY' || $operator === 'NOT HASKEY') {
-            $column = $this->resolver->resolve($field) . '->' . $rightValue;
+        if (in_array($operator, ['HASKEY', 'NOT HASKEY'])) {
+            $column = $this->resolver->resolve($node->field) . '->' . $right->value;
             $method = $boolean === 'or' ? 'orWhereJsonContainsKey' : 'whereJsonContainsKey';
             $builder->{$method}($column, 'and', $operator === 'NOT HASKEY');
 
             return;
         }
 
-        if ($leftIsSysvar && $rightIsField) {
+        // Symmetric comparisons
+        if ($left->isSysvar && $right->isField) {
             // Flip: @auth.id = id -> id = @auth.id
-            $this->applyScalarComparison($builder, $this->resolver->resolve((string) $rightValue), $this->invertOrderedOperator($operator), $leftValue, $boolean);
+            $this->applyScalarComparison($builder, $this->resolver->resolve((string) $right->value), $this->invertOrderedOperator($operator), $left->value, $boolean);
 
             return;
         }
 
-        if ($leftIsSysvar && $rightIsSysvar) {
-            $this->applyLiteralComparison($builder, $operator, $leftValue, $rightValue, $boolean);
+        if ($left->isSysvar) {
+            // Sysvar vs Literal/Sysvar
+            $this->applyLiteralComparison($builder, $operator, $left->value, $right->value, $boolean);
 
             return;
         }
 
-        if ($leftIsSysvar && ! $rightIsSysvar && ! $rightIsField) {
-            $this->applyLiteralComparison($builder, $operator, $leftValue, $rightValue, $boolean);
-
-            return;
-        }
-
-        if (! $leftIsSysvar && ! $rightIsSysvar && ! $rightIsField) {
-            $this->applyScalarComparison($builder, $this->resolver->resolve($field), $operator, $rightValue, $boolean);
-
-            return;
-        }
-
-        if (! $leftIsSysvar && $rightIsField) {
+        if ($right->isField) {
+            // Field vs Field
             $method = $boolean === 'or' ? 'orWhereColumn' : 'whereColumn';
-            $builder->{$method}($this->resolver->resolve($field), $this->toSqlOperator($operator), $this->resolver->resolve((string) $rightValue));
+            $builder->{$method}($this->resolver->resolve($node->field), $this->toSqlOperator($operator), $this->resolver->resolve((string) $right->value));
 
             return;
         }
 
-        // Default behavior (Field op Literal) - Fallback
-        $this->applyScalarComparison($builder, $this->resolver->resolve($field), $operator, $rightValue, $boolean);
+        // Default: Field vs Literal
+        $this->applyScalarComparison($builder, $this->resolver->resolve($node->field), $operator, $right->value, $boolean);
+    }
+
+    private function resolveOperand(mixed $operand, bool $forceDynamic = false): object
+    {
+        $isCollection = false;
+        $isSysvar = false;
+        $isField = false;
+        $value = null;
+
+        if ($operand instanceof IdentifierNode) {
+            $isSysvar = $this->isSysvar($operand->name);
+            $isField = ! $isSysvar;
+            $isCollection = str_starts_with($operand->name, '@collection.');
+            $value = $this->visitIdentifierNode($operand);
+        } elseif (is_string($operand) && $forceDynamic) {
+            $isSysvar = $this->isSysvar($operand);
+            $isField = ! $isSysvar;
+            $isCollection = str_starts_with($operand, '@collection.');
+            $value = $isSysvar ? $this->getSysvarValue($operand) : $operand;
+        } elseif (is_array($operand)) {
+            $value = array_map(function ($v) {
+                return $v instanceof IdentifierNode ? $this->visitIdentifierNode($v) : $v;
+            }, $operand);
+        } else {
+            $value = $operand;
+        }
+
+        return (object) [
+            'value' => $value,
+            'isSysvar' => $isSysvar,
+            'isField' => $isField,
+            'isCollection' => $isCollection,
+        ];
     }
 
     private function applyCrossCollectionComparison(object $builder, string $collectionPath, string $operator, mixed $otherValue, bool $otherIsField, string $boolean): void
