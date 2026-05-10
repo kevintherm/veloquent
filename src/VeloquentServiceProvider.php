@@ -88,11 +88,7 @@ class VeloquentServiceProvider extends ServiceProvider
         $router = $this->app['router'];
         $router->aliasMiddleware('superuser', \Veloquent\Core\Http\Middleware\SuperuserOnly::class);
         $router->aliasMiddleware('token.auth', \Veloquent\Core\Http\Middleware\TokenAuthMiddleware::class);
-        
-        $this->app->booted(function () {
-            $kernel = $this->app->make(\Illuminate\Foundation\Http\Kernel::class);
-            $kernel->prependMiddleware(NeedsTenant::class);
-        });
+        $router->aliasMiddleware('needs.tenant', \Veloquent\Core\Http\Middleware\EnsureTenant::class);
     }
 
     protected function registerAuth(): void
@@ -126,13 +122,13 @@ class VeloquentServiceProvider extends ServiceProvider
     protected function registerRoutes(): void
     {
         Route::prefix(config('velo.api_prefix'))
-            ->middleware(['api', 'token.auth'])
+            ->middleware(['api', 'needs.tenant', 'token.auth'])
             ->group(function () {
                 $this->loadRoutesFrom(__DIR__ . '/../routes/api.php');
             });
 
         Route::prefix(config('velo.admin_prefix'))
-            ->middleware('web')
+            ->middleware(['web', 'needs.tenant'])
             ->group(function () {
                 $this->loadRoutesFrom(__DIR__ . '/../routes/web.php');
             });
@@ -149,6 +145,10 @@ class VeloquentServiceProvider extends ServiceProvider
     protected function registerRouteBindings(): void
     {
         Route::bind('collection', function ($value) {
+            if (! \Veloquent\Core\Infrastructure\Models\Tenant::current()) {
+                abort(404, 'Tenant not found');
+            }
+
             return Collection::findByIdCached($value)
                 ?? Collection::findByNameCached($value)
                 ?? abort(404, 'Collection not found');
