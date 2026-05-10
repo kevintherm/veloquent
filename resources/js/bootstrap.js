@@ -30,10 +30,13 @@ const driver = (rt.type ?? import.meta.env.VITE_BROADCAST_CONNECTION ?? 'reverb'
 
 const LOOPBACK = /^(127\.\d+\.\d+\.\d+|::1|localhost)$/i;
 
-const scheme = rt.scheme ?? (window.location.protocol === 'https:' ? 'https' : 'http');
-const defaultPort = scheme === 'https' ? 443 : 80;
-
 const isLoopback = !rt.host || LOOPBACK.test(rt.host);
+
+const scheme = isLoopback
+	? (window.location.protocol === 'https:' ? 'https' : 'http')
+	: (rt.scheme ?? (window.location.protocol === 'https:' ? 'https' : 'http'));
+
+const defaultPort = scheme === 'https' ? 443 : 80;
 const host = isLoopback ? window.location.hostname : rt.host;
 const port = isLoopback ? defaultPort : (rt.port != null ? Number(rt.port) : defaultPort);
 
