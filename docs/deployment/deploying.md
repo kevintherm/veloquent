@@ -81,6 +81,16 @@ redirect_stderr=true
 stdout_logfile=/home/forge/app.com/storage/logs/reverb.log
 ```
 
+### 5. Reverse Proxies & Trusting Proxies
+
+The Veloquent skeleton is pre-configured to trust all proxies via `$middleware->trustProxies(at: '*')` in `bootstrap/app.php`. This is necessary for correct tenant domain resolution when running behind services like **Cloudflare**, **Nginx reverse proxies**, or load balancers.
+
+> [!WARNING]
+> Because the application trusts all incoming `X-Forwarded-*` headers, you **MUST** implement network-level security to prevent header spoofing:
+> - **Firewall (UFW)**: Configure your firewall to only accept traffic on ports 80/443 from your trusted proxy IP ranges (e.g., [Cloudflare IPs](https://www.cloudflare.com/ips/)).
+> - **Nginx Catch-all**: Implement a "default" server block in Nginx that drops requests for unknown hostnames.
+> - **Cloudflare Authenticated Origin Pulls**: (Optional) Use client certificates to ensure only Cloudflare can connect to your origin server.
+
 ## Summary Checklist
 
 - [ ] Standard Laravel optimization (`config:cache`, `route:cache`, `view:cache`).
