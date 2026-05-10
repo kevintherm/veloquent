@@ -16,23 +16,21 @@
         'email' => env('VELO_DEMO_EMAIL', 'demo@velophp.com'),
         'password' => env('VELO_DEMO_PASSWORD', 'demo@123123'),
     ],
-    'realtime' => [
-        'type' => config('broadcasting.default'),
-        'pusher' => [
-            'key' => config('broadcasting.connections.pusher.key'),
-            'cluster' => config('broadcasting.connections.pusher.options.cluster'),
-            'host' => config('broadcasting.connections.pusher.options.host'),
-            'port' => config('broadcasting.connections.pusher.options.port'),
-            'scheme' => config('broadcasting.connections.pusher.options.scheme'),
-        ],
-        'reverb' => [
-            'key' => config('broadcasting.connections.reverb.key'),
-            'host' => config('broadcasting.connections.reverb.options.host'),
-            'port' => config('broadcasting.connections.reverb.options.port'),
-            'scheme' => config('broadcasting.connections.reverb.options.scheme'),
-        ],
-    ]
-]) }}">
+    'realtime' => (function () {
+        $driver = config('broadcasting.default', 'reverb');
+        $conn   = config("broadcasting.connections.{$driver}", []);
+        $opts   = $conn['options'] ?? [];
+
+        return [
+            'type'    => $driver,
+            'key'     => $conn['key'] ?? null,
+            'host'    => $opts['host'] ?? null,
+            'port'    => $opts['port'] ?? null,
+            'scheme'  => $opts['scheme'] ?? null,
+            'cluster' => $opts['cluster'] ?? null,
+        ];
+    })()
+    ]) }}">
 
 
     @php

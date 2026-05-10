@@ -24,59 +24,75 @@ window.axios.interceptors.request.use((config) => {
 	return config;
 });
 
-const broadcastConnection = (VELO_CONFIG.realtime?.type ?? import.meta.env.VITE_BROADCAST_CONNECTION ?? 'reverb').toLowerCase();
+const rt = VELO_CONFIG.realtime ?? {};
+
+const driver = (rt.type ?? import.meta.env.VITE_BROADCAST_CONNECTION ?? 'reverb').toLowerCase();
+
+const LOOPBACK = /^(127\.\d+\.\d+\.\d+|::1|localhost)$/i;
+
+const resolveHost = (host) => {
+	if (!host || LOOPBACK.test(host)) {
+		return window.location.hostname;
+	}
+	return host;
+};
+
+const scheme = rt.scheme ?? (window.location.protocol === 'https:' ? 'https' : 'http');
+const host = resolveHost(rt.host);
+const port = rt.port != null ? Number(rt.port) : (scheme === 'https' ? 443 : 80);
+const key = rt.key;
+const cluster = rt.cluster;
+const forceTLS = scheme === 'https';
 
 const buildEchoConnectionConfig = () => {
-	const realtime = VELO_CONFIG.realtime;
+	switch (driver) {
+		case 'pusher': {
+			const wsHost = (host && host.includes('pusher.com') && host.startsWith('api-'))
+				? undefined
+				: host;
 
-	if (broadcastConnection === 'pusher') {
-		const pusher = realtime?.pusher;
-		const pusherScheme = pusher?.scheme ?? import.meta.env.VITE_PUSHER_SCHEME ?? 'https';
-		let pusherHost = pusher?.host || import.meta.env.VITE_PUSHER_HOST || undefined;
-
-		// If the host is explicitly set to a Pusher API endpoint, it's likely a misconfiguration
-		// for WebSocket connections. Official Pusher users should rely on the cluster.
-		if (pusherHost && pusherHost.includes('pusher.com') && pusherHost.startsWith('api-')) {
-			pusherHost = undefined;
+			return {
+				key,
+				config: {
+					broadcaster: 'pusher',
+					key,
+					cluster,
+					...(wsHost ? { wsHost, wsPort: port, wssPort: port } : {}),
+					forceTLS,
+					enabledTransports: ['ws', 'wss'],
+				},
+			};
 		}
 
-		const pusherPort = Number(pusher?.port ?? import.meta.env.VITE_PUSHER_PORT ?? (pusherScheme === 'https' ? 443 : 80));
-		const pusherKey = pusher?.key ?? import.meta.env.VITE_PUSHER_APP_KEY;
+		case 'ably':
+			return {
+				key,
+				config: {
+					broadcaster: 'pusher',
+					key,
+					wsHost: host,
+					wsPort: port,
+					wssPort: port,
+					forceTLS,
+					enabledTransports: ['ws', 'wss'],
+				},
+			};
 
-		return {
-			key: pusherKey,
-			config: {
-				broadcaster: 'pusher',
-				key: pusherKey,
-				cluster: pusher?.cluster ?? import.meta.env.VITE_PUSHER_APP_CLUSTER,
-				wsHost: pusherHost,
-				wsPort: pusherPort,
-				wssPort: pusherPort,
-				forceTLS: pusherScheme === 'https',
-				enabledTransports: ['ws', 'wss'],
-			},
-		};
+		case 'reverb':
+		default:
+			return {
+				key,
+				config: {
+					broadcaster: 'reverb',
+					key,
+					wsHost: host,
+					wsPort: port,
+					wssPort: port,
+					forceTLS,
+					enabledTransports: ['ws', 'wss'],
+				},
+			};
 	}
-
-	const reverb = realtime?.reverb;
-	const reverbScheme = reverb?.scheme ?? import.meta.env.VITE_REVERB_SCHEME ?? (window.location.protocol === 'https:' ? 'https' : 'http');
-	const reverbHost = reverb?.host ?? import.meta.env.VITE_REVERB_HOST ?? window.location.hostname;
-	const reverbPort = Number(reverb?.port ?? import.meta.env.VITE_REVERB_PORT ?? (reverbScheme === 'https' ? 443 : 80));
-	const reverbKey = reverb?.key ?? import.meta.env.VITE_REVERB_APP_KEY;
-
-	return {
-		key: reverbKey,
-		config: {
-			broadcaster: 'pusher',
-			key: reverbKey,
-			cluster: 'mt1',
-			wsHost: reverbHost,
-			wsPort: reverbPort,
-			wssPort: reverbPort,
-			forceTLS: reverbScheme === 'https',
-			enabledTransports: ['ws', 'wss'],
-		},
-	};
 };
 
 const disconnectEcho = () => {
@@ -88,9 +104,9 @@ const disconnectEcho = () => {
 
 const connectEcho = () => {
 	const token = getAuthToken();
-	const { key, config } = buildEchoConnectionConfig();
+	const { key: echoKey, config } = buildEchoConnectionConfig();
 
-	if (!key || !token) {
+	if (!echoKey || !token) {
 		disconnectEcho();
 		return;
 	}

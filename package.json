@@ -32,6 +32,7 @@
         "vue-eslint-parser": "^10.4.0"
     },
     "dependencies": {
+        "@ably/laravel-echo": "^1.0.6",
         "@codemirror/autocomplete": "^6.20.1",
         "@codemirror/commands": "^6.10.3",
         "@codemirror/lang-html": "^6.4.11",
@@ -53,6 +54,7 @@
         "@tiptap/vue-3": "^3.20.4",
         "@vitejs/plugin-vue": "^6.0.4",
         "@vueuse/core": "^14.2.1",
+        "ably": "^1.2.50",
         "class-variance-authority": "^0.7.1",
         "codemirror": "^6.0.2",
         "reka-ui": "^2.9.2",
