@@ -29,19 +29,27 @@ class OAuthDriverFactory
         $config = Cache::remember(
             "oauth_config:{$collectionId}:{$provider}",
             now()->addHour(),
-            fn () => OAuthProvider::query()
-                ->where('collection_id', $collectionId)
-                ->where('provider', $provider)
-                ->enabled()
-                ->firstOrFail()
+            function () use ($collectionId, $provider) {
+                $model = OAuthProvider::query()
+                    ->where('collection_id', $collectionId)
+                    ->where('provider', $provider)
+                    ->enabled()
+                    ->firstOrFail();
+
+                return [
+                    'client_id' => $model->client_id,
+                    'client_secret' => $model->client_secret,
+                    'redirect_uri' => $model->redirect_uri,
+                ];
+            }
         );
 
-        $redirectUrl = $redirectOverride ?? (! empty($config->redirect_uri) ? $config->redirect_uri : route('oauth.callback'));
+        $redirectUrl = $redirectOverride ?? (! empty($config['redirect_uri']) ? $config['redirect_uri'] : route('oauth.callback'));
 
         return new $class(
             request: app(Request::class),
-            clientId: $config->client_id,
-            clientSecret: $config->client_secret,
+            clientId: $config['client_id'],
+            clientSecret: $config['client_secret'],
             redirectUrl: $redirectUrl,
         );
     }
