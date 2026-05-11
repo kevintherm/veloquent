@@ -17,6 +17,8 @@
     - in-memory caching for subscriber models
     - clear memory/efficient data structures
     - set memory limit
+- Manage .env.example structure
+- Add sync strategy for realtime worker?
 
 ## Issues
 
