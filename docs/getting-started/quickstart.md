@@ -34,7 +34,7 @@ The server is now available at [http://localhost:8000](http://localhost:8000).
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/kevintherm/veloquent
+git clone https://github.com/kevintherm/veloquent-skeleton
 rm -rf .git # Remove upstream git folder
 ```
 
