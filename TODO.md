@@ -13,6 +13,7 @@
 - Add support for indexing json and file field
 - Add oauth link setting for auth collection (per-user)
 - Add octane support
+- Full app backup?
 
 ## Issues
 
