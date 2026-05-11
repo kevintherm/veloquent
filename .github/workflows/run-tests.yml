@@ -1,0 +1,27 @@
+name: Tests
+
+on:
+  push:
+    branches: [ "main", "*.x" ]
+  pull_request:
+    branches: [ "main", "*.x" ]
+
+jobs:
+  pest-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.3'
+        extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, readline
+        coverage: none
+
+    - name: Install Dependencies
+      run: composer install --prefer-dist --no-interaction --no-progress
+
+    - name: Run Tests
+      run: vendor/bin/pest
