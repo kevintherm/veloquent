@@ -3,7 +3,6 @@
 namespace Veloquent\Core;
 
 use Illuminate\Support\ServiceProvider;
-use Spatie\Multitenancy\Http\Middleware\NeedsTenant;
 use Veloquent\Core\Domain\Auth\Services\TokenAuthService;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Records\Models\Record;
@@ -122,13 +121,13 @@ class VeloquentServiceProvider extends ServiceProvider
     protected function registerRoutes(): void
     {
         Route::prefix(config('velo.api_prefix'))
-            ->middleware(['api', 'throttle:api', 'needs.tenant', 'token.auth'])
+            ->middleware(['needs.tenant', 'api', 'throttle:api', 'token.auth'])
             ->group(function () {
                 $this->loadRoutesFrom(__DIR__ . '/../routes/api.php');
             });
 
         Route::prefix(config('velo.admin_prefix'))
-            ->middleware(['web', 'needs.tenant'])
+            ->middleware(['needs.tenant', 'web'])
             ->group(function () {
                 $this->loadRoutesFrom(__DIR__ . '/../routes/web.php');
             });
