@@ -122,7 +122,7 @@ class VeloquentServiceProvider extends ServiceProvider
     protected function registerRoutes(): void
     {
         Route::prefix(config('velo.api_prefix'))
-            ->middleware(['api', 'needs.tenant', 'token.auth'])
+            ->middleware(['api', 'throttle:api', 'needs.tenant', 'token.auth'])
             ->group(function () {
                 $this->loadRoutesFrom(__DIR__ . '/../routes/api.php');
             });
@@ -159,6 +159,14 @@ class VeloquentServiceProvider extends ServiceProvider
     {
         RateLimiter::for('otp', function (Request $request) {
             return Limit::perMinute(5)->by($request->user()?->id ?: $request->ip());
+        });
+
+        RateLimiter::for('auth', function (Request $request) {
+            return Limit::perMinute(10)->by($request->ip());
+        });
+
+        RateLimiter::for('api', function (Request $request) {
+            return Limit::perMinute(240)->by($request->user()?->id ?: $request->ip());
         });
     }
 }

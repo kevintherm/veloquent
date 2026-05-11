@@ -1,21 +1,29 @@
 ## TODO
 
-- Add support for :changed, :isset, :length for api rules
 - Battle Testing
 - Ship
 
 ## Roadmap
 
+- Add support for :changed, :isset, :length for api rules
 - Add expand option to realtime
-- Bypass rule for superuser in realtime worker
 - Hooks system
 - Schema SDK sync (Typed)
 - Add support for indexing json and file field
 - Add oauth link setting for auth collection (per-user)
 - Add octane support
 - Full app backup?
+- Optimize Realtime worker
+    - in-memory caching for subscriber models
+    - clear memory/efficient data structures
+    - set memory limit
 
 ## Issues
 
-- Admin panel: switching collections very quickly can trigger race conditions causing correct data to missplaced
-- Admin panel: recreating a field will add "expand" object to the datatable columns
+- Admin panel: Implement AbortController to prevent race conditions when switching collections
+- Admin panel: fix recreating a field adds "expand" object to columns
+
+## Testing
+- Implement load testing to simulate high subscriber/tenant volume.
+- Tenant leak tests: verify cross-tenant event isolation at the worker level.
+- Parallel worker execution tests.

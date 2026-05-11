@@ -326,6 +326,10 @@ class RealtimeWorker extends Command
                 return false;
             }
 
+            if ($subscriber->isSuperuser()) {
+                return true;
+            }
+
             $viewRule = $collection->api_rules['view'] ?? null;
             if ($viewRule === null) {
                 return false;

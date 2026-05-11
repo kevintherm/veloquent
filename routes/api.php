@@ -65,7 +65,7 @@ Route::prefix('collections/{collection}/records')->group(function () {
 |
 */
 Route::prefix('collections/{collection}/auth')->name('collections.auth.')->group(function () {
-    Route::post('/login', [AuthController::class, 'login'])->name('authenticate');
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:auth')->name('authenticate');
 
     Route::post('/password-reset/request', [AuthController::class, 'requestPasswordReset'])->middleware('throttle:otp')->name('password-reset.request');
     Route::post('/password-reset/confirm', [AuthController::class, 'confirmPasswordReset'])->name('password-reset.confirm');

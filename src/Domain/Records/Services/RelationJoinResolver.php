@@ -55,7 +55,7 @@ class RelationJoinResolver
             return "{$alias}.{$dotPath}";
         }
 
-        $targetCollection = Collection::query()->find($targetCollectionId);
+        $targetCollection = Collection::findByIdCached($targetCollectionId);
         if (! $targetCollection) {
             $alias = $this->baseAlias ?: $this->sourceCollection->getPhysicalTableName();
 

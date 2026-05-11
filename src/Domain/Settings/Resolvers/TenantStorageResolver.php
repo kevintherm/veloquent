@@ -27,7 +27,7 @@ class TenantStorageResolver
             'region' => $this->settings->s3_region,
             'bucket' => $this->settings->s3_bucket,
             'endpoint' => $this->settings->s3_endpoint ?: null,
-            'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+            'use_path_style_endpoint' => config('filesystems.disks.s3.use_path_style_endpoint', false),
             'throw' => true,
         ];
     }
@@ -43,7 +43,7 @@ class TenantStorageResolver
                 'region' => $config['s3_region'] ?? '',
                 'bucket' => $config['s3_bucket'] ?? '',
                 'endpoint' => $config['s3_endpoint'] ?? null,
-                'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
+                'use_path_style_endpoint' => config('filesystems.disks.s3.use_path_style_endpoint', false),
                 'throw' => true,
             ]]);
 
