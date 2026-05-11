@@ -39,7 +39,6 @@ class SchemaTransferService
         'otp_tokens',
         'oauth_providers',
         'oauth_accounts',
-        'realtime_subscriptions',
     ];
 
     public function __construct(
