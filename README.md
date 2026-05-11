@@ -2,8 +2,11 @@
     <img src="resources/assets/logo.svg" width="250" />
 </p>
 
-[![Tests](https://github.com/kevintherm/veloquent/actions/workflows/run-tests.yml/badge.svg)](https://github.com/your-org/firelaravel/actions)
-
+<p align="center">
+<a href="https://github.com/kevintherm/veloquent/actions"><img src="https://github.com/kevintherm/veloquent/actions/workflows/run-tests.yml/badge.svg" alt="Build Status"></a>
+<a href="https://packagist.org/packages/veloquent/veloquent"><img src="https://img.shields.io/packagist/v/veloquent/core" alt="Latest Stable Version"></a>
+<a href="https://packagist.org/packages/veloquent/veloquent"><img src="https://img.shields.io/packagist/l/veloquent/veloquent" alt="License"></a>
+</p>
 
 # Veloquent
 
