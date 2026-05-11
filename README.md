@@ -2,6 +2,9 @@
     <img src="resources/assets/logo.svg" width="250" />
 </p>
 
+[![Tests](https://github.com/kevintherm/veloquent/actions/workflows/run-tests.yml/badge.svg)](https://github.com/your-org/firelaravel/actions)
+
+
 # Veloquent
 
 Veloquent is an open-source Backend-as-a-Service (BaaS) built on Laravel. It provides authentication, database, storage, real-time capabilities, and multi-tenancy out of the box.
