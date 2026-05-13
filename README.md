@@ -38,7 +38,22 @@ Alternatively, you can use `/llms.txt` or `/llms-full.txt` to retrieve fully com
 
 ## Getting Started
 
-To get started with Veloquent, the quickest path is following the [Quickstart Guide](https://velophp.com/docs/quickstart).
+The easiest way to get started is to create a new Veloquent project:
+
+1. **Create a new Veloquent project**
+```bash
+composer create-project veloquent/veloquent app-name
+# The composer post-install script will automatically run 'php artisan velo:install', 
+# which handles migrations, assets, and initial tenant setup.
+```
+
+2. **Start the server**
+```bash
+php artisan serve
+```
+
+The server is now available at [http://localhost:8000](http://localhost:8000).
+For more information visit [Quickstart Guide](https://velophp.com/docs/quickstart).
 
 ### v2.0 Transition
 
