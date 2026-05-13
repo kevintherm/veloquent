@@ -542,9 +542,8 @@ const copyRecordId = async (recordId) => {
 </script>
 
 <template>
-    <Card>
-        <div class="rounded-md border">
-            <Table class="table-fixed">
+    <Card class="overflow-hidden">
+        <Table class="min-w-full">
                 <TableHeader>
                     <TableRow>
                         <TableHead class="w-12.5">
@@ -572,7 +571,8 @@ const copyRecordId = async (recordId) => {
                                 <Checkbox :model-value="selectedRecords.includes(record.id)"
                                     @update:model-value="$emit('toggle-record', record.id)" />
                             </TableCell>
-                            <TableCell v-for="column in columns" :key="`${record.id}-${column}`" :class="['align-top']">
+                            <TableCell v-for="column in columns" :key="`${record.id}-${column}`" 
+                                :class="['align-top', resolveColumnWidthClass(column, columnTypes)]">
                                 <div v-if="isDatetimeColumn(column, columnTypes)"
                                     class="leading-tight whitespace-nowrap">
                                     <p class="text-sm font-medium">
@@ -650,12 +650,11 @@ const copyRecordId = async (recordId) => {
                         </TableCell>
                     </TableRow>
                 </TableBody>
-            </Table>
-        </div>
+        </Table>
 
         <!-- Pagination -->
-        <div class="flex items-center justify-between px-6 py-4 border-t">
-            <div class="text-sm text-muted-foreground">
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 border-t">
+            <div class="text-sm text-muted-foreground order-2 sm:order-1">
                 <template v-if="filteredRecordsLength > 0">
                     Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to
                     {{ Math.min(currentPage * itemsPerPage, filteredRecordsLength) }} of
@@ -667,14 +666,14 @@ const copyRecordId = async (recordId) => {
             </div>
             <Pagination v-if="totalPages > 1" v-slot="{ page }" :total="filteredRecordsLength" :sibling-count="1"
                 show-edges :page="currentPage" :items-per-page="itemsPerPage"
-                @update:page="$emit('change-page', $event)" class="justify-end">
+                @update:page="$emit('change-page', $event)" class="justify-end order-1 sm:order-2">
                 <PaginationContent v-slot="{ items }">
                     <PaginationFirst />
                     <PaginationPrevious />
 
                     <template v-for="(item, index) in items">
                         <PaginationItem v-if="item.type === 'page'" :key="index" :value="item.value" as-child>
-                            <Button class="w-9 h-9 p-0" :variant="item.value === page ? 'default' : 'outline'">
+                            <Button class="w-8 h-8 sm:w-9 sm:h-9 p-0" :variant="item.value === page ? 'default' : 'outline'">
                                 {{ item.value }}
                             </Button>
                         </PaginationItem>

@@ -494,25 +494,27 @@ onUnmounted(() => {
 <template>
     <DashboardLayout>
         <div class="space-y-6">
-            <div class="flex items-center justify-between gap-3">
-                <div class="relative w-full">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div class="relative flex-1">
                     <Search class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input v-model="searchQuery" placeholder="Search records..." class="pl-9 h-10 bg-card w-full" />
                 </div>
-                <Button type="button" variant="outline" class="shrink-0 gap-2"
-                    @click="showColumnPicker = !showColumnPicker">
-                    <SlidersHorizontal class="h-4 w-4" />
-                    Columns
-                </Button>
-                <Button variant="outline" class="shrink-0 gap-2" @click="fetchRecords" :disabled="loading"
-                    title="Refresh records">
-                    <RefreshCw :class="['h-4 w-4', { 'animate-spin': loading }]" />
-                </Button>
+                <div class="flex items-center gap-2">
+                    <Button type="button" variant="outline" class="flex-1 sm:flex-none gap-2"
+                        @click="showColumnPicker = !showColumnPicker">
+                        <SlidersHorizontal class="h-4 w-4" />
+                        Columns
+                    </Button>
+                    <Button variant="outline" class="shrink-0 gap-2" @click="fetchRecords" :disabled="loading"
+                        title="Refresh records">
+                        <RefreshCw :class="['h-4 w-4', { 'animate-spin': loading }]" />
+                    </Button>
+                </div>
             </div>
 
             <div v-if="showColumnPicker" class="rounded-md border bg-card p-4">
                 <div class="mb-3 text-sm font-medium">Show/Hide Fields</div>
-                <div class="grid grid-cols-2 gap-2 md:grid-cols-4">
+                <div class="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                     <label v-for="column in recordColumns" :key="`column-picker-${column}`"
                         class="flex cursor-pointer items-center gap-2 text-sm">
                         <Checkbox :model-value="displayedColumns.includes(column)"

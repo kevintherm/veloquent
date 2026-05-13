@@ -213,7 +213,7 @@ const handleLogout = async () => {
             </div>
 
             <!-- Content Area -->
-            <div class="flex-1 overflow-auto p-8">
+            <div class="flex-1 overflow-auto p-4 lg:p-8">
                 <div class="max-w-full space-y-6 pb-20">
                     <slot :active-collection="activeCollection"></slot>
                 </div>
