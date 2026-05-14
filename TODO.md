@@ -5,20 +5,20 @@
 
 ## Roadmap
 
-- Add support for :changed, :isset, :length for api rules
-- Add expand option to realtime
 - Hooks system
-- Schema SDK sync (Typed)
-- Add support for indexing json and file field
-- Add oauth link setting for auth collection (per-user)
-- Add octane support
-- Full app backup?
 - Optimize Realtime worker
     - in-memory caching for subscriber models
     - clear memory/efficient data structures
     - set memory limit
+    - Added Sync or afterResponse strategy alongside long running process
+- Add support for :changed, :isset, :length for api rules
+- Add expand option to realtime
+- Add support for indexing json and file field
+- Add octane support
+- Full app backup?
+- Add oauth link setting for auth collection (per-user)
 - Manage .env.example structure
-- Add sync strategy for realtime worker?
+- Schema SDK sync (Typed)
 
 ## Issues
 
