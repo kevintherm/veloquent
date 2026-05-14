@@ -9,6 +9,8 @@ use Veloquent\Core\Domain\Realtime\Commands\InstallRealtimeSupervisor;
 use Veloquent\Core\Domain\Realtime\Commands\PruneExpiredRealtimeSubscriptions;
 use Veloquent\Core\Domain\Realtime\Commands\RealtimeWorker;
 use Veloquent\Core\Domain\Realtime\Contracts\RealtimeBusDriver;
+use Veloquent\Core\Domain\Realtime\Services\RealtimeDispatcher;
+use Veloquent\Core\Domain\Realtime\Services\RealtimeBuffer;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
@@ -17,6 +19,9 @@ class RealtimeServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->singleton(RealtimeDispatcher::class);
+        $this->app->singleton(RealtimeBuffer::class);
+
         $this->app->singleton(RealtimeBusDriver::class, function (): RealtimeBusDriver {
             $driver = config('velo.realtime.bus', 'redis');
 
@@ -45,5 +50,11 @@ class RealtimeServiceProvider extends ServiceProvider
             InstallRealtimeCron::class,
             PruneExpiredRealtimeSubscriptions::class,
         ]);
+
+        if (config('velo.realtime.strategy') === 'after_response') {
+            $this->app->terminating(function () {
+                app(RealtimeBuffer::class)->flush(app(RealtimeDispatcher::class));
+            });
+        }
     }
 }

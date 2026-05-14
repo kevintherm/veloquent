@@ -2,17 +2,17 @@
 
 namespace Veloquent\Core\Observers;
 
-use Veloquent\Core\Infrastructure\Models\Tenant;
-use Illuminate\Database\QueryException;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
-use RuntimeException;
 use Throwable;
+use RuntimeException;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Artisan;
+use Veloquent\Core\Infrastructure\Models\Tenant;
 
 class TenantObserver
 {
@@ -23,16 +23,18 @@ class TenantObserver
 
     public function saved(Tenant $tenant): void
     {
-        Cache::forget("tenant_id_domain_{$tenant->domain}");
+        Cache::forget("velo:tenant:domain:{$tenant->domain}");
+        Cache::forget("velo:tenant:id:{$tenant->id}");
 
         if ($tenant->isDirty('domain')) {
-            Cache::forget("tenant_id_domain_{$tenant->getOriginal('domain')}");
+            Cache::forget("velo:tenant:domain:{$tenant->getOriginal('domain')}");
         }
     }
 
     public function deleted(Tenant $tenant): void
     {
-        Cache::forget("tenant_id_domain_{$tenant->domain}");
+        Cache::forget("velo:tenant:domain:{$tenant->domain}");
+        Cache::forget("velo:tenant:id:{$tenant->id}");
     }
 
     private function prepareTenantDatabaseAndRunMigrations(Tenant $tenant): void

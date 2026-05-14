@@ -2,18 +2,13 @@
 
 namespace Veloquent\Core\Domain\Realtime\Commands;
 
-use Veloquent\Core\Domain\Collections\Models\Collection;
-use Veloquent\Core\Domain\QueryCompiler\Services\QueryFilter;
-use Veloquent\Core\Domain\Realtime\Contracts\RealtimeBusDriver;
-use Veloquent\Core\Domain\Realtime\Models\RealtimeSubscription;
-use Veloquent\Core\Domain\Records\Events\RecordChanged;
-use Veloquent\Core\Domain\Records\Models\Record;
-use Veloquent\Core\Domain\Records\Services\CreateRuleContextBuilder;
-use Veloquent\Core\Infrastructure\Models\Tenant;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Veloquent\Core\Domain\Realtime\Events\RealtimeRecordEvent;
+use Veloquent\Core\Domain\Realtime\Contracts\RealtimeBusDriver;
+use Veloquent\Core\Domain\Realtime\Models\RealtimeSubscription;
+use Veloquent\Core\Domain\Realtime\Services\RealtimeDispatcher;
 
 class RealtimeWorker extends Command
 {
@@ -22,9 +17,11 @@ class RealtimeWorker extends Command
     protected $description = 'Process realtime subscription fan-out';
 
     private array $subscriptions = [];
+    private RealtimeDispatcher $dispatcher;
 
-    public function handle(RealtimeBusDriver $bus): int
+    public function handle(RealtimeBusDriver $bus, RealtimeDispatcher $dispatcher): int
     {
+        $this->dispatcher = $dispatcher;
         $mode = config('velo.realtime.mode', 'persistent');
         $ttl = (int) config('velo.realtime.cron_ttl', 55);
         $startedAt = time();
@@ -198,74 +195,17 @@ class RealtimeWorker extends Command
     {
         $tenantId = $payload['tenant_id'] ?? null;
         $collectionId = $payload['collection_id'] ?? null;
-        $record = $payload['record'] ?? [];
-        $event = (string) ($payload['event'] ?? 'updated');
 
-        if ($tenantId === null || ! is_string($collectionId) || $collectionId === '' || ! is_array($record) || $record === []) {
+        if ($tenantId === null || ! is_string($collectionId) || $collectionId === '') {
             return;
         }
 
-        $tenant = Tenant::query()->find($tenantId);
+        $subscriptions = $this->pruneExpiredSubscriptionsForCollection($tenantId, $collectionId);
 
-        if (! $tenant) {
-            return;
-        }
-
-        $tenant->execute(function () use ($tenantId, $collectionId, $record, $event): void {
-            $collection = Collection::query()->find($collectionId);
-
-            if (! $collection) {
-                return;
-            }
-
-            $subscriptions = $this->pruneExpiredSubscriptionsForCollection($tenantId, $collectionId);
-            $matchedCount = 0;
-
-            foreach ($subscriptions as $subscription) {
-                $filter = (string) ($subscription['filter'] ?? '');
-                $matched = $this->evaluateFilter($filter, $collection, $record, $subscription);
-
-                $this->debug('Realtime subscription filter/auth evaluated', [
-                    'tenant_id' => $tenantId,
-                    'event' => $event,
-                    'collection_id' => $collectionId,
-                    'auth_collection' => (string) ($subscription['auth_collection'] ?? ''),
-                    'subscriber_id' => (string) ($subscription['subscriber_id'] ?? ''),
-                    'channel' => (string) ($subscription['channel'] ?? ''),
-                    'filter' => $filter,
-                    'matched' => $matched,
-                    'record_id' => $record['id'] ?? null,
-                ]);
-
-                if ($matched) {
-                    $matchedCount++;
-
-                    try {
-                        broadcast(new RecordChanged(
-                            channel: (string) $subscription['channel'],
-                            event: $event,
-                            record: array_merge(array_intersect_key($record, array_flip(array_keys($record))), ['_collection' => $collection->name]),
-                        ));
-                    } catch (\Throwable $e) {
-                        $this->debug('Broadcast failed: '.$e->getMessage(), [
-                            'exception' => $e,
-                            'tenant_id' => $tenantId,
-                            'collection_id' => $collectionId,
-                            'channel' => (string) $subscription['channel'],
-                        ]);
-                    }
-                }
-            }
-
-            $this->debug('Realtime record event processed', [
-                'tenant_id' => $tenantId,
-                'event' => $event,
-                'collection_id' => $collectionId,
-                'subscriptions_in_collection' => count($subscriptions),
-                'matched_subscriptions' => $matchedCount,
-                'record_id' => $record['id'] ?? null,
-            ]);
-        });
+        $this->dispatcher->dispatch(
+            RealtimeRecordEvent::fromArray($payload),
+            $subscriptions
+        );
     }
 
     private function pruneExpiredSubscriptionsForCollection(int $tenantId, string $collectionId): array
@@ -310,60 +250,7 @@ class RealtimeWorker extends Command
         return CarbonImmutable::now()->addSeconds($defaultTtl)->timestamp;
     }
 
-    private function evaluateFilter(string $filter, Collection $collection, array $record, array $subscription): bool
-    {
-        try {
-            $subscriberCollection = Collection::query()->where('name', $subscription['auth_collection'])->first();
-            if (! $subscriberCollection) {
-                return false;
-            }
 
-            $subscriber = Record::of($subscriberCollection)
-                ->newQuery()
-                ->find($subscription['subscriber_id']);
-
-            if (! $subscriber) {
-                return false;
-            }
-
-            if ($subscriber->isSuperuser()) {
-                return true;
-            }
-
-            $viewRule = $collection->api_rules['view'] ?? null;
-            if ($viewRule === null) {
-                return false;
-            }
-
-            $viewRule = trim($viewRule);
-            if ($viewRule !== '') {
-                $viewContext = app(CreateRuleContextBuilder::class)
-                    ->build($collection, $record, $subscriber, Request::create('/'), $viewRule);
-
-                $canView = QueryFilter::for(Record::of($collection)->newQuery(), array_keys($viewContext))
-                    ->evaluate($viewRule, $viewContext);
-
-                if (! $canView) {
-                    return false;
-                }
-            }
-            if (blank($filter)) {
-                return true;
-            }
-
-            $filterContext = app(CreateRuleContextBuilder::class)
-                ->build($collection, $record, $subscriber, Request::create('/'), $filter);
-
-            return QueryFilter::for(
-                Record::of($collection)->newQuery(),
-                array_keys($filterContext)
-            )->evaluate($filter, $filterContext);
-        } catch (\Throwable $e) {
-            $this->debug('Evaluation error', ['error' => $e->getMessage()]);
-
-            return false;
-        }
-    }
 
     private function debug(string $message, array $context = []): void
     {

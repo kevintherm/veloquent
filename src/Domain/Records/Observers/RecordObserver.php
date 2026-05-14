@@ -2,17 +2,21 @@
 
 namespace Veloquent\Core\Domain\Records\Observers;
 
-use Veloquent\Core\Domain\Realtime\Contracts\RealtimeBusDriver;
-use Veloquent\Core\Domain\Records\Models\Record;
-use Veloquent\Core\Domain\Records\Services\FileFieldProcessor;
-use Veloquent\Core\Domain\Records\Services\RelationIntegrityService;
 use Spatie\Multitenancy\Contracts\IsTenant;
-use Spatie\Multitenancy\Landlord;
-use Illuminate\Support\Facades\Log;
-use Throwable;
+use Veloquent\Core\Domain\Records\Models\Record;
+use Veloquent\Core\Domain\Realtime\Events\RealtimeRecordEvent;
+use Veloquent\Core\Domain\Records\Services\FileFieldProcessor;
+use Veloquent\Core\Domain\Realtime\Services\RealtimeDispatcher;
+use Veloquent\Core\Domain\Records\Services\RelationIntegrityService;
 
 class RecordObserver
 {
+    public function __construct(
+        protected RealtimeDispatcher $dispatcher,
+        protected RelationIntegrityService $integrityService,
+        protected FileFieldProcessor $fileProcessor,
+    ) {}
+
     public function creating(Record $record): void
     {
         //
@@ -35,8 +39,8 @@ class RecordObserver
 
     public function deleting(Record $record): void
     {
-        app(RelationIntegrityService::class)->handleRecordDeletion($record->collection, $record->id);
-        app(FileFieldProcessor::class)->cleanupRecordFiles($record);
+        $this->integrityService->handleRecordDeletion($record->collection, $record->id);
+        $this->fileProcessor->cleanupRecordFiles($record);
 
         $this->publishEvent('deleted', $record);
     }
@@ -54,34 +58,23 @@ class RecordObserver
     private function publishEvent(string $event, Record $record): void
     {
         $tenantId = $this->resolveTenantId();
-
         if ($tenantId === null) {
             return;
         }
 
         $collectionId = $record->collection?->id ?? $record->getAttribute('collection_id');
-
         if (! is_string($collectionId) || $collectionId === '') {
             return;
         }
 
-        Landlord::execute(function () use ($event, $tenantId, $collectionId, $record) {
-            try {
-                app(RealtimeBusDriver::class)->publish([
-                    'type' => 'record_event',
-                    'event' => $event,
-                    'tenant_id' => $tenantId,
-                    'collection_id' => $collectionId,
-                    'record' => $record->toArray(),
-                ]);
-            } catch (Throwable $e) {
-                Log::error("Failed to publish {$event} event for record {$record->id}: {$e->getMessage()}", [
-                    'exception' => $e,
-                    'tenant_id' => $tenantId,
-                    'collection_id' => $collectionId,
-                ]);
-            }
-        });
+        $realtimeEvent = new RealtimeRecordEvent(
+            tenantId: $tenantId,
+            collectionId: $collectionId,
+            record: $record->toArray(),
+            event: $event,
+        );
+
+        $this->dispatcher->handle($realtimeEvent);
     }
 
     private function resolveTenantId(): ?string

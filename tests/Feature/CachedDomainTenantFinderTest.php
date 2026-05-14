@@ -23,14 +23,14 @@ it('can find and cache a tenant by domain', function () {
 
     $finder = new CachedDomainTenantFinder;
 
-    expect(Cache::has('tenant_id_domain_my-tenant.veloquent.test'))->toBeFalse();
+    expect(Cache::has('velo:tenant:domain:my-tenant.veloquent.test'))->toBeFalse();
 
     $foundTenant = $finder->findForRequest($request);
 
     expect($foundTenant)->not->toBeNull()
         ->and($foundTenant->id)->toBe($tenant->id);
 
-    expect(Cache::has('tenant_id_domain_my-tenant.veloquent.test'))->toBeTrue();
+    expect(Cache::has('velo:tenant:domain:my-tenant.veloquent.test'))->toBeTrue();
 });
 
 it('clears cache when tenant domain is updated', function () {
@@ -44,12 +44,12 @@ it('clears cache when tenant domain is updated', function () {
     $finder = new CachedDomainTenantFinder;
     $finder->findForRequest($request);
 
-    expect(Cache::has('tenant_id_domain_old-domain.veloquent.test'))->toBeTrue();
+    expect(Cache::has('velo:tenant:domain:old-domain.veloquent.test'))->toBeTrue();
 
     $tenant->update(['domain' => 'new-domain.veloquent.test']);
 
-    expect(Cache::has('tenant_id_domain_old-domain.veloquent.test'))->toBeFalse();
-    expect(Cache::has('tenant_id_domain_new-domain.veloquent.test'))->toBeFalse();
+    expect(Cache::has('velo:tenant:domain:old-domain.veloquent.test'))->toBeFalse();
+    expect(Cache::has('velo:tenant:domain:new-domain.veloquent.test'))->toBeFalse();
 });
 
 it('clears cache when tenant is deleted', function () {
@@ -63,9 +63,9 @@ it('clears cache when tenant is deleted', function () {
     $finder = new CachedDomainTenantFinder;
     $finder->findForRequest($request);
 
-    expect(Cache::has('tenant_id_domain_del-domain.veloquent.test'))->toBeTrue();
+    expect(Cache::has('velo:tenant:domain:del-domain.veloquent.test'))->toBeTrue();
 
     $tenant->delete();
 
-    expect(Cache::has('tenant_id_domain_del-domain.veloquent.test'))->toBeFalse();
+    expect(Cache::has('velo:tenant:domain:del-domain.veloquent.test'))->toBeFalse();
 });

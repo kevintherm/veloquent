@@ -60,7 +60,7 @@ it('publishes created event with collection id for realtime worker', function ()
         'name' => 'Realtime Payload Test',
     ]);
 
-    (new RecordObserver)->created($record);
+    app(RecordObserver::class)->created($record);
 
     expect($publishedPayloads)->toHaveCount(1)
         ->and($publishedPayloads[0])->toMatchArray([
