@@ -1299,34 +1299,34 @@ onMounted(async () => {
               </div>
             </div>
 
-            <div class="flex items-center justify-between border-t px-4 py-3">
-              <div class="flex gap-2">
-                <Button variant="ghost" type="button" @click="clearRelationDialogSelection">
+            <div class="flex flex-col sm:flex-row items-center justify-between border-t px-4 py-3 gap-4">
+              <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <Button variant="ghost" type="button" @click="clearRelationDialogSelection" class="w-full sm:w-auto">
                   Clear Selection
                 </Button>
-                <Button variant="outline" type="button" @click="handleCreateNewRelatedRecord">
+                <Button variant="outline" type="button" @click="handleCreateNewRelatedRecord" class="w-full sm:w-auto">
                   <Plus class="h-3.5 w-3.5 mr-1" />
                   New Related Record
                 </Button>
               </div>
-              <div class="flex gap-2">
-                <Button variant="outline" type="button" @click="closeRelationDialog">Cancel</Button>
-                <Button type="button" @click="applyRelationDialogSelection">Apply</Button>
+              <div class="flex gap-2 w-full sm:w-auto">
+                <Button variant="outline" type="button" @click="closeRelationDialog" class="flex-1 sm:flex-none">Cancel</Button>
+                <Button type="button" @click="applyRelationDialogSelection" class="flex-1 sm:flex-none">Apply</Button>
               </div>
             </div>
           </div>
         </div>
       </Transition>
 
-      <SheetFooter class="absolute bottom-0 left-0 right-0 p-6 bg-background border-t">
-        <div class="flex gap-2 w-full">
-          <div v-if="isUpdating" class="relative">
-            <Button variant="outline" :disabled="submitting || loadingCollection" @click="toggleRecordActionsMenu">
+      <SheetFooter class="absolute bottom-0 left-0 right-0 p-4 sm:p-6 bg-background border-t">
+        <div class="flex flex-col sm:flex-row gap-2 w-full">
+          <div v-if="isUpdating" class="relative w-full sm:w-auto">
+            <Button variant="outline" :disabled="submitting || loadingCollection" @click="toggleRecordActionsMenu" class="w-full sm:w-auto">
               <MoreVertical class="h-4 w-4" />
-              <div class="sr-only">Actions</div>
+              <span class="sm:sr-only ml-2 sm:ml-0">Record Actions</span>
             </Button>
             <div v-if="recordActionsMenuOpen"
-              class="absolute bottom-11 left-0 z-20 min-w-44 rounded-md border bg-background p-1 shadow-lg">
+              class="absolute bottom-full mb-1 left-0 z-20 min-w-full sm:min-w-44 rounded-md border bg-background p-1 shadow-lg animate-in slide-in-from-bottom-2 duration-200">
               <button type="button"
                 class="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-left text-sm text-destructive hover:bg-muted"
                 :disabled="submitting" @click="requestDeleteRecord">
@@ -1354,10 +1354,12 @@ onMounted(async () => {
             </div>
           </div>
 
-          <Button variant="outline" class="flex-1" @click="requestClose">Cancel</Button>
-          <Button class="flex-1" :disabled="submitting || loadingCollection" @click="handleSave">
-            {{ submitting ? 'Saving...' : 'Save Record' }}
-          </Button>
+          <div class="flex gap-2 flex-1 w-full">
+            <Button variant="outline" class="flex-1" @click="requestClose">Cancel</Button>
+            <Button class="flex-1" :disabled="submitting || loadingCollection" @click="handleSave">
+              {{ submitting ? 'Saving...' : 'Save Record' }}
+            </Button>
+          </div>
         </div>
       </SheetFooter>
 
