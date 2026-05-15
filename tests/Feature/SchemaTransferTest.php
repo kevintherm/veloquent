@@ -217,3 +217,46 @@ it('applies API rules without linting, even if they reference unknown fields', f
     expect($articles)->not->toBeNull();
     expect($articles->api_rules['list'])->toBe('author_id = @user.id');
 });
+
+it('updates target_collection_id during import when target collection is also imported', function () {
+    $service = app(SchemaTransferService::class);
+    $createAction = app(CreateCollectionAction::class);
+
+    // 1. Create source environment state
+    $posts = $createAction->execute([
+        'name' => 'posts',
+        'type' => 'base',
+        'fields' => [],
+    ]);
+
+    $comments = $createAction->execute([
+        'name' => 'comments',
+        'type' => 'base',
+        'fields' => [
+            [
+                'name' => 'post',
+                'type' => 'relation',
+                'target_collection_id' => $posts->id,
+            ],
+        ],
+    ]);
+
+    // 2. Export
+    $export = $service->export(['posts', 'comments'], [], false);
+    
+    // Clear database to simulate fresh import
+    $comments->delete();
+    $posts->delete();
+    
+    // 3. Import into "new" environment
+    // In the new environment, the IDs will be different
+    $service->import($export);
+    
+    $newPosts = Collection::query()->where('name', 'posts')->first();
+    $newComments = Collection::query()->where('name', 'comments')->first();
+    
+    expect($newPosts->id)->not->toBe($posts->id);
+    
+    $relationField = collect($newComments->fields)->firstWhere('name', 'post');
+    expect($relationField['target_collection_id'])->toBe($newPosts->id);
+});

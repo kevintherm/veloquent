@@ -134,6 +134,7 @@ class SchemaTransferService
         ];
 
         $apiRulesToApply = [];
+        $idMapping = [];
 
         $metadataCollections = data_get($payload, 'metadata.collections', []);
 
@@ -143,7 +144,7 @@ class SchemaTransferService
                     continue;
                 }
 
-                $result['metadata'][] = $this->importCollectionMetadataRow($collectionRow, $conflict, $apiRulesToApply);
+                $result['metadata'][] = $this->importCollectionMetadataRow($collectionRow, $conflict, $apiRulesToApply, $idMapping);
             }
         }
 
@@ -170,7 +171,8 @@ class SchemaTransferService
                 $conflict,
                 $collectionsByTable->get($tableName),
                 false,
-                $apiRulesToApply
+                $apiRulesToApply,
+                $idMapping
             );
         }
 
@@ -199,11 +201,13 @@ class SchemaTransferService
                     $conflict,
                     $collection,
                     true,
-                    $apiRulesToApply
+                    $apiRulesToApply,
+                    $idMapping
                 );
             });
         }
 
+        $this->updateRelationFieldsUsingMapping($idMapping);
         $this->applyDeferredApiRules($apiRulesToApply);
 
         return $result;
@@ -266,6 +270,7 @@ class SchemaTransferService
             ->all();
 
         return [
+            'id' => $collection->id,
             'type' => $collection->type->value,
             'is_system' => (bool) $collection->is_system,
             'name' => $collection->name,
@@ -289,7 +294,7 @@ class SchemaTransferService
             ->all();
     }
 
-    private function importCollectionMetadataRow(array $row, string $conflict, array &$apiRulesToApply): array
+    private function importCollectionMetadataRow(array $row, string $conflict, array &$apiRulesToApply, array &$idMapping): array
     {
         $name = (string) ($row['name'] ?? '');
         $type = (string) ($row['type'] ?? CollectionType::Base->value);
@@ -334,10 +339,12 @@ class SchemaTransferService
  
             $apiRulesToApply[$created->name] = is_array($row['api_rules'] ?? null) ? $row['api_rules'] : [];
  
-            $result = [
-                'collection' => $created->name,
-                'action' => 'created',
-            ];
+            $idMapping[(string) ($row['id'] ?? '')] = $created->id;
+ 
+             $result = [
+                 'collection' => $created->name,
+                 'action' => 'created',
+             ];
  
             if ($hasRelationFields) {
                 $result['warning'] = 'Collection has relation fields that may need to be reconfigured for this environment.';
@@ -348,6 +355,8 @@ class SchemaTransferService
         }
  
         $apiRulesToApply[$existing->name] = is_array($row['api_rules'] ?? null) ? $row['api_rules'] : [];
+ 
+        $idMapping[(string) ($row['id'] ?? '')] = $existing->id;
  
         if ($conflict === 'skip') {
             return [
@@ -425,6 +434,7 @@ class SchemaTransferService
         ?Collection $collection,
         bool $useTransaction,
         array &$apiRulesToApply,
+        array &$idMapping,
     ): array {
         $this->assertTableExists($tableName);
 
@@ -440,7 +450,7 @@ class SchemaTransferService
             }
 
             if ($tableName === 'collections') {
-                $metadataResult = $this->importCollectionMetadataRow($row, $conflict, $apiRulesToApply);
+                $metadataResult = $this->importCollectionMetadataRow($row, $conflict, $apiRulesToApply, $idMapping);
                 $action = $metadataResult['action'] ?? 'skipped';
 
                 if ($action === 'created') {
@@ -529,6 +539,40 @@ class SchemaTransferService
         DB::table($tableName)->insert($row);
 
         return 'inserted';
+    }
+
+    /**
+     * Update relation fields target_collection_id using the provided ID mapping.
+     *
+     * @param  array<string, string>  $idMapping
+     */
+    private function updateRelationFieldsUsingMapping(array $idMapping): void
+    {
+        if (empty($idMapping)) {
+            return;
+        }
+
+        Collection::query()->each(function (Collection $collection) use ($idMapping): void {
+            $fields = $collection->fields ?? [];
+            $changed = false;
+
+            foreach ($fields as &$field) {
+                if (($field['type'] ?? '') !== 'relation') {
+                    continue;
+                }
+
+                $targetId = $field['target_collection_id'] ?? null;
+
+                if ($targetId !== null && isset($idMapping[$targetId])) {
+                    $field['target_collection_id'] = $idMapping[$targetId];
+                    $changed = true;
+                }
+            }
+
+            if ($changed) {
+                $collection->update(['fields' => $fields]);
+            }
+        });
     }
 
     private function assertTableExists(string $tableName): void
