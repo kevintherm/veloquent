@@ -24,7 +24,7 @@ beforeEach(function (): void {
     $this->tenant = Tenant::withoutEvents(fn () => Tenant::query()->create([
         'name' => 'Test Tenant',
         'domain' => Str::random(10) . '.test',
-        'database' => 'test_db_' . Str::random(10),
+        'database' => null,
     ]));
 
     app()->instance((string) config('multitenancy.current_tenant_container_key'), $this->tenant);
@@ -91,7 +91,7 @@ it('dispatches retry job on failure in sync strategy', function () {
     $dispatcher = Mockery::mock(RealtimeDispatcher::class)->makePartial();
     // Use shouldAllowMockingProtectedMethods() to mock protected method
     $dispatcher->shouldAllowMockingProtectedMethods();
-    $dispatcher->shouldReceive('loadSubscriptionsFromDb')->andThrow(new Exception('DB failed'));
+    $dispatcher->shouldReceive('loadSubscriptionsFromLandlord')->andThrow(new Exception('DB failed'));
     app()->instance(RealtimeDispatcher::class, $dispatcher);
     
     $event = new RealtimeRecordEvent(

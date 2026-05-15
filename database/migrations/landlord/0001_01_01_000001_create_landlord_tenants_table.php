@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('domain')->unique();
-            $table->string('database')->unique();
+            $table->string('database')->nullable()->unique();
             $table->timestamps();
         });
     }

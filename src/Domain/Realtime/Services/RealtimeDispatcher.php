@@ -71,18 +71,18 @@ class RealtimeDispatcher
             return;
         }
 
-        $collection = $tenant->execute(fn() => Collection::findByIdCached($collectionId));
-        if (! $collection) {
-            Log::warning("[RealtimeDispatcher] Collection not found.", ['collection_id' => $collectionId]);
-            return;
-        }
-
-        $activeSubscriptions = $subscriptions ?? $this->loadSubscriptionsFromLandlord($tenantId, $collectionId);
-        if (empty($activeSubscriptions)) {
-            return;
-        }
-
         try {
+            $collection = $tenant->execute(fn() => Collection::findByIdCached($collectionId));
+            if (! $collection) {
+                Log::warning("[RealtimeDispatcher] Collection not found.", ['collection_id' => $collectionId]);
+                return;
+            }
+
+            $activeSubscriptions = $subscriptions ?? $this->loadSubscriptionsFromLandlord($tenantId, $collectionId);
+            if (empty($activeSubscriptions)) {
+                return;
+            }
+
             $tenant->execute(function () use ($tenant, $collection, $activeSubscriptions, $event): void {
                 foreach ($activeSubscriptions as $subscription) {
                     $this->processSubscription(
@@ -95,7 +95,7 @@ class RealtimeDispatcher
                 }
             });
         } catch (Throwable $e) {
-            Log::error("[RealtimeDispatcher] Processing error", [
+            Log::error("[RealtimeDispatcher] Dispatching error", [
                 'error' => $e->getMessage(),
                 'tenant_id' => $tenantId,
                 'collection_id' => $collectionId,
