@@ -5,9 +5,6 @@
 
 ## Roadmap
 
-- Hooks system
-- Optimize Realtime worker
-    - set memory limit
 - Manage .env.example structure
 - Add support for :changed, :isset, :length for api rules
 - Add expand option to realtime

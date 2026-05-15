@@ -2,18 +2,23 @@
 
 namespace Veloquent\Core\Domain\Auth\Actions;
 
-use Veloquent\Core\Domain\Collections\Enums\CollectionType;
-use Veloquent\Core\Domain\Collections\Models\Collection;
+use Illuminate\Support\Facades\DB;
+use Veloquent\Core\Domain\Hooks\HookRunner;
+use Illuminate\Auth\AuthenticationException;
+use Veloquent\Core\Domain\Hooks\HookPayload;
 use Veloquent\Core\Domain\Otp\Enums\OtpAction;
-use Veloquent\Core\Domain\Otp\Services\OtpService;
 use Veloquent\Core\Domain\Records\Models\Record;
 use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Auth\AuthenticationException;
-use Illuminate\Support\Facades\DB;
+use Veloquent\Core\Domain\Otp\Services\OtpService;
+use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\Collections\Enums\CollectionType;
 
 class ConfirmEmailChangeAction
 {
-    public function __construct(private OtpService $otpService) {}
+    public function __construct(
+        private OtpService $otpService,
+        private HookRunner $hookRunner,
+    ) {}
 
     public function execute(Collection $collection, Record $user, array $payload): array
     {
@@ -28,7 +33,18 @@ class ConfirmEmailChangeAction
             throw new AuthenticationException('User not authenticated.');
         }
 
-        return DB::transaction(function () use ($collection, $user, $newEmail, $token) {
+        $payload = DB::transaction(function () use ($collection, $user, $payload, $newEmail, $token) {
+            $payload = $this->hookRunner->run(new HookPayload(
+                event: 'auth.email_changing',
+                collection: $collection,
+                record: $user,
+                data: $payload,
+                request: request(),
+            ))->data;
+
+            $newEmail = $payload['new_email'] ?? $newEmail;
+            $token = $payload['token'] ?? $token;
+
             $this->otpService->consume(
                 $token,
                 OtpAction::EmailChange,
@@ -40,7 +56,17 @@ class ConfirmEmailChangeAction
                 ->where('id', $user->id)
                 ->update(['email' => $newEmail]);
 
-            return ['status' => 'ok'];
+            return $payload;
         });
+
+        $this->hookRunner->run(new HookPayload(
+            event: 'auth.email_changed',
+            collection: $collection,
+            record: $user,
+            data: $payload,
+            request: request(),
+        ));
+
+        return ['status' => 'ok'];
     }
 }

@@ -2,20 +2,26 @@
 
 namespace Veloquent\Core\Domain\Auth\Actions;
 
-use Veloquent\Core\Domain\Auth\Services\TokenAuthService;
-use Veloquent\Core\Domain\Collections\Enums\CollectionType;
-use Veloquent\Core\Domain\Collections\Models\Collection;
-use Veloquent\Core\Domain\Otp\Enums\OtpAction;
-use Veloquent\Core\Domain\Otp\Services\OtpService;
-use Veloquent\Core\Domain\Records\Models\Record;
-use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Auth\AuthenticationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Veloquent\Core\Domain\Hooks\HookRunner;
+use Illuminate\Auth\AuthenticationException;
+use Veloquent\Core\Domain\Hooks\HookPayload;
+use Veloquent\Core\Domain\Otp\Enums\OtpAction;
+use Veloquent\Core\Domain\Records\Models\Record;
+use Illuminate\Auth\Access\AuthorizationException;
+use Veloquent\Core\Domain\Otp\Services\OtpService;
+use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\Auth\Services\TokenAuthService;
+use Veloquent\Core\Domain\Collections\Enums\CollectionType;
 
 class ConfirmPasswordResetAction
 {
-    public function __construct(private OtpService $otpService, private TokenAuthService $tokenService) {}
+    public function __construct(
+        private OtpService $otpService,
+        private TokenAuthService $tokenService,
+        private HookRunner $hookRunner,
+    ) {}
 
     /**
      * Verify the OTP and reset the user's password inside a transaction.
@@ -34,7 +40,17 @@ class ConfirmPasswordResetAction
             throw new AuthenticationException('Invalid credentials.');
         }
 
-        return DB::transaction(function () use ($payload, $collection, $user, $newPassword) {
+        $payload = DB::transaction(function () use ($payload, $collection, $user, $newPassword) {
+            $payload = $this->hookRunner->run(new HookPayload(
+                event: 'auth.password_resetting',
+                collection: $collection,
+                record: $user,
+                data: $payload,
+                request: request(),
+            ))->data;
+
+            $newPassword = $payload['new_password'] ?? $newPassword;
+
             $this->otpService->consume(
                 $payload['token'],
                 OtpAction::PasswordReset,
@@ -48,7 +64,17 @@ class ConfirmPasswordResetAction
 
             $this->tokenService->revokeRecordTokens($collection->id, (string) $user->id);
 
-            return ['status' => 'ok'];
+            return $payload;
         });
+
+        $this->hookRunner->run(new HookPayload(
+            event: 'auth.password_reset',
+            collection: $collection,
+            record: $user,
+            data: $payload,
+            request: request(),
+        ));
+
+        return ['status' => 'ok'];
     }
 }

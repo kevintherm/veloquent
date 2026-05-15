@@ -1,0 +1,14 @@
+<?php
+
+use Veloquent\Core\Domain\Hooks\Facades\Hooks;
+
+/**
+ * Register your Veloquent hooks here.
+ *
+ * Example:
+ * Hooks::before('record.create', \App\Hooks\MyHook::class);
+ * Hooks::after('auth.login', function ($payload, $next) {
+ *     // Your logic here
+ *     return $next($payload);
+ * });
+ */

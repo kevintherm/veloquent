@@ -2,25 +2,29 @@
 
 namespace Veloquent\Core\Domain\Records\Actions;
 
-use Veloquent\Core\Domain\Collections\Enums\CollectionType;
-use Veloquent\Core\Domain\Collections\Models\Collection;
-use Veloquent\Core\Domain\QueryCompiler\Services\QueryFilter;
-use Veloquent\Core\Domain\Records\Models\Record;
-use Veloquent\Core\Domain\Records\Services\FileFieldProcessor;
-use Veloquent\Core\Domain\Records\Services\RelationIntegrityService;
-use Veloquent\Core\Domain\Records\Services\UpdateRuleContextBuilder;
-use Illuminate\Auth\Access\AuthorizationException;
+use Throwable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\DB;
+use Veloquent\Core\Domain\Hooks\HookRunner;
+use Veloquent\Core\Domain\Hooks\HookPayload;
 use Illuminate\Validation\ValidationException;
-use Throwable;
+use Veloquent\Core\Domain\Records\Models\Record;
+use Illuminate\Auth\Access\AuthorizationException;
+use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\Collections\Enums\CollectionType;
+use Veloquent\Core\Domain\QueryCompiler\Services\QueryFilter;
+use Veloquent\Core\Domain\Records\Services\FileFieldProcessor;
+use Veloquent\Core\Domain\Records\Services\RelationIntegrityService;
+use Veloquent\Core\Domain\Records\Services\UpdateRuleContextBuilder;
 
 class UpdateRecordAction
 {
     public function __construct(
         private readonly RelationIntegrityService $relationIntegrityService,
         private readonly FileFieldProcessor $fileFieldProcessor,
+        private readonly HookRunner $hookRunner,
     ) {}
 
     public function execute(Collection $collection, string $recordId, array $data, ?Request $request = null): Record
@@ -89,26 +93,52 @@ class UpdateRecordAction
             }
         }
 
-        $data = array_diff_key($data, array_flip(['created_at', 'updated_at']));
+        $record = DB::transaction(function () use ($collection, $recordId, $data, $request, $authenticatedUser, $record) {
+            $payload = $this->hookRunner->run(new HookPayload(
+                event: 'record.updating',
+                collection: $collection,
+                record: $record,
+                data: $data,
+                request: $request ?? request(),
+                actor: $authenticatedUser instanceof Record ? $authenticatedUser : null,
+            ));
 
-        $this->relationIntegrityService->validateRelationIds($collection->fields ?? [], $data);
-        $this->relationIntegrityService->validateNoCircularReferences($collection, $recordId, $data);
+            $data = $payload->data;
 
-        $fileProcessing = $this->fileFieldProcessor->processForUpdate(
-            $collection,
-            $record,
-            $data,
-            $request ?? request(),
-        );
+            $data = array_diff_key($data, array_flip(['created_at', 'updated_at']));
 
-        try {
-            $record->update($fileProcessing['data']);
-            $record->refresh();
-        } catch (Throwable $exception) {
-            $this->fileFieldProcessor->deletePaths($fileProcessing['stored_paths']);
+            $this->relationIntegrityService->validateRelationIds($collection->fields ?? [], $data);
+            $this->relationIntegrityService->validateNoCircularReferences($collection, $recordId, $data);
 
-            throw $exception;
-        }
+            $fileProcessing = $this->fileFieldProcessor->processForUpdate(
+                $collection,
+                $record,
+                $data,
+                $request ?? request(),
+            );
+
+            try {
+                $record->update($fileProcessing['data']);
+                $record->refresh();
+                
+                return ['record' => $record, 'fileProcessing' => $fileProcessing];
+            } catch (Throwable $exception) {
+                $this->fileFieldProcessor->deletePaths($fileProcessing['stored_paths']);
+                throw $exception;
+            }
+        });
+
+        $fileProcessing = $record['fileProcessing'];
+        $record = $record['record'];
+
+        $this->hookRunner->run(new HookPayload(
+            event: 'record.updated',
+            collection: $collection,
+            record: $record,
+            data: $data,
+            request: $request ?? request(),
+            actor: $authenticatedUser instanceof Record ? $authenticatedUser : null,
+        ));
 
         $this->fileFieldProcessor->deletePaths($fileProcessing['pending_delete_paths']);
 

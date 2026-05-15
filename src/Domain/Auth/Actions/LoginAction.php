@@ -2,18 +2,24 @@
 
 namespace Veloquent\Core\Domain\Auth\Actions;
 
-use Veloquent\Core\Domain\Auth\Services\TokenAuthService;
-use Veloquent\Core\Domain\Auth\ValueObjects\TokenData;
-use Veloquent\Core\Domain\Collections\Enums\CollectionType;
-use Veloquent\Core\Domain\Collections\Models\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Veloquent\Core\Domain\Hooks\HookRunner;
+use Illuminate\Auth\AuthenticationException;
+use Veloquent\Core\Domain\Hooks\HookPayload;
 use Veloquent\Core\Domain\Records\Models\Record;
 use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Auth\AuthenticationException;
-use Illuminate\Support\Facades\Hash;
+use Veloquent\Core\Domain\Auth\ValueObjects\TokenData;
+use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\Auth\Services\TokenAuthService;
+use Veloquent\Core\Domain\Collections\Enums\CollectionType;
 
 class LoginAction
 {
-    public function __construct(private TokenAuthService $tokenService) {}
+    public function __construct(
+        private TokenAuthService $tokenService,
+        private HookRunner $hookRunner,
+    ) {}
 
     /**
      * Handle standard login for an auth collection and return the token data.
@@ -21,30 +27,55 @@ class LoginAction
      */
     public function execute(Collection $collection, array $payload): TokenData
     {
-        $identity = $payload['identity'] ?? null;
-        $password = $payload['password'] ?? null;
+        $result = DB::transaction(function () use ($collection, $payload) {
+            $payload = $this->hookRunner->run(new HookPayload(
+                event: 'auth.logging_in',
+                collection: $collection,
+                data: $payload,
+                request: request(),
+            ))->data;
 
-        if ($collection->type !== CollectionType::Auth) {
-            throw new AuthorizationException('This collection does not support authentication.');
-        }
+            $identity = $payload['identity'] ?? null;
+            $password = $payload['password'] ?? null;
 
-        if ($collection->is_system === false && data_get($collection->options, 'auth_methods.standard.enabled') !== true) {
-            throw new AuthorizationException('Standard authentication is not enabled for this collection.');
-        }
-
-        $identityFields = data_get($collection->options, 'auth_methods.standard.identity_fields', ['email']);
-        $identityFields = is_array($identityFields) ? $identityFields : ['email'];
-
-        $user = Record::of($collection)->where(function ($query) use ($identityFields, $identity) {
-            foreach ($identityFields as $field) {
-                $query->orWhere($field, $identity);
+            if ($collection->type !== CollectionType::Auth) {
+                throw new AuthorizationException('This collection does not support authentication.');
             }
-        })->first();
 
-        if (! $user || ! Hash::check($password, $user->password)) {
-            throw new AuthenticationException('Invalid credentials.');
-        }
+            if ($collection->is_system === false && data_get($collection->options, 'auth_methods.standard.enabled') !== true) {
+                throw new AuthorizationException('Standard authentication is not enabled for this collection.');
+            }
 
-        return $this->tokenService->generateToken($user);
+            $identityFields = data_get($collection->options, 'auth_methods.standard.identity_fields', ['email']);
+            $identityFields = is_array($identityFields) ? $identityFields : ['email'];
+
+            $user = Record::of($collection)->where(function ($query) use ($identityFields, $identity) {
+                foreach ($identityFields as $field) {
+                    $query->orWhere($field, $identity);
+                }
+            })->first();
+
+            if (! $user || ! Hash::check($password, $user->password)) {
+                throw new AuthenticationException('Invalid credentials.');
+            }
+
+            $tokenData = $this->tokenService->generateToken($user);
+
+            return [
+                'tokenData' => $tokenData,
+                'user' => $user,
+                'payload' => $payload,
+            ];
+        });
+
+        $this->hookRunner->run(new HookPayload(
+            event: 'auth.logged_in',
+            collection: $collection,
+            record: $result['user'],
+            data: $result['payload'],
+            request: request(),
+        ));
+
+        return $result['tokenData'];
     }
 }

@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Veloquent\Core\Domain\Hooks\HookRegistry;
+use Veloquent\Core\Domain\Hooks\HookRunner;
 
 class VeloquentServiceProvider extends ServiceProvider
 {
@@ -29,6 +31,9 @@ class VeloquentServiceProvider extends ServiceProvider
         $this->app->bind(\Spatie\Multitenancy\Contracts\IsTenant::class, function ($app) {
             return $app->make(config('multitenancy.tenant_model'));
         });
+
+        $this->app->singleton(HookRegistry::class);
+        $this->app->singleton(HookRunner::class);
 
         $veloAuth = config('velo.auth', []);
         config(['auth.guards' => array_merge(config('auth.guards', []), $veloAuth['guards'] ?? [])]);
@@ -59,6 +64,10 @@ class VeloquentServiceProvider extends ServiceProvider
             require __DIR__ . '/../routes/channels.php';
         }
 
+        if (file_exists(base_path('hooks/hooks.php'))) {
+            require base_path('hooks/hooks.php');
+        }
+
         if ($this->app->runningInConsole()) {
             $this->commands([
                 \Veloquent\Core\Console\Commands\CreateTenantCommand::class,
@@ -71,6 +80,7 @@ class VeloquentServiceProvider extends ServiceProvider
             $this->publishes([
                 __DIR__ . '/../config/velo.php' => config_path('velo.php'),
                 __DIR__ . '/../config/multitenancy.php' => config_path('multitenancy.php'),
+                __DIR__ . '/Domain/Hooks/stubs/hooks.php.stub' => base_path('hooks/hooks.php'),
             ], 'velo-config');
 
             $this->publishes([
