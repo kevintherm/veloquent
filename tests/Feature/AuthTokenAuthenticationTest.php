@@ -46,7 +46,7 @@ function bearerHeaders(string $token): array
 }
 
 beforeEach(function () {
-    config()->set('token_auth.max_active_tokens', 0);
+    config()->set('velo.auth.token.max_active_tokens', 0);
 
     $tenant = Tenant::query()->updateOrCreate(['domain' => 'localhost'], [
         'id' => 1001,
@@ -203,7 +203,7 @@ it('returns not found for removed refresh endpoint', function () {
 });
 
 it('enforces max active tokens when set to one', function () {
-    config()->set('token_auth.max_active_tokens', 1);
+    config()->set('velo.auth.token.max_active_tokens', 1);
 
     $collection = createAuthCollection('auth_users_h');
     $user = createAuthRecord($collection, 'max@example.test', 'password123');
