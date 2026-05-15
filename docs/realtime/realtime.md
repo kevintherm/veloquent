@@ -10,9 +10,40 @@ When a record is created, updated, or deleted, Veloquentautomatically broadcasts
 
 Realtime synchronization is governed by the same [API Rules](../security/api-rules.md) as the REST API:
 
-- **Sub-second Fan-out**: The `php artisan realtime:worker` process listens for record change events and matches them against active subscriptions.
-- **Dynamic Permission Check**: Every update is re-evaluated against the subscriber's `view` rules in real-time. If a subscriber no longer has access to a record, no broadcast is sent to their channel.
-- **Requirement**: The `php artisan realtime:worker` command must be running (either via Supervisor or a persistent process) for real-time features to function.
+- **Sub-second Fan-out**: Record change events are matched against active subscriptions and re-evaluated against the subscriber's `view` rules in real-time.
+- **Dynamic Permission Check**: If a subscriber no longer has access to a record, no broadcast is sent to their channel.
+- **Strategies**: Depending on your scale, you can choose between background worker processing, post-response execution, or synchronous dispatching.
+
+## Real-time Strategies
+
+Veloquent supports multiple strategies for processing and broadcasting record events. This can be configured in your environment or `velo.php` configuration.
+
+### 1. Worker (Default)
+`VELO_REALTIME_STRATEGY=worker`
+
+This is the recommended strategy for production. Events are published to a high-speed bus, and a dedicated process handles the evaluation and broadcasting.
+
+- **Pros**: Maximum throughput; offloads heavy processing from the API request.
+- **Cons**: Requires a background process to be running.
+- **Setup**: You must run `php artisan realtime:worker` (ideally managed by Supervisor).
+
+### 2. After Response
+`VELO_REALTIME_STRATEGY=after_response`
+
+Events are buffered and processed immediately after the HTTP response is sent to the client.
+
+- **Pros**: Low latency; no background worker required.
+- **Cons**: Requires a runtime that supports post-response execution (e.g., Nginx, PHP-FPM, Octane, or FrankenPHP).
+- **Setup**: Ensure your server environment supports the Laravel `terminating` callback. If your runtime does not support terminating callback it will most likely just process the events sync similar to the sync strategy.
+
+### 3. Sync
+`VELO_REALTIME_STRATEGY=sync`
+
+Events are evaluated and broadcasted immediately within the request lifecycle.
+
+- **Pros**: Simplest setup; no extra processes or runtime requirements.
+- **Cons**: **Slows down API writes**. The response is not sent until all subscribers are processed.
+- **Recommendation**: Use **only for testing** or very small local development setups. Not recommended for production.
 
 ## Subscribing to Updates
 
