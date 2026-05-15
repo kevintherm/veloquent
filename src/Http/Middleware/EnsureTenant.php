@@ -18,6 +18,14 @@ class EnsureTenant
      */
     public function handle(Request $request, Closure $next): Response
     {
+        if (! config('velo.tenancy_enabled', true)) {
+            if (! Tenant::current()) {
+                Tenant::getVirtualTenant()->makeCurrent();
+            }
+
+            return $next($request);
+        }
+
         if (! Tenant::current()) {
             abort(404, 'Tenant not found');
         }

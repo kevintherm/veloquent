@@ -29,6 +29,10 @@ class DeleteTenantCommand extends Command
 
     public function handle(): int
     {
+        if (! config('velo.tenancy_enabled', true)) {
+            $this->warn('Multi-tenancy is currently disabled in your configuration. This command may not have the expected effect on the running application.');
+        }
+
         $identifier = trim((string) $this->argument('identifier'));
 
         if ($identifier === '') {

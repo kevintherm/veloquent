@@ -15,6 +15,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Tenancy Enabled
+    |--------------------------------------------------------------------------
+    |
+    | Whether multi-tenancy is enabled. If disabled, the application will
+    | operate as a single-tenant system using the default database.
+    |
+    */
+    'tenancy_enabled' => env('VELO_TENANCY_ENABLED', true),
+
+    /*
+    |--------------------------------------------------------------------------
     | Maximum Records Per Page
     |--------------------------------------------------------------------------
     |

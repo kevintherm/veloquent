@@ -75,6 +75,7 @@ class VeloquentServiceProvider extends ServiceProvider
                 \Veloquent\Core\Console\Commands\ListTenantsCommand::class,
                 \Veloquent\Core\Console\Commands\PurgeTenantCommand::class,
                 \Veloquent\Core\Console\Commands\InstallCommand::class,
+                \Veloquent\Core\Console\Commands\ExtractTenantCommand::class,
             ]);
 
             $this->publishes([

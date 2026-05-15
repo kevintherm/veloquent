@@ -12,6 +12,10 @@ class Tenant extends SpatieTenant
 {
     public static function findByIdCached(string $id): ?self
     {
+        if (! config('velo.tenancy_enabled', true)) {
+            return self::getVirtualTenant();
+        }
+
         $ttl = config('velo.collection_cache_ttl', 0);
         $key = "velo:tenant:id:{$id}";
 
@@ -33,6 +37,10 @@ class Tenant extends SpatieTenant
 
     public static function findByDomainCached(string $domain): ?self
     {
+        if (! config('velo.tenancy_enabled', true)) {
+            return self::getVirtualTenant();
+        }
+
         $ttl = config('velo.collection_cache_ttl', 0);
         $key = "velo:tenant:domain:{$domain}";
 
@@ -55,6 +63,19 @@ class Tenant extends SpatieTenant
     public function getDatabaseName(): string
     {
         return (string) ($this->database ?? (app()->runningUnitTests() ? ':memory:' : ''));
+    }
+
+    public static function getVirtualTenant(): self
+    {
+        $tenant = new self([
+            'name' => 'Default Tenant',
+            'domain' => request()->getHost() ?: 'localhost',
+            'database' => null,
+        ]);
+
+        $tenant->id = 1;
+
+        return $tenant;
     }
 
     protected $fillable = [
