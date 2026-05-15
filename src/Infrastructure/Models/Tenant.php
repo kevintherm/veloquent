@@ -62,7 +62,17 @@ class Tenant extends SpatieTenant
 
     public function getDatabaseName(): string
     {
-        return (string) ($this->database ?? (app()->runningUnitTests() ? ':memory:' : ''));
+        if ($this->database) {
+            return (string) $this->database;
+        }
+
+        if (app()->runningUnitTests()) {
+            return ':memory:';
+        }
+
+        $landlordConnection = config('multitenancy.landlord_database_connection_name') ?? config('database.default');
+
+        return (string) config("database.connections.{$landlordConnection}.database");
     }
 
     public static function getVirtualTenant(): self

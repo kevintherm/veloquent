@@ -54,7 +54,17 @@ class InstallCommand extends Command
             ]);
         });
 
-        if ($this->option('force') || $this->confirm('Would you like to create your first tenant?', true)) {
+        if (! config('velo.tenancy_enabled', true)) {
+            $this->components->task('Running tenant migrations (single-tenant mode)...', function () {
+                $this->call('migrate', [
+                    '--path' => 'vendor/veloquent/core/database/migrations/tenant',
+                    '--force' => $this->option('force'),
+                ]);
+            });
+
+            $this->components->info('Multi-tenancy is disabled. Skipping tenant creation.');
+            $this->components->info('Veloquent will operate in single-tenant mode using the virtual tenant.');
+        } elseif ($this->option('force') || $this->confirm('Would you like to create your first tenant?', true)) {
             $name = $this->option('force') ? 'Acme' : $this->ask('Tenant Name', 'Acme');
             $domain = $this->option('force') ? 'localhost' : $this->ask('Tenant Domain', 'localhost');
 
