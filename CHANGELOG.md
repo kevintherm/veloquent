@@ -2,6 +2,26 @@
 
 All notable changes to Veloquent will be documented in this file.
 
+## [2.3.0] - 2026-05-15
+
+### Added
+- **Hooks System**:
+    - Lifecycle interception system using Laravel Pipelines.
+    - Support for `before` (transactional) and `after` (isolated) hooks.
+    - Automatic loading of `hooks.php` from the application root.
+    - Human-readable event aliasing (e.g. `record.create`, `auth.login`).
+    - Dedicated `Hooks` facade with full PHPDoc support.
+    - `HookAbortException` for graceful operation halting.
+    - Integration across all core actions (Records & Auth).
+- **Documentation**:
+    - New `docs/the-basics/hooks.md` guide.
+
+### Fixed
+- Improved exception handling in actions to ensure file cleanup on failure.
+- Silenced and logged exceptions in "after" hooks to prevent side-effect failures.
+- Superusers now bypass view rules in the realtime system.
+- Fixed an issue with an unresponsive record picker modal in the admin panel.
+
 ## [2.2.0] - 2026-05-07
 
 ### Added
