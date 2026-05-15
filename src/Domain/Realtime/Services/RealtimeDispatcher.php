@@ -72,18 +72,18 @@ class RealtimeDispatcher
         }
 
         try {
-            $collection = $tenant->execute(fn() => Collection::findByIdCached($collectionId));
-            if (! $collection) {
-                Log::warning("[RealtimeDispatcher] Collection not found.", ['collection_id' => $collectionId]);
-                return;
-            }
+            $tenant->execute(function () use ($tenant, $event, $subscriptions): void {
+                $collection = $tenant->execute(fn() => Collection::findByIdCached($event->collectionId));
+                if (! $collection) {
+                    Log::warning("[RealtimeDispatcher] Collection not found.", ['collection_id' => $event->collectionId]);
+                    return;
+                }
 
-            $activeSubscriptions = $subscriptions ?? $this->loadSubscriptionsFromLandlord($tenantId, $collectionId);
-            if (empty($activeSubscriptions)) {
-                return;
-            }
+                $activeSubscriptions = $subscriptions ?? $this->loadSubscriptionsFromLandlord($tenant->id, $event->collectionId);
+                if (empty($activeSubscriptions)) {
+                    return;
+                }
 
-            $tenant->execute(function () use ($tenant, $collection, $activeSubscriptions, $event): void {
                 foreach ($activeSubscriptions as $subscription) {
                     $this->processSubscription(
                         subscription: $subscription,
@@ -156,45 +156,32 @@ class RealtimeDispatcher
                 return false;
             }
 
-            $subscriber = Record::of($subscriberCollection)
-                ->newQuery()
-                ->find($subscription['subscriber_id']);
-
+            $subscriber = Record::of($subscriberCollection)->newQuery()->find($subscription['subscriber_id']);
             if (! $subscriber) {
                 return false;
             }
 
-            if ($subscriber->isSuperuser()) {
-                return true;
-            }
-
-            $viewRule = $collection->api_rules['view'] ?? null;
-            if ($viewRule === null) {
-                return false;
-            }
-
-            $viewRule = trim($viewRule);
-            if ($viewRule !== '') {
-                $viewContext = $this->contextBuilder
-                    ->build($collection, $record, $subscriber, Request::create('/'), $viewRule);
-
-                $canView = RuleEngine::make(array_keys($viewContext))
-                    ->evaluate($viewRule, $viewContext);
-
-                if (! $canView) {
+            if (! $subscriber->isSuperuser()) {
+                $viewRule = $collection->api_rules['view'] ?? null;
+                if ($viewRule === null) {
                     return false;
                 }
-            }
 
+                $viewRule = trim($viewRule);
+                if ($viewRule !== '') {
+                    $viewContext = $this->contextBuilder->build($collection, $record, $subscriber, Request::create('/'), $viewRule);
+                    $canView = RuleEngine::make(array_keys($viewContext))->evaluate($viewRule, $viewContext);
+                    return $canView;
+                }
+            }
+            
             if (blank($filter)) {
                 return true;
             }
-
-            $filterContext = $this->contextBuilder
-                ->build($collection, $record, $subscriber, Request::create('/'), $filter);
-
-            return RuleEngine::make(array_keys($filterContext))
-                ->evaluate($filter, $filterContext);
+            
+            $filterContext = $this->contextBuilder->build($collection, $record, $subscriber, Request::create('/'), $filter);
+            
+            return RuleEngine::make(array_keys($filterContext))->evaluate($filter, $filterContext);
         } catch (Throwable $e) {
             Log::debug('[RealtimeDispatcher] Evaluation error', ['error' => $e->getMessage()]);
 
