@@ -145,5 +145,9 @@ return [
                 'model' => \Veloquent\Core\Domain\Auth\Models\Superuser::class,
             ],
         ],
+        'token' => [
+            'expiration' => env('VELO_AUTH_TOKEN_EXPIRATION', 3600),
+            'max_active_tokens' => env('VELO_AUTH_TOKEN_MAX_ACTIVE', 3) // 0: Unlimited
+        ]
     ],
 ];

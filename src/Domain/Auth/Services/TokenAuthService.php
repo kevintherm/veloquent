@@ -24,7 +24,7 @@ class TokenAuthService
             throw new \RuntimeException('Cannot issue token without collection context.');
         }
 
-        $expiresIn = $expiresIn ?? (int) config('token_auth.expiration', 3600);
+        $expiresIn = $expiresIn ?? (int) config('velo.auth.token.expiration', 3600);
         $token = bin2hex(random_bytes(32));
 
         AuthToken::create([
@@ -112,7 +112,7 @@ class TokenAuthService
 
     protected function enforceMaxTokens(Record $user): void
     {
-        $maxTokens = (int) config('token_auth.max_active_tokens', 0);
+        $maxTokens = (int) config('velo.auth.token.max_active_tokens', 0);
 
         if ($maxTokens <= 0 || ! $user->collection) {
             return;
