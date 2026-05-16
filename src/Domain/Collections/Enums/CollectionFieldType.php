@@ -86,7 +86,8 @@ enum CollectionFieldType: string
                     $skipRelationExists ? [] : ['exists:collections,id']
                 ),
                 "{$prefix}.pivot_fields" => ['sometimes', 'array'],
-                "{$prefix}.pivot_fields.*.name" => ['required', 'string'],
+                "{$prefix}.pivot_fields.*.id" => ['sometimes', 'string'],
+                "{$prefix}.pivot_fields.*.name" => ['required', 'string', 'regex:/^[a-zA-Z][a-zA-Z0-9_]*$/'],
                 "{$prefix}.pivot_fields.*.type" => ['required', 'string', 'in:text,datetime,json,number,select,boolean,longtext'],
             ],
             self::Select => [

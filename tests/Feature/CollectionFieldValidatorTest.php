@@ -1,7 +1,8 @@
 <?php
 
 use Veloquent\Core\Domain\Collections\Validators\CollectionFieldValidator;
-use Veloquent\Core\Domain\SchemaManagement\Services\SchemaChangePlan;
+use Veloquent\Core\Domain\SchemaManagement\Services\SchemaChange
+;
 use Illuminate\Validation\ValidationException;
 
 it('collects create validation errors for reserved names duplicates and invalid indexes', function () {
@@ -58,7 +59,8 @@ it('rejects changing type for known field ids on update', function () {
 it('rejects dropping auth reserved fields on auth collections', function () {
     $validator = app(CollectionFieldValidator::class);
 
-    $storedFields = collect(array_values(SchemaChangePlan::getReservedFieldDefinitions(true)))
+    $storedFields = collect(array_values(SchemaChange
+::getReservedFieldDefinitions(true)))
         ->values()
         ->map(function (array $field, int $index): array {
             $field['id'] = sprintf('stored%02d', $index);

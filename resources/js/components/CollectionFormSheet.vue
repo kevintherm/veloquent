@@ -1255,25 +1255,27 @@ onMounted(async () => {
                          Add Pivot Field
                        </Button>
                      </div>
-                     <div class="space-y-2">
-                       <div v-for="(pfield, idx) in newField.pivot_fields" :key="idx" class="flex gap-2 items-center">
-                         <div class="flex-[2]">
-                           <Input v-model="newField.pivot_fields[idx].name" placeholder="Column name" class="h-8 text-xs" />
-                         </div>
-                         <div class="flex-1">
-                           <select v-model="newField.pivot_fields[idx].type" 
-                             class="flex h-8 w-full items-center justify-between rounded-md border border-primary/20 bg-background px-2 py-1 text-[11px] shadow-sm focus:outline-none focus:ring-1">
-                             <option v-for="pt in pivotFieldTypes" :key="pt.value" :value="pt.value">{{ pt.label }}</option>
-                           </select>
-                         </div>
-                         <Button variant="ghost" size="icon" class="h-8 w-8 text-destructive" @click="removePivotField(newField, idx)">
-                           <Trash2 class="h-3 w-3" />
-                         </Button>
-                       </div>
-                       <p v-if="(newField.pivot_fields ?? []).length === 0" class="text-xs text-muted-foreground text-center py-2 bg-muted/20 rounded border border-dashed">
-                         No pivot fields added yet.
-                       </p>
-                     </div>
+                      <div class="space-y-3">
+                        <div v-for="(pfield, idx) in newField.pivot_fields" :key="idx" class="flex flex-col gap-1.5">
+                          <div class="flex gap-2 items-center">
+                            <div class="flex-[2]">
+                              <Input v-model="newField.pivot_fields[idx].name" placeholder="Column name" class="h-8 text-xs" />
+                            </div>
+                            <div class="flex-1">
+                              <select v-model="newField.pivot_fields[idx].type" 
+                                class="flex h-8 w-full items-center justify-between rounded-md border border-primary/20 bg-background px-2 py-1 text-[11px] shadow-sm focus:outline-none focus:ring-1">
+                                <option v-for="pt in pivotFieldTypes" :key="pt.value" :value="pt.value">{{ pt.label }}</option>
+                              </select>
+                            </div>
+                            <Button variant="ghost" size="icon" class="h-8 w-8 text-destructive" @click="removePivotField(newField, idx)">
+                              <Trash2 class="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                        <p v-if="(newField.pivot_fields ?? []).length === 0" class="text-xs text-muted-foreground text-center py-2 bg-muted/20 rounded border border-dashed">
+                          No pivot fields added yet.
+                        </p>
+                      </div>
                    </div>
 
                   <div v-if="newField.type === 'select'" class="space-y-2 col-span-1 sm:col-span-2">
@@ -1532,20 +1534,32 @@ onMounted(async () => {
                           Add Pivot Field
                         </Button>
                       </div>
-                      <div class="space-y-2">
-                        <div v-for="(pfield, idx) in field.pivot_fields" :key="idx" class="flex gap-2 items-center">
-                          <div class="flex-[2]">
-                            <Input v-model="field.pivot_fields[idx].name" placeholder="Column name" class="h-8 text-xs" />
+                      <div class="space-y-3">
+                        <div v-for="(pfield, idx) in field.pivot_fields" :key="idx" class="flex flex-col gap-1.5">
+                          <div class="flex gap-2 items-center">
+                            <div class="flex-[2]">
+                              <Input v-model="field.pivot_fields[idx].name" placeholder="Column name" class="h-8 text-xs" 
+                                @input="clearValidationError(`fields.${index}.pivot_fields.${idx}.name`)" />
+                            </div>
+                            <div class="flex-1">
+                              <select v-model="field.pivot_fields[idx].type" :disabled="!isCreating && !!pfield.id"
+                                class="flex h-8 w-full items-center justify-between rounded-md border border-primary/20 bg-background px-2 py-1 text-[11px] shadow-sm focus:outline-none focus:ring-1 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <option v-for="pt in pivotFieldTypes" :key="pt.value" :value="pt.value">{{ pt.label }}</option>
+                              </select>
+                            </div>
+                            <Button variant="ghost" size="icon" class="h-8 w-8 text-destructive" @click="removePivotField(field, idx)">
+                              <Trash2 class="h-3 w-3" />
+                            </Button>
                           </div>
-                          <div class="flex-1">
-                            <select v-model="field.pivot_fields[idx].type" 
-                              class="flex h-8 w-full items-center justify-between rounded-md border border-primary/20 bg-background px-2 py-1 text-[11px] shadow-sm focus:outline-none focus:ring-1">
-                              <option v-for="pt in pivotFieldTypes" :key="pt.value" :value="pt.value">{{ pt.label }}</option>
-                            </select>
+                          <div v-if="!isCreating && !!pfield.id" class="text-[10px] text-muted-foreground flex items-center gap-1 px-1">
+                             <Lock class="h-2.5 w-2.5" /> Type locked.
                           </div>
-                          <Button variant="ghost" size="icon" class="h-8 w-8 text-destructive" @click="removePivotField(field, idx)">
-                            <Trash2 class="h-3 w-3" />
-                          </Button>
+                          <p v-if="firstErrorFor(`fields.${index}.pivot_fields.${idx}.name`)" class="text-[10px] text-destructive px-1">
+                            {{ firstErrorFor(`fields.${index}.pivot_fields.${idx}.name`) }}
+                          </p>
+                          <p v-if="firstErrorFor(`fields.${index}.pivot_fields.${idx}.type`)" class="text-[10px] text-destructive px-1">
+                            {{ firstErrorFor(`fields.${index}.pivot_fields.${idx}.type`) }}
+                          </p>
                         </div>
                         <p v-if="(field.pivot_fields ?? []).length === 0" class="text-xs text-muted-foreground text-center py-2 bg-muted/20 rounded border border-dashed">
                           No pivot fields added yet.

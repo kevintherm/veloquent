@@ -2,14 +2,14 @@
 
 namespace Veloquent\Core\Domain\Collections\Requests;
 
-use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
-use Veloquent\Core\Domain\Collections\Enums\CollectionType;
+use Illuminate\Validation\Validator;
+use Illuminate\Validation\Rules\Enum;
+use Illuminate\Foundation\Http\FormRequest;
 use Veloquent\Core\Domain\Collections\Enums\IndexType;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Collections\ValueObjects\Index;
-use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rules\Enum;
-use Illuminate\Validation\Validator;
+use Veloquent\Core\Domain\Collections\Enums\CollectionType;
+use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
 
 class StoreCollectionRequest extends FormRequest
 {
@@ -34,7 +34,7 @@ class StoreCollectionRequest extends FormRequest
 
             'fields' => 'required|array|min:1',
             'fields.*' => ['required', 'array'],
-            'fields.*.name' => 'required|string|regex:/^[a-zA-Z_]+$/',
+            'fields.*.name' => 'required|string|regex:/^[a-zA-Z][a-zA-Z0-9_]*$/',
             'fields.*.type' => ['required', new Enum(CollectionFieldType::class)],
             'fields.*.nullable' => 'sometimes|boolean',
             'fields.*.unique' => 'sometimes',
@@ -50,7 +50,7 @@ class StoreCollectionRequest extends FormRequest
             'options' => 'nullable|array',
         ];
 
-        foreach ($this->input('fields', []) as $index => $field) {
+        foreach ($this->fields() as $index => $field) {
             $type = CollectionFieldType::tryFrom($field['type'] ?? '');
 
             if ($type === null) {
@@ -88,21 +88,36 @@ class StoreCollectionRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function (Validator $validator): void {
-            foreach ($this->input('fields', []) as $index => $field) {
+            foreach ($this->fields() as $index => $field) {
                 $fieldType = CollectionFieldType::tryFrom($field['type'] ?? '');
                 if ($fieldType === null || ! is_array($field)) {
                     continue;
                 }
 
-                if ($fieldType === CollectionFieldType::Relation) {
-                    $this->validateRelationFieldDefinition($validator, $index, $field);
-                }
-
                 if ($fieldType === CollectionFieldType::File) {
                     $this->validateFileFieldDefinition($validator, $index, $field);
                 }
+
+                if ($fieldType === CollectionFieldType::Relation || $fieldType === CollectionFieldType::RelationMany) {
+                    $targetId = $field['target_collection_id'] ?? null;
+                    if ($targetId && Collection::find($targetId)?->is_system) {
+                        $validator->errors()->add("fields.{$index}.target_collection_id", 'Cannot relate to system collections.');
+                    }
+                }
             }
         });
+    }
+
+    private function fields(): array
+    {
+        $fields = $this->input('fields', []);
+
+        if (empty($fields) && $this->getContent()) {
+            $data = json_decode($this->getContent(), true);
+            $fields = $data['fields'] ?? [];
+        }
+
+        return $fields;
     }
 
     private function validateFileFieldDefinition(Validator $validator, int $index, array $field): void
@@ -126,27 +141,6 @@ class StoreCollectionRequest extends FormRequest
         }
     }
 
-    private function validateRelationFieldDefinition(Validator $validator, int $index, array $field): void
-    {
-        $targetCollectionId = $field['target_collection_id'] ?? null;
-
-        if (! is_string($targetCollectionId) || $targetCollectionId === '') {
-            $validator->errors()->add("fields.{$index}.target_collection_id", 'The target collection is required.');
-
-            return;
-        }
-
-        $targetCollection = Collection::query()->find($targetCollectionId);
-        if ($targetCollection === null) {
-            $validator->errors()->add("fields.{$index}.target_collection_id", 'The selected target collection is invalid.');
-
-            return;
-        }
-
-        if ($targetCollection->is_system) {
-            $validator->errors()->add("fields.{$index}.target_collection_id", 'System collections cannot be used as relation targets.');
-        }
-    }
 
     public function getIndexes(): array
     {

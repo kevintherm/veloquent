@@ -2,13 +2,13 @@
 
 namespace Veloquent\Core\Domain\Collections\Validators;
 
-use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
+use Illuminate\Validation\ValidationException;
 use Veloquent\Core\Domain\Collections\Enums\IndexType;
 use Veloquent\Core\Domain\Collections\ValueObjects\Index;
+use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
 use Veloquent\Core\Domain\SchemaManagement\Policies\SchemaPolicy;
-use Veloquent\Core\Domain\SchemaManagement\Services\SchemaChangePlan;
+use Veloquent\Core\Domain\SchemaManagement\Services\SchemaChange;
 use Veloquent\Core\Infrastructure\Exceptions\InvalidArgumentException;
-use Illuminate\Validation\ValidationException;
 
 class CollectionFieldValidator
 {
@@ -20,13 +20,13 @@ class CollectionFieldValidator
      * @param  array<int, array<string, mixed>>  $fields
      * @param  array<int, Index|array<string, mixed>>  $indexes
      */
-    public function validateForCreate(array $fields, array $indexes, bool $isAuthCollection, bool $skipRelationExists = false): void
+    public function validateForCreate(array $fields, array $indexes, bool $isAuthCollection): void
     {
         $errors = [];
 
         $errors = $this->mergeErrors($errors, $this->checkReservedNames($fields, $isAuthCollection));
         $errors = $this->mergeErrors($errors, $this->checkDuplicateNames($fields));
-        $errors = $this->mergeErrors($errors, $this->checkFieldShapes($fields, $skipRelationExists));
+        $errors = $this->mergeErrors($errors, $this->checkFieldShapes($fields));
         $errors = $this->mergeErrors($errors, $this->checkIndexes($indexes, $fields, $isAuthCollection));
 
         if ($errors !== []) {
@@ -39,15 +39,14 @@ class CollectionFieldValidator
      * @param  array<int, array<string, mixed>>  $storedFields
      * @param  array<int, Index|array<string, mixed>>  $incomingIndexes
      */
-    public function validateForUpdate(array $incomingFields, array $storedFields, array $incomingIndexes, bool $isAuthCollection, bool $skipRelationExists = false): void
+    public function validateForUpdate(array $incomingFields, array $storedFields, array $incomingIndexes, bool $isAuthCollection): void
     {
         $errors = [];
 
         $errors = $this->mergeErrors($errors, $this->checkDuplicateNames($incomingFields));
-        $errors = $this->mergeErrors($errors, $this->checkFieldShapes($incomingFields, $skipRelationExists));
+        $errors = $this->mergeErrors($errors, $this->checkFieldShapes($incomingFields));
         $errors = $this->mergeErrors($errors, $this->checkTypeChanges($incomingFields, $storedFields));
-        $errors = $this->mergeErrors($errors, $this->checkAuthFieldIntegrity($incomingFields, $isAuthCollection));
-        $errors = $this->mergeErrors($errors, $this->checkDropConstraints($incomingFields, $storedFields, $isAuthCollection));
+        $errors = $this->mergeErrors($errors, $this->checkDroppedAuthFields($incomingFields, $storedFields, $isAuthCollection));
         $errors = $this->mergeErrors($errors, $this->checkIndexes($incomingIndexes, $incomingFields, $isAuthCollection));
 
         if ($errors !== []) {
@@ -62,7 +61,7 @@ class CollectionFieldValidator
     private function checkReservedNames(array $fields, bool $isAuthCollection): array
     {
         $errors = [];
-        $reservedNames = SchemaChangePlan::getAllReservedFields($isAuthCollection);
+        $reservedNames = SchemaChange::getAllReservedFields($isAuthCollection);
 
         foreach ($fields as $index => $field) {
             $name = $field['name'] ?? null;
@@ -115,7 +114,7 @@ class CollectionFieldValidator
      * @param  array<int, array<string, mixed>>  $fields
      * @return array<string, array<int, string>>
      */
-    private function checkFieldShapes(array $fields, bool $skipRelationExists = false): array
+    private function checkFieldShapes(array $fields): array
     {
         $errors = [];
         $allowedTypes = collect(CollectionFieldType::cases())
@@ -147,11 +146,11 @@ class CollectionFieldValidator
                 $this->addError(
                     $errors,
                     "fields.{$index}.name",
-                    "fields.{$index}.name must match /^[a-zA-Z_]+$/ and fields.{$index}.type must be one of: {$allowedTypes}."
+                    "fields.{$index}.name must match /^[a-zA-Z][a-zA-Z0-9_]*$/ and fields.{$index}.type must be one of: {$allowedTypes}."
                 );
             }
 
-            $typeRules = $type->typeValidationRules("fields.{$index}", $skipRelationExists);
+            $typeRules = $type->typeValidationRules("fields.{$index}", true); // Always skip relation exists here, domain validator handles it
             if ($typeRules !== []) {
                 $validator = \Illuminate\Support\Facades\Validator::make(
                     ['fields' => [$index => $field]],
@@ -167,90 +166,54 @@ class CollectionFieldValidator
         return $errors;
     }
 
-    /**
-     * @param  array<int, array<string, mixed>>  $incomingFields
-     * @param  array<int, array<string, mixed>>  $storedFields
-     * @return array<string, array<int, string>>
-     */
-    private function checkTypeChanges(array $incomingFields, array $storedFields): array
+    private function checkTypeChanges(array $incomingFields, array $storedFields, string $pathPrefix = 'fields'): array
     {
         $errors = [];
-
-        $storedById = collect($storedFields)
-            ->filter(function (array $field): bool {
-                $id = $field['id'] ?? null;
-
-                return is_string($id) && $id !== '';
-            })
-            ->keyBy('id');
+        $storedById = collect($storedFields)->keyBy('id');
 
         foreach ($incomingFields as $index => $field) {
             $id = $field['id'] ?? null;
-
-            if (! is_string($id) || $id === '' || ! $storedById->has($id)) {
+            if (!$id || !$storedById->has($id)) {
                 continue;
             }
 
-            $stored = $storedById->get($id);
-            $oldType = (string) ($stored['type'] ?? '');
-            $newType = (string) ($field['type'] ?? '');
+            $oldField = $storedById->get($id);
+            $oldType = is_array($oldField) ? ($oldField['type'] ?? null) : $oldField->type;
+            $newType = $field['type'] ?? null;
 
-            if ($oldType === '' || $newType === '' || $oldType === $newType) {
-                continue;
+            if ($oldType !== $newType) {
+                $this->addError($errors, "{$pathPrefix}.{$index}.type", 'Field type cannot be changed.');
             }
 
-            $name = (string) ($field['name'] ?? $stored['name'] ?? 'unknown');
+            $oldPivotFields = is_array($oldField) ? ($oldField['pivot_fields'] ?? []) : ($oldField->pivot_fields ?? []);
+            $newPivotFields = $field['pivot_fields'] ?? [];
 
-            $this->addError(
-                $errors,
-                "fields.{$index}.type",
-                "Field '{$name}' cannot change type from '{$oldType}' to '{$newType}'. To change the type, remove the field and add it again with the new type."
-            );
+            if (! empty($oldPivotFields) || ! empty($newPivotFields)) {
+                $errors = $this->mergeErrors(
+                    $errors,
+                    $this->checkTypeChanges($newPivotFields, $oldPivotFields, "{$pathPrefix}.{$index}.pivot_fields")
+                );
+            }
         }
 
         return $errors;
     }
 
-    /**
-     * @param  array<int, array<string, mixed>>  $incomingFields
-     * @return array<string, array<int, string>>
-     */
-    private function checkAuthFieldIntegrity(array $incomingFields, bool $isAuthCollection): array
+    private function checkDroppedAuthFields(array $incomingFields, array $storedFields, bool $isAuthCollection): array
     {
-        if (! $isAuthCollection) {
+        if (!$isAuthCollection) {
             return [];
         }
 
         $errors = [];
-        $reservedDefinitions = SchemaChangePlan::getReservedFieldDefinitions(true);
+        $incomingNames = collect($incomingFields)->pluck('name')->all();
+        $requiredAuthFields = SchemaChange::getAuthReservedFields();
 
-        foreach ($incomingFields as $index => $field) {
-            $name = $field['name'] ?? null;
+        foreach ($storedFields as $index => $field) {
+            $name = is_array($field) ? ($field['name'] ?? null) : $field->name;
 
-            if (! is_string($name) || ! isset($reservedDefinitions[$name])) {
-                continue;
-            }
-
-            $expectedType = (string) ($reservedDefinitions[$name]['type'] ?? '');
-            $expectedNullable = (bool) ($reservedDefinitions[$name]['nullable'] ?? false);
-            $actualType = (string) ($field['type'] ?? '');
-            $actualNullable = (bool) ($field['nullable'] ?? false);
-
-            if ($actualType !== '' && $actualType !== $expectedType) {
-                $this->addError(
-                    $errors,
-                    "fields.{$index}.type",
-                    "Field '{$name}' is a reserved auth field. type must be '{$expectedType}'."
-                );
-            }
-
-            if ($actualNullable !== $expectedNullable) {
-                $expectedNullableLabel = $expectedNullable ? 'true' : 'false';
-                $this->addError(
-                    $errors,
-                    "fields.{$index}.nullable",
-                    "Field '{$name}' is a reserved auth field. nullable must be '{$expectedNullableLabel}'."
-                );
+            if (in_array($name, $requiredAuthFields, true) && !in_array($name, $incomingNames, true)) {
+                $this->addError($errors, "fields.{$index}", "Authentication field '{$name}' cannot be removed.");
             }
         }
 
@@ -262,44 +225,6 @@ class CollectionFieldValidator
      * @param  array<int, array<string, mixed>>  $storedFields
      * @return array<string, array<int, string>>
      */
-    private function checkDropConstraints(array $incomingFields, array $storedFields, bool $isAuthCollection): array
-    {
-        $errors = [];
-
-        $incomingIds = collect($incomingFields)
-            ->map(fn (array $field): mixed => $field['id'] ?? null)
-            ->filter(fn (mixed $id): bool => is_string($id) && $id !== '')
-            ->values()
-            ->all();
-
-        foreach ($storedFields as $storedPosition => $storedField) {
-            $storedId = $storedField['id'] ?? null;
-
-            if (! is_string($storedId) || $storedId === '' || in_array($storedId, $incomingIds, true)) {
-                continue;
-            }
-
-            $name = (string) ($storedField['name'] ?? 'unknown');
-
-            if (($storedField['required'] ?? false) === true) {
-                $this->addError(
-                    $errors,
-                    "fields.{$storedPosition}",
-                    "Field '{$name}' is required and cannot be removed. Set required to false before removing it."
-                );
-            }
-
-            if ($isAuthCollection && in_array($name, SchemaChangePlan::getAuthReservedFields(), true)) {
-                $this->addError(
-                    $errors,
-                    "fields.{$storedPosition}",
-                    "Field '{$name}' is a reserved auth field and cannot be removed from an auth collection."
-                );
-            }
-        }
-
-        return $errors;
-    }
 
     /**
      * @param  array<int, Index|array<string, mixed>>  $indexes
@@ -315,7 +240,7 @@ class CollectionFieldValidator
             ->mapWithKeys(fn (array $field): array => [$field['name'] => (string) $field['type']])
             ->all();
 
-        foreach (SchemaChangePlan::getReservedFieldDefinitions($isAuthCollection) as $name => $definition) {
+        foreach (SchemaChange::getReservedFieldDefinitions($isAuthCollection) as $name => $definition) {
             $fieldTypesByName[$name] ??= (string) $definition['type'];
         }
 

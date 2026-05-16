@@ -12,7 +12,6 @@ use Veloquent\Core\Domain\Hooks\HookPayload;
 use Veloquent\Core\Domain\Records\Models\Record;
 use Illuminate\Auth\Access\AuthorizationException;
 use Veloquent\Core\Domain\Collections\Models\Collection;
-use Veloquent\Core\Domain\Collections\ValueObjects\Field;
 use Veloquent\Core\Domain\Records\Support\PivotTableName;
 use Veloquent\Core\Domain\Records\Services\PivotSyncService;
 use Veloquent\Core\Domain\QueryCompiler\Services\QueryFilter;
@@ -32,8 +31,6 @@ class CreateRecordAction
 
     public function execute(Collection $collection, array $data, ?Request $request = null): Record
     {
-        Gate::authorize('create-records', $collection);
-
         $this->authorizeCreate($collection, $data, $request);
 
         $record = DB::transaction(function () use ($collection, $data, $request) {
@@ -67,6 +64,8 @@ class CreateRecordAction
      */
     private function authorizeCreate(Collection $collection, array $data, ?Request $request): void
     {
+        Gate::authorize('create-records', $collection);
+
         $user = Auth::user();
         if ($user instanceof Record && $user->isSuperuser()) {
             return;

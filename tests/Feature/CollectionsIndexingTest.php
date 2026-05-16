@@ -9,7 +9,8 @@ use Veloquent\Core\Domain\Collections\Requests\StoreCollectionRequest;
 use Veloquent\Core\Domain\Collections\Requests\UpdateCollectionRequest;
 use Veloquent\Core\Domain\Collections\Validators\CollectionFieldValidator;
 use Veloquent\Core\Domain\Collections\ValueObjects\Index;
-use Veloquent\Core\Domain\SchemaManagement\Services\SchemaChangePlan;
+use Veloquent\Core\Domain\SchemaManagement\Services\SchemaChange
+;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
@@ -282,7 +283,8 @@ it('allows recreating a deleted field with the same name and a different type', 
         'indexes' => [],
     ]);
 
-    $reservedDefinitions = SchemaChangePlan::getReservedFieldDefinitions();
+    $reservedDefinitions = SchemaChange
+::getReservedFieldDefinitions();
     $idField = collect($reservedDefinitions['id'])->except(['unique'])->all();
     $createdAtField = collect($reservedDefinitions['created_at'])->except(['unique'])->all();
     $updatedAtField = collect($reservedDefinitions['updated_at'])->except(['unique'])->all();
