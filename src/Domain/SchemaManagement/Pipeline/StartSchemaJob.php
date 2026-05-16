@@ -2,8 +2,8 @@
 
 namespace Veloquent\Core\Domain\SchemaManagement\Pipeline;
 
-use Veloquent\Core\Domain\SchemaManagement\Models\SchemaJob;
 use Closure;
+use Veloquent\Core\Domain\SchemaManagement\Models\SchemaJob;
 
 class StartSchemaJob
 {

@@ -2,17 +2,17 @@
 
 namespace Veloquent\Core\Domain\SchemaManagement\Services;
 
-use Veloquent\Core\Domain\Collections\Actions\CreateCollectionAction;
-use Veloquent\Core\Domain\Collections\Actions\UpdateCollectionAction;
-use Veloquent\Core\Domain\Collections\Enums\CollectionType;
-use Veloquent\Core\Domain\Collections\Models\Collection;
-use Veloquent\Core\Domain\Records\Models\Record;
+use RuntimeException;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
-use RuntimeException;
+use Veloquent\Core\Domain\Records\Models\Record;
+use Illuminate\Support\Collection as SupportCollection;
+use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\Collections\Enums\CollectionType;
+use Veloquent\Core\Domain\Collections\Actions\CreateCollectionAction;
+use Veloquent\Core\Domain\Collections\Actions\UpdateCollectionAction;
 
 class SchemaTransferService
 {

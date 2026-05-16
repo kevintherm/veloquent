@@ -2,12 +2,11 @@
 
 namespace Veloquent\Core\Domain\SchemaManagement\Services;
 
+use InvalidArgumentException;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Collections\ValueObjects\Index;
-use Veloquent\Core\Domain\SchemaManagement\Enums\SchemaOperation;
 use Veloquent\Core\Domain\SchemaManagement\Models\SchemaJob;
-use Illuminate\Support\Facades\Schema;
-use InvalidArgumentException;
+use Veloquent\Core\Domain\SchemaManagement\Enums\SchemaOperation;
 
 class SchemaRecoveryService
 {

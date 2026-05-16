@@ -2,7 +2,6 @@
 
 namespace Veloquent\Core\Domain\SchemaManagement\Pipeline;
 
-use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
 use Closure;
 
 class SyncIndexMetadata
@@ -13,12 +12,8 @@ class SyncIndexMetadata
             return $next($context);
         }
 
-        $renames = collect($context->schemaChange->renames)->pluck(1, 0)->all(); // [old => new]
+        $renames = collect($context->schemaChange->renames)->pluck(1, 0)->all();
         $drops = collect($context->schemaChange->drops)->pluck('name')->all();
-
-        // Also consider fields that changed type to something non-indexable as "dropped" for indexes
-        // Though SchemaChange might not track this explicitly in a way we can easily use here
-        // without more logic. For now, let's focus on renames and drops.
 
         $context->newIndexes = collect($context->newIndexes)->map(function ($index) use ($renames, $drops) {
             $isObject = !is_array($index);

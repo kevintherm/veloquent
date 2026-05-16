@@ -2,9 +2,9 @@
 
 namespace Veloquent\Core\Domain\SchemaManagement\Pipeline;
 
+use Closure;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\SchemaManagement\Services\SchemaChange;
-use Closure;
 
 class CreateCollectionRecord
 {

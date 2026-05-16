@@ -17,9 +17,6 @@ readonly class SchemaDDLService
         private SchemaPolicy $namingPolicy
     ) {}
 
-    /**
-     * @throws InvalidArgumentException
-     */
     public function createTable(string $table, array $columns): void
     {
         $this->namingPolicy->assertValidTableName($table);
@@ -38,9 +35,6 @@ readonly class SchemaDDLService
         });
     }
 
-    /**
-     * @throws InvalidArgumentException
-     */
     public function renameTable(string $from, string $to, bool $ignoreMissingFrom = false): void
     {
         $this->namingPolicy->assertValidTableName($to);
@@ -58,9 +52,6 @@ readonly class SchemaDDLService
         });
     }
 
-    /**
-     * @throws InvalidArgumentException
-     */
     private function columnBlueprint(Blueprint $blueprint, array $column, ?string $after = null, bool $change = false): void
     {
         $this->namingPolicy->assertValidColumnDefinition($column);
@@ -107,9 +98,6 @@ readonly class SchemaDDLService
         }
     }
 
-    /**
-     * @throws InvalidArgumentException
-     */
     public function applyChange(string $table, SchemaChange $change): void
     {
         $this->runDDL(function () use ($table, $change): void {
@@ -133,12 +121,6 @@ readonly class SchemaDDLService
         });
     }
 
-    /**
-     * @throws InvalidArgumentException
-     */
-    /**
-     * @throws InvalidArgumentException
-     */
     public function updateTable(string $table, array $before, array $after): void
     {
         $this->applyChange($table, SchemaChange::diff($before, $after));

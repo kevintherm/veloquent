@@ -2,9 +2,9 @@
 
 namespace Veloquent\Core\Domain\SchemaManagement\Pipeline;
 
+use Closure;
 use Veloquent\Core\Domain\SchemaManagement\Services\SchemaChange;
 use Veloquent\Core\Domain\SchemaManagement\Services\SchemaDDLService;
-use Closure;
 
 class CreateTableDDL
 {

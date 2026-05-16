@@ -2,9 +2,8 @@
 
 namespace Veloquent\Core\Domain\SchemaManagement\Services;
 
-use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
 use Veloquent\Core\Domain\Collections\ValueObjects\Field;
-use InvalidArgumentException;
+use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
 
 final class SchemaChange
 {

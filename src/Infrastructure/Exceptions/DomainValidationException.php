@@ -2,8 +2,8 @@
 
 namespace Veloquent\Core\Infrastructure\Exceptions;
 
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 
 class DomainValidationException extends VeloquentException
 {

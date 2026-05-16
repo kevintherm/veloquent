@@ -2,8 +2,8 @@
 
 namespace Veloquent\Core\Domain\SchemaManagement\Pipeline;
 
-use Veloquent\Core\Domain\Collections\Enums\IndexType;
 use Closure;
+use Veloquent\Core\Domain\Collections\Enums\IndexType;
 
 class SyncFieldUniqueMetadata
 {

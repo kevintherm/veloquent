@@ -2,8 +2,8 @@
 
 namespace Veloquent\Core\Domain\SchemaManagement\Pipeline;
 
-use Veloquent\Core\Domain\SchemaManagement\Services\IndexSyncService;
 use Closure;
+use Veloquent\Core\Domain\SchemaManagement\Services\IndexSyncService;
 
 class SyncIndexes
 {
