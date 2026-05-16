@@ -2,6 +2,41 @@
 
 All notable changes to Veloquent will be documented in this file.
 
+## [2.5.0] - 2026-05-16
+
+### Added
+- **Many-to-Many Relationships**:
+    - New `RelationMany` field type for bidirectional associations.
+    - Support for custom pivot fields to store metadata on relationships.
+    - Automatic management of physical pivot tables including creation, renaming, and type synchronization.
+    - Enhanced validation for pivot fields and reserved naming conventions.
+    - Integrated UI in the collection builder for configuring many-to-many relations.
+- **Pipeline Architecture**:
+    - Refactored schema management into a modular Pipeline system.
+    - Improved atomicity of schema changes with automated recovery paths.
+    - Structured error reporting for schema corruption and synchronization failures.
+
+## [2.4.1] - 2026-05-15
+
+### Fixed
+- **Schema Transfer**:
+    - Fixed an issue where cross-collection relations were broken during import due to missing ID mapping.
+    - Added automated ID remapping pass for all relation fields during schema restore.
+    - Improved collision detection for system collection imports.
+
+## [2.4.0] - 2026-05-15
+
+### Added
+- **Single-Tenant Mode**:
+    - Introduced `tenancy_enabled` configuration to disable multi-tenancy architecture.
+    - Added a "virtual tenant" mechanism to redirect operations to the landlord database.
+    - Added `ExtractTenantCommand` to provide a migration path from single-tenant to multi-tenant.
+    - Updated `InstallCommand` to intelligently skip tenant setup when multi-tenancy is disabled.
+- **Realtime System**:
+    - Added support for the `expand` parameter in realtime subscriptions to resolve related records during broadcast.
+- **Environment Management**:
+    - Standardized `.env.example` structure for core and skeleton projects.
+
 ## [2.3.0] - 2026-05-15
 
 ### Added

@@ -24,7 +24,8 @@ Each collection is made up of fields that define the structure of your records. 
 | `url` | Validated URL. |
 | `json` | Arbitrary JSON data. |
 | `file` | Upload metadata (single or multiple files) with optional protected access. |
-| `relation` | Link to a record in another collection. |
+| `relation` | Link to a single record in another collection (one-to-many). |
+| `relation_many` | Bidirectional link between multiple records (many-to-many). |
 | `select` | Dropdown selection with predefined options. |
 
 ### File Fields
@@ -50,14 +51,29 @@ File fields support upload constraints and access protection.
 You can create, update, and delete collections via the Veloquentdashboard or through the REST API. When you create or update a collection, Veloquentautomatically manages the underlying database schema for you, including:
 - Creating or renaming tables.
 - Adding, renaming, or deleting columns.
+- Managing pivot tables for many-to-many relationships.
 - Synchronizing unique and non-unique indexes.
 
 ### Relation Fields
 
-Relation fields allow you to create powerful connections between your data. When defining a relation field, you can specify:
-- **Collection**: The target collection to link to.
-- **Max Select**: The maximum number of records that can be linked.
+Relation fields allow you to create powerful connections between your data. 
+
+#### One-to-Many (`relation`)
+
+Used to link a record to exactly one record in a target collection. 
+
+- **Target Collection**: The collection to link to.
 - **Cascade on Delete**: Toggle whether to automatically delete related records when a record is deleted.
+
+#### Many-to-Many (`relation_many`)
+
+Used when multiple records in one collection can be linked to multiple records in another (e.g., *Posts* and *Tags*).
+
+- **Target Collection**: The collection to link to.
+- **Pivot Fields**: Optional fields stored on the relationship itself. For example, in a *Users* to *Projects* relation, a pivot field named `role` could store the user's role in that specific project.
+
+> [!NOTE]
+> Veloquent handles the creation and maintenance of the physical pivot table automatically. If you rename a `relation_many` field or update its pivot fields, Veloquent will migrate the data and update the schema without data loss.
 
 ## Next Steps
 
