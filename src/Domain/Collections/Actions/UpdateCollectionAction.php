@@ -7,7 +7,9 @@ use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Collections\Validators\ApiRulesValidator;
 use Veloquent\Core\Domain\Collections\Validators\AuthOptionsValidator;
 use Veloquent\Core\Domain\Collections\Validators\CollectionFieldValidator;
-use Veloquent\Core\Domain\SchemaManagement\Services\SchemaChangePlan;
+use Veloquent\Core\Domain\Collections\Validators\CollectionValidator;
+use Veloquent\Core\Domain\SchemaManagement\Services\CollectionSyncService;
+use Veloquent\Core\Domain\SchemaManagement\Services\SchemaChange;
 use Illuminate\Support\Arr;
 use Illuminate\Validation\ValidationException;
 
@@ -15,11 +17,13 @@ class UpdateCollectionAction
 {
     public function __construct(
         private readonly CollectionFieldValidator $collectionFieldValidator,
+        private readonly CollectionValidator $collectionValidator,
         private readonly ApiRulesValidator $apiRulesValidator,
-        private readonly AuthOptionsValidator $authOptionsValidator
+        private readonly AuthOptionsValidator $authOptionsValidator,
+        private readonly CollectionSyncService $syncService
     ) {}
 
-    public function execute(Collection $collection, array $data, bool $skipRelationExists = false): Collection
+    public function execute(Collection $collection, array $data, bool $force = false, bool $skipValidation = false): Collection
     {
         $defaultUsersCollectionName = config('velo.default_auth_collection', 'users');
         if (isset($data['name']) && $collection->name === $defaultUsersCollectionName && $data['name'] !== $defaultUsersCollectionName) {
@@ -42,20 +46,27 @@ class UpdateCollectionAction
 
         $indexesForValidation = $data['indexes'] ?? $collection->indexes ?? [];
 
-        $this->collectionFieldValidator->validateForUpdate(
-            $fieldsForRules,
-            $existingFields,
-            $indexesForValidation,
-            $collection->type === CollectionType::Auth,
-            $skipRelationExists,
-        );
+        if (!$skipValidation) {
+            $this->collectionFieldValidator->validateForUpdate(
+                $fieldsForRules,
+                $existingFields,
+                $indexesForValidation,
+                $collection->type === CollectionType::Auth,
+            );
+
+            $this->collectionValidator->validateUpdate(
+                $collection,
+                $fieldsForRules,
+                $force
+            )->throwIfFailed();
+        }
 
         if (isset($data['fields']) && is_array($data['fields'])) {
             $data['fields'] = array_values(array_map(function (array $field): array {
                 $fieldId = $field['id'] ?? null;
 
                 if (! is_string($fieldId) || $fieldId === '') {
-                    $field['id'] = SchemaChangePlan::generateFieldId();
+                    $field['id'] = SchemaChange::generateFieldId();
                 }
 
                 return $field;
@@ -80,10 +91,11 @@ class UpdateCollectionAction
             );
         }
 
-        $collection->update($data);
-        $collection->refresh();
-
-        return $collection;
+        return $this->syncService->update($collection, [
+            ...$data,
+            'fields' => $fieldsForRules,
+            'indexes' => $indexesForValidation,
+        ]);
     }
 
     private function ensureCollectionFieldsHaveIds(Collection $collection): array
@@ -99,8 +111,18 @@ class UpdateCollectionAction
                 $fieldId = $field['id'] ?? null;
 
                 if (! is_string($fieldId) || $fieldId === '') {
-                    $field['id'] = SchemaChangePlan::generateFieldId();
+                    $field['id'] = SchemaChange::generateFieldId();
                     $hadMissingIds = true;
+                }
+
+                if (($field['type'] ?? '') === \Veloquent\Core\Domain\Collections\Enums\CollectionFieldType::RelationMany->value && isset($field['pivot_fields'])) {
+                    $field['pivot_fields'] = collect($field['pivot_fields'])->map(function ($pf) use (&$hadMissingIds) {
+                        if (!isset($pf['id']) || $pf['id'] === '') {
+                            $pf['id'] = SchemaChange::generateFieldId();
+                            $hadMissingIds = true;
+                        }
+                        return $pf;
+                    })->all();
                 }
 
                 return $field;
@@ -134,40 +156,74 @@ class UpdateCollectionAction
 
                 if (is_string($fieldId) && $fieldId !== '') {
                     if ($existingById->has($fieldId)) {
-                        return $field;
+                        $matchedField = $existingById->get($fieldId);
+                    } else {
+                        $field['id'] = SchemaChange::generateFieldId();
+                        $matchedField = null;
                     }
+                } else {
+                    $fieldName = $field['name'] ?? null;
+                    $fieldType = $field['type'] ?? null;
 
-                    $field['id'] = SchemaChangePlan::generateFieldId();
+                    if (is_string($fieldName) && $existingByName->has($fieldName)) {
+                        $existingField = $existingByName->get($fieldName);
+                        $existingFieldId = $existingField['id'] ?? null;
+                        $existingFieldType = $existingField['type'] ?? null;
 
-                    return $field;
+                        if (
+                            is_string($existingFieldId)
+                            && $existingFieldId !== ''
+                            && is_string($fieldType)
+                            && is_string($existingFieldType)
+                            && $fieldType === $existingFieldType
+                        ) {
+                            $field['id'] = $existingFieldId;
+                            $matchedField = $existingField;
+                        } else {
+                            $field['id'] = SchemaChange::generateFieldId();
+                            $matchedField = null;
+                        }
+                    } else {
+                        $field['id'] = SchemaChange::generateFieldId();
+                        $matchedField = null;
+                    }
                 }
 
-                $fieldName = $field['name'] ?? null;
-                $fieldType = $field['type'] ?? null;
-
-                if (is_string($fieldName) && $existingByName->has($fieldName)) {
-                    $existingField = $existingByName->get($fieldName);
-                    $existingFieldId = $existingField['id'] ?? null;
-                    $existingFieldType = $existingField['type'] ?? null;
-
-                    if (
-                        is_string($existingFieldId)
-                        && $existingFieldId !== ''
-                        && is_string($fieldType)
-                        && is_string($existingFieldType)
-                        && $fieldType === $existingFieldType
-                    ) {
-                        $field['id'] = $existingFieldId;
-
-                        return $field;
-                    }
+                // Handle pivot fields
+                if (($field['type'] ?? '') === \Veloquent\Core\Domain\Collections\Enums\CollectionFieldType::RelationMany->value && isset($field['pivot_fields'])) {
+                    $existingPivotFields = $matchedField['pivot_fields'] ?? [];
+                    $field['pivot_fields'] = $this->assignPivotIds($field['pivot_fields'], $existingPivotFields);
                 }
-
-                $field['id'] = SchemaChangePlan::generateFieldId();
 
                 return $field;
             })
             ->values()
             ->all();
+    }
+
+    private function assignPivotIds(array $incoming, array $existing): array
+    {
+        $existingById = collect($existing)->filter(fn($f) => isset($f['id']))->keyBy('id');
+        $existingByName = collect($existing)->filter(fn($f) => isset($f['name']))->keyBy('name');
+
+        return collect($incoming)->map(function ($pf) use ($existingById, $existingByName) {
+            if (is_string($pf)) {
+                $pf = ['name' => $pf, 'type' => 'text'];
+            }
+
+            $id = $pf['id'] ?? null;
+            if ($id && $existingById->has($id)) {
+                return $pf;
+            }
+
+            $name = $pf['name'] ?? null;
+            if ($name && $existingByName->has($name)) {
+                $pf['id'] = $existingByName->get($name)['id'];
+                return $pf;
+            }
+
+            $pf['id'] = SchemaChange::generateFieldId();
+            return $pf;
+        })->all();
     }
 }

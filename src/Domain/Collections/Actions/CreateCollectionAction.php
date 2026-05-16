@@ -2,23 +2,27 @@
 
 namespace Veloquent\Core\Domain\Collections\Actions;
 
-use Veloquent\Core\Domain\Collections\Enums\CollectionType;
+use Illuminate\Support\Arr;
 use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\Collections\Enums\CollectionType;
+use Veloquent\Core\Domain\SchemaManagement\Services\SchemaChange;
 use Veloquent\Core\Domain\Collections\Validators\ApiRulesValidator;
+use Veloquent\Core\Domain\Collections\Validators\CollectionValidator;
 use Veloquent\Core\Domain\Collections\Validators\AuthOptionsValidator;
 use Veloquent\Core\Domain\Collections\Validators\CollectionFieldValidator;
-use Veloquent\Core\Domain\SchemaManagement\Services\SchemaChangePlan;
-use Illuminate\Support\Arr;
+use Veloquent\Core\Domain\SchemaManagement\Services\CollectionSyncService;
 
 class CreateCollectionAction
 {
     public function __construct(
         private readonly CollectionFieldValidator $collectionFieldValidator,
+        private readonly CollectionValidator $collectionValidator,
         private readonly ApiRulesValidator $apiRulesValidator,
-        private readonly AuthOptionsValidator $authOptionsValidator
+        private readonly AuthOptionsValidator $authOptionsValidator,
+        private readonly CollectionSyncService $syncService
     ) {}
 
-    public function execute(array $data, bool $skipRelationExists = false): Collection
+    public function execute(array $data, bool $skipValidation = false): Collection
     {
         $collectionType = $data['type'] ?? null;
 
@@ -27,15 +31,21 @@ class CreateCollectionAction
         }
 
         $isAuthCollection = $collectionType === CollectionType::Auth->value;
-        $mergedFields = SchemaChangePlan::mergeWithSystemFields($data['fields'], $isAuthCollection);
+        $mergedFields = SchemaChange::mergeWithSystemFields($data['fields'], $isAuthCollection);
         $indexes = $data['indexes'] ?? [];
 
-        $this->collectionFieldValidator->validateForCreate(
-            $data['fields'] ?? [],
-            $indexes,
-            $isAuthCollection,
-            $skipRelationExists,
-        );
+        if (!$skipValidation) {
+            $this->collectionFieldValidator->validateForCreate(
+                $data['fields'] ?? [],
+                $indexes,
+                $isAuthCollection,
+            );
+
+            $this->collectionValidator->validateCreate(
+                $data['fields'] ?? [],
+                $isAuthCollection
+            )->throwIfFailed();
+        }
 
         if (isset($data['api_rules'])) {
             $data['api_rules'] = $this->apiRulesValidator->validate(
@@ -53,10 +63,9 @@ class CreateCollectionAction
             );
         }
 
-        return Collection::create([
+        return $this->syncService->create([
             'is_system' => $data['is_system'] ?? false,
             ...$data,
-            'table_name' => SchemaChangePlan::generateTableName($data['name'], $data['is_system'] ?? false),
             'fields' => $mergedFields,
             'indexes' => $indexes,
         ]);

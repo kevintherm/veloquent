@@ -146,7 +146,7 @@ class Collection extends Model
     }
 
     /**
-     * @deprecated Use SchemaChangePlan::generateTableName($collectionName, $isSystem) instead for new collections.
+     * @deprecated Use SchemaChange::generateTableName($collectionName, $isSystem) instead for new collections.
      */
     public static function formatTableName(string $collectionName, ?bool $isSystem = false): string
     {
