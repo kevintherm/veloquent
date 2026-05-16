@@ -3,6 +3,7 @@
 namespace Veloquent\Core\Domain\Records\Resources;
 
 use Veloquent\Core\Domain\Collections\Enums\CollectionType;
+use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Auth;
@@ -27,7 +28,8 @@ class RecordResource extends JsonResource
         }
 
         foreach ($this->resource->collection->fields ?? [] as $field) {
-            if (($field['type'] ?? null) !== 'relation') {
+            $type = $field['type'] ?? null;
+            if ($type !== CollectionFieldType::Relation->value && $type !== CollectionFieldType::RelationMany->value) {
                 continue;
             }
 

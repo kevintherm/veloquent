@@ -5,8 +5,10 @@ namespace Veloquent\Core\Domain\Records\Services;
 use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Collections\ValueObjects\Field;
+use Veloquent\Core\Domain\Records\Support\PivotTableName;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Support\Facades\Schema;
 
 class RelationJoinResolver
 {
@@ -42,7 +44,8 @@ class RelationJoinResolver
             ->first(fn (Field|array $f): bool => ($f['name'] ?? '') === $relationName);
 
         // If not a relation field, we can't join further, return as is (wrapped in base alias)
-        if (! $field || ($field['type'] ?? '') !== CollectionFieldType::Relation->value) {
+        $fieldType = $field['type'] ?? '';
+        if ($fieldType !== CollectionFieldType::Relation->value && $fieldType !== CollectionFieldType::RelationMany->value) {
             $alias = $this->baseAlias ?: $this->sourceCollection->getPhysicalTableName();
 
             return "{$alias}.{$dotPath}";
@@ -74,7 +77,7 @@ class RelationJoinResolver
 
         $targetTable = $targetCollection->getPhysicalTableName();
 
-        $this->registerJoin($sourceAlias, $relationName, $targetTable, $joinAlias);
+        $this->registerJoin($sourceAlias, $relationName, $targetTable, $joinAlias, $fieldType);
 
         // Recursively resolve the rest of the path
         $nestedResolver = new self($targetCollection, $this->query, $joinAlias);
@@ -83,18 +86,45 @@ class RelationJoinResolver
         return $nestedResolver->resolveField($remainingPath);
     }
 
-    private function registerJoin(string $sourceAlias, string $relationName, string $targetTable, string $joinAlias): void
+    private function registerJoin(string $sourceAlias, string $relationName, string $targetTable, string $joinAlias, string $fieldType): void
     {
         if (isset($this->joinedAliases[$joinAlias])) {
             return;
         }
 
-        $this->query->leftJoin(
-            "{$targetTable} as {$joinAlias}",
-            "{$sourceAlias}.{$relationName}",
-            '=',
-            "{$joinAlias}.id"
-        );
+        if ($fieldType === CollectionFieldType::RelationMany->value) {
+            $sourceTable = $this->sourceCollection->getPhysicalTableName();
+            $pivotTable = PivotTableName::for($sourceTable, $targetTable, $relationName);
+
+            if (! Schema::hasTable($pivotTable)) {
+                return;
+            }
+
+            $pivotAlias = "{$joinAlias}__pivot";
+
+            $this->query->leftJoin(
+                "{$pivotTable} as {$pivotAlias}",
+                "{$sourceAlias}.id",
+                '=',
+                "{$pivotAlias}.source_id"
+            );
+
+            $this->query->leftJoin(
+                "{$targetTable} as {$joinAlias}",
+                "{$pivotAlias}.target_id",
+                '=',
+                "{$joinAlias}.id"
+            );
+
+            $this->query->distinct();
+        } else {
+            $this->query->leftJoin(
+                "{$targetTable} as {$joinAlias}",
+                "{$sourceAlias}.{$relationName}",
+                '=',
+                "{$joinAlias}.id"
+            );
+        }
 
         $this->joinedAliases[$joinAlias] = $targetTable;
     }

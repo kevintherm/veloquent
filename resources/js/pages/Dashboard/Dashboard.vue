@@ -176,7 +176,7 @@ const relationFieldsMeta = computed(() => {
     const fields = Array.isArray(activeCollection.value?.fields) ? activeCollection.value.fields : [];
 
     return fields.reduce((carry, field) => {
-        if (field?.type !== "relation" || !field?.name) {
+        if (!['relation', 'relation_many'].includes(field?.type) || !field?.name) {
             return carry;
         }
 

@@ -24,6 +24,7 @@ class Field implements \ArrayAccess, \JsonSerializable
         public bool $cascade_on_delete = false,
         public ?bool $allow_decimals = null,
         public array $options = [],
+        public array $pivot_fields = [],
     ) {}
 
     public static function fromArray(array $data): self
@@ -66,6 +67,7 @@ class Field implements \ArrayAccess, \JsonSerializable
             cascade_on_delete: (bool) ($shape['cascade_on_delete'] ?? false),
             allow_decimals: isset($shape['allow_decimals']) ? (is_null($shape['allow_decimals']) ? null : (bool) $shape['allow_decimals']) : null,
             options: (array) ($shape['options'] ?? []),
+            pivot_fields: (array) ($shape['pivot_fields'] ?? []),
         );
     }
 
@@ -91,6 +93,7 @@ class Field implements \ArrayAccess, \JsonSerializable
             'cascade_on_delete' => $this->cascade_on_delete,
             'allow_decimals' => $this->allow_decimals,
             'options' => $this->options,
+            'pivot_fields' => $this->pivot_fields,
         ];
 
         if ($type !== CollectionFieldType::File) {
@@ -225,6 +228,12 @@ class Field implements \ArrayAccess, \JsonSerializable
 
         if ($key === 'options') {
             $this->options = (array) $value;
+
+            return;
+        }
+
+        if ($key === 'pivot_fields') {
+            $this->pivot_fields = (array) $value;
         }
     }
 

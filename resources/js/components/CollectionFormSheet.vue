@@ -98,7 +98,18 @@ const fieldTypes = [
   { value: "json", label: "JSON" },
   { value: "file", label: "File" },
   { value: "relation", label: "Relation" },
+  { value: "relation_many", label: "Many-to-Many Relation" },
   { value: "select", label: "Select" },
+];
+
+const pivotFieldTypes = [
+  { value: "text", label: "Text" },
+  { value: "datetime", label: "Datetime" },
+  { value: "json", label: "JSON" },
+  { value: "number", label: "Number" },
+  { value: "select", label: "Select" },
+  { value: "boolean", label: "Boolean" },
+  { value: "longtext", label: "Long Text" },
 ];
 
 const collectionTypes = [
@@ -291,9 +302,14 @@ const normalizeMimeTypeList = (value) => {
 const normalizeFieldForForm = (field) => {
   const normalized = { ...field };
 
-  if (normalized.type === "relation") {
+  if (normalized.type === "relation" || normalized.type === "relation_many") {
     normalized.target_collection_id = normalized.target_collection_id ?? normalized.collection ?? null;
     normalized.cascade_on_delete = Boolean(normalized.cascade_on_delete ?? false);
+    if (normalized.type === "relation_many") {
+      normalized.pivot_fields = Array.isArray(normalized.pivot_fields) 
+        ? normalized.pivot_fields.map(pf => typeof pf === 'string' ? { name: pf, type: 'text' } : pf)
+        : [];
+    }
   }
 
   if (normalized.type === "file") {
@@ -337,8 +353,8 @@ const isFieldIndexable = (type) => {
 };
 
 const isRelationNeeded = computed(() => {
-  return formState.value.fields.some(f => f.type === 'relation') ||
-    newField.value.type === 'relation';
+  return formState.value.fields.some(f => ['relation', 'relation_many'].includes(f.type)) ||
+    ['relation', 'relation_many'].includes(newField.value.type);
 });
 
 const isRelationFetched = ref(false);
@@ -623,6 +639,17 @@ const removeOption = (field, index) => {
   isCollectionModified.value = true;
 };
 
+const addPivotField = (field) => {
+  if (!field.pivot_fields) field.pivot_fields = [];
+  field.pivot_fields.push({ name: "", type: "text" });
+  isCollectionModified.value = true;
+};
+
+const removePivotField = (field, index) => {
+  field.pivot_fields.splice(index, 1);
+  isCollectionModified.value = true;
+};
+
 const isExistingField = (field) => {
   return !isCreating.value && Boolean(field?.id);
 };
@@ -767,14 +794,23 @@ const buildPayload = () => {
       } else if (typeof cleaned.id !== 'string') {
         cleaned.id = String(cleaned.id);
       }
-      if (cleaned.type !== "relation") {
+      if (cleaned.type !== "relation" && cleaned.type !== "relation_many") {
         delete cleaned.target_collection_id;
         delete cleaned.cascade_on_delete;
         delete cleaned.collection;
+        delete cleaned.pivot_fields;
       } else {
         cleaned.target_collection_id = cleaned.target_collection_id ?? cleaned.collection ?? null;
         cleaned.cascade_on_delete = Boolean(cleaned.cascade_on_delete ?? false);
         delete cleaned.collection;
+
+        if (cleaned.type === "relation_many") {
+          cleaned.pivot_fields = Array.isArray(cleaned.pivot_fields) 
+            ? cleaned.pivot_fields.map(pf => typeof pf === 'string' ? { name: pf, type: 'text' } : pf)
+            : [];
+        } else {
+          delete cleaned.pivot_fields;
+        }
       }
 
       if (cleaned.type !== "file") {
@@ -1198,18 +1234,47 @@ onMounted(async () => {
                       placeholder="Optional default value" />
                   </div>
 
-                  <div v-if="newField.type === 'relation'" class="space-y-2">
-                    <Label class="text-xs font-semibold tracking-wide text-primary/80 uppercase">Related
-                      Collection</Label>
-                    <select v-model="newField.target_collection_id"
-                      class="flex h-9 w-full items-center justify-between rounded-md border border-primary/20 bg-background px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring">
-                      <option :value="null">Select collection</option>
-                      <option v-for="collection in availableCollections" :key="`new-field-target-${collection.id}`"
-                        :value="collection.id">
-                        {{ collection.name }}
-                      </option>
-                    </select>
-                  </div>
+                   <div v-if="['relation', 'relation_many'].includes(newField.type)" class="space-y-2">
+                     <Label class="text-xs font-semibold tracking-wide text-primary/80 uppercase">Related
+                       Collection</Label>
+                     <select v-model="newField.target_collection_id"
+                       class="flex h-9 w-full items-center justify-between rounded-md border border-primary/20 bg-background px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring">
+                       <option :value="null">Select collection</option>
+                       <option v-for="collection in availableCollections" :key="`new-field-target-${collection.id}`"
+                         :value="collection.id">
+                         {{ collection.name }}
+                       </option>
+                     </select>
+                   </div>
+
+                   <div v-if="newField.type === 'relation_many'" class="space-y-2 col-span-1 sm:col-span-2">
+                     <div class="flex items-center justify-between mb-2">
+                       <Label class="text-xs font-semibold tracking-wide text-primary/80 uppercase">Pivot Fields (Extra Columns)</Label>
+                       <Button variant="outline" size="xs" class="px-3" @click="addPivotField(newField)">
+                         <Plus class="h-3 w-3 mr-1" />
+                         Add Pivot Field
+                       </Button>
+                     </div>
+                     <div class="space-y-2">
+                       <div v-for="(pfield, idx) in newField.pivot_fields" :key="idx" class="flex gap-2 items-center">
+                         <div class="flex-[2]">
+                           <Input v-model="newField.pivot_fields[idx].name" placeholder="Column name" class="h-8 text-xs" />
+                         </div>
+                         <div class="flex-1">
+                           <select v-model="newField.pivot_fields[idx].type" 
+                             class="flex h-8 w-full items-center justify-between rounded-md border border-primary/20 bg-background px-2 py-1 text-[11px] shadow-sm focus:outline-none focus:ring-1">
+                             <option v-for="pt in pivotFieldTypes" :key="pt.value" :value="pt.value">{{ pt.label }}</option>
+                           </select>
+                         </div>
+                         <Button variant="ghost" size="icon" class="h-8 w-8 text-destructive" @click="removePivotField(newField, idx)">
+                           <Trash2 class="h-3 w-3" />
+                         </Button>
+                       </div>
+                       <p v-if="(newField.pivot_fields ?? []).length === 0" class="text-xs text-muted-foreground text-center py-2 bg-muted/20 rounded border border-dashed">
+                         No pivot fields added yet.
+                       </p>
+                     </div>
+                   </div>
 
                   <div v-if="newField.type === 'select'" class="space-y-2 col-span-1 sm:col-span-2">
                     <div class="flex items-center justify-between mb-2">
@@ -1446,7 +1511,7 @@ onMounted(async () => {
                         placeholder="Optional default value" />
                     </div>
 
-                    <div v-if="field.type === 'relation'" class="space-y-2">
+                    <div v-if="['relation', 'relation_many'].includes(field.type)" class="space-y-2">
                       <Label class="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Related
                         Collection</Label>
                       <select v-model="field.target_collection_id"
@@ -1457,6 +1522,35 @@ onMounted(async () => {
                           {{ collection.name }}
                         </option>
                       </select>
+                    </div>
+
+                    <div v-if="field.type === 'relation_many'" class="space-y-2 col-span-1 sm:col-span-2">
+                      <div class="flex items-center justify-between mb-2">
+                        <Label class="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Pivot Fields (Extra Columns)</Label>
+                        <Button variant="outline" size="xs" class="px-3" @click="addPivotField(field)">
+                          <Plus class="h-3 w-3 mr-1" />
+                          Add Pivot Field
+                        </Button>
+                      </div>
+                      <div class="space-y-2">
+                        <div v-for="(pfield, idx) in field.pivot_fields" :key="idx" class="flex gap-2 items-center">
+                          <div class="flex-[2]">
+                            <Input v-model="field.pivot_fields[idx].name" placeholder="Column name" class="h-8 text-xs" />
+                          </div>
+                          <div class="flex-1">
+                            <select v-model="field.pivot_fields[idx].type" 
+                              class="flex h-8 w-full items-center justify-between rounded-md border border-primary/20 bg-background px-2 py-1 text-[11px] shadow-sm focus:outline-none focus:ring-1">
+                              <option v-for="pt in pivotFieldTypes" :key="pt.value" :value="pt.value">{{ pt.label }}</option>
+                            </select>
+                          </div>
+                          <Button variant="ghost" size="icon" class="h-8 w-8 text-destructive" @click="removePivotField(field, idx)">
+                            <Trash2 class="h-3 w-3" />
+                          </Button>
+                        </div>
+                        <p v-if="(field.pivot_fields ?? []).length === 0" class="text-xs text-muted-foreground text-center py-2 bg-muted/20 rounded border border-dashed">
+                          No pivot fields added yet.
+                        </p>
+                      </div>
                     </div>
 
                       <div v-if="field.type === 'select'" class="space-y-2 col-span-1 sm:col-span-2">

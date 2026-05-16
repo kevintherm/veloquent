@@ -26,7 +26,7 @@ class RelationIntegrityService
             $fieldName = $field['name'] ?? null;
             $fieldType = $field['type'] ?? null;
 
-            if ($fieldType !== CollectionFieldType::Relation->value) {
+            if ($fieldType !== CollectionFieldType::Relation->value && $fieldType !== CollectionFieldType::RelationMany->value) {
                 continue;
             }
 
@@ -51,10 +51,34 @@ class RelationIntegrityService
             }
 
             $tableName = $targetCollection->getPhysicalTableName();
-            $exists = DB::table($tableName)->where('id', $value)->exists();
 
-            if (! $exists) {
-                $errors[$fieldName] = ["The referenced record '{$value}' does not exist in collection '{$targetCollection->name}'."];
+            if ($fieldType === CollectionFieldType::RelationMany->value) {
+                if (! is_array($value)) {
+                    $errors[$fieldName] = ["The value for '{$fieldName}' must be an array."];
+                    continue;
+                }
+
+                $ids = [];
+                foreach ($value as $item) {
+                    $id = is_array($item) ? ($item['id'] ?? null) : $item;
+                    if (is_string($id) && $id !== '') {
+                        $ids[] = $id;
+                    }
+                }
+
+                if (empty($ids)) {
+                    continue;
+                }
+
+                $foundCount = DB::table($tableName)->whereIn('id', $ids)->count();
+                if ($foundCount !== count(array_unique($ids))) {
+                    $errors[$fieldName] = ["One or more of the selected related records do not exist in collection '{$targetCollection->name}'."];
+                }
+            } else {
+                $exists = DB::table($tableName)->where('id', $value)->exists();
+                if (! $exists) {
+                    $errors[$fieldName] = ["The referenced record '{$value}' does not exist in collection '{$targetCollection->name}'."];
+                }
             }
         }
 
@@ -211,6 +235,11 @@ class RelationIntegrityService
             $cascadeOnDelete = (bool) ($referencingField['cascade_on_delete'] ?? false);
 
             $tableName = $referencingCollection->getPhysicalTableName();
+
+            if (($referencingField['type'] ?? '') === CollectionFieldType::RelationMany->value) {
+                continue;
+            }
+
             $referencingRecordExists = DB::table($tableName)->where($fieldName, $recordId)->exists();
 
             if (! $referencingRecordExists) {
@@ -221,7 +250,6 @@ class RelationIntegrityService
                 throw new InvalidArgumentException("Cannot delete this record because it is referenced by collection '{$referencingCollection->name}' (field '{$fieldName}').");
             }
 
-            // @TODO: This should be checked recursively to ensure no circular dependencies (infinite recursion prevention)
             $referencingRecordIds = DB::table($tableName)
                 ->where($fieldName, $recordId)
                 ->pluck('id')
@@ -258,7 +286,7 @@ class RelationIntegrityService
      *
      * @return array<int, array{collection: Collection, field: array}>
      */
-    private function findReferencingFields(string $targetCollectionId): array
+    public function findReferencingFields(string $targetCollectionId): array
     {
         $results = [];
 
@@ -271,7 +299,7 @@ class RelationIntegrityService
                         $fieldType = $field['type'] ?? null;
                         $fieldTarget = $field['target_collection_id'] ?? null;
 
-                        if ($fieldType !== CollectionFieldType::Relation->value) {
+                        if ($fieldType !== CollectionFieldType::Relation->value && $fieldType !== CollectionFieldType::RelationMany->value) {
                             continue;
                         }
 

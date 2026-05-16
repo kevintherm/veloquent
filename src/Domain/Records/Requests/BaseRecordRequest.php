@@ -134,6 +134,56 @@ abstract class BaseRecordRequest extends FormRequest
                 $fieldRules[] = 'max:255';
             }
 
+            if ($fieldType === CollectionFieldType::RelationMany) {
+                $fieldRules[] = 'array';
+                $fieldRules[] = function (string $attribute, mixed $value, callable $fail) use ($field): void {
+                    if ($value === null || ! is_array($value)) {
+                        return;
+                    }
+
+                    $targetCollectionId = $field['target_collection_id'] ?? null;
+                    if (! is_string($targetCollectionId) || $targetCollectionId === '') {
+                        $fail('Relation field configuration is invalid.');
+                        return;
+                    }
+
+                    $targetCollection = Collection::query()->find($targetCollectionId);
+                    if ($targetCollection === null) {
+                        $fail('Relation target collection does not exist.');
+                        return;
+                    }
+
+                    $ids = [];
+                    foreach ($value as $item) {
+                        $id = is_array($item) ? ($item['id'] ?? null) : $item;
+                        if (is_string($id) && $id !== '') {
+                            $ids[] = $id;
+                        }
+                    }
+
+                    if (empty($ids)) {
+                        return;
+                    }
+
+                    $foundCount = Record::of($targetCollection)
+                        ->newQuery()
+                        ->whereIn('id', $ids)
+                        ->count();
+
+                    if ($foundCount !== count(array_unique($ids))) {
+                        $fail('One or more of the selected related records do not exist.');
+                    }
+                };
+
+                if ($intervene) {
+                    $intervene($fieldName, $fieldRules);
+                }
+
+                $rules[$fieldName] = $fieldRules;
+
+                continue;
+            }
+
             if ($fieldType === CollectionFieldType::Relation) {
                 $fieldRules[] = 'string';
 
@@ -335,6 +385,14 @@ abstract class BaseRecordRequest extends FormRequest
     {
         return collect($collection->fields ?? [])
             ->filter(fn (Field|array $field): bool => ($field['type'] ?? null) === CollectionFieldType::Json->value)
+            ->keyBy(fn (Field|array $field): string => (string) $field['name'])
+            ->all();
+    }
+
+    private function getRelationManyFields(Collection $collection): array
+    {
+        return collect($collection->fields ?? [])
+            ->filter(fn (Field|array $field): bool => ($field['type'] ?? null) === CollectionFieldType::RelationMany->value)
             ->keyBy(fn (Field|array $field): string => (string) $field['name'])
             ->all();
     }

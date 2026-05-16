@@ -207,6 +207,10 @@ const defaultFieldValue = (field) => {
       return existingValue;
     }
 
+    if (field.type === "relation_many") {
+      return Array.isArray(existingValue) ? existingValue : [];
+    }
+
     return existingValue;
   }
 
@@ -353,7 +357,7 @@ const resolveRelationTargetName = (field) => {
 const loadRelationOptions = async (field) => {
   const targetCollection = resolveRelationTargetName(field);
 
-  if (field.type !== "relation" || !targetCollection) {
+  if (!['relation', 'relation_many'].includes(field.type) || !targetCollection) {
     return;
   }
 
@@ -391,7 +395,7 @@ const loadRelationOptions = async (field) => {
 
 const loadAllRelationOptions = async () => {
   const relationFields = orderedFields.value.filter((field) => {
-    return field?.type === "relation" && resolveRelationTargetIdentifier(field);
+    return ['relation', 'relation_many'].includes(field?.type) && resolveRelationTargetIdentifier(field);
   });
 
   await Promise.all(relationFields.map((field) => loadRelationOptions(field)));
@@ -459,7 +463,17 @@ const isRelationDialogValueSelected = (value) => {
 
 const toggleRelationDialogValue = (field, value) => {
   const normalizedValue = String(value);
-  relationDialogState.value.selected = [normalizedValue];
+
+  if (field?.type === "relation_many") {
+    const idx = relationDialogState.value.selected.indexOf(normalizedValue);
+    if (idx > -1) {
+      relationDialogState.value.selected.splice(idx, 1);
+    } else {
+      relationDialogState.value.selected.push(normalizedValue);
+    }
+  } else {
+    relationDialogState.value.selected = [normalizedValue];
+  }
 };
 
 const clearRelationDialogSelection = () => {
@@ -476,7 +490,11 @@ const applyRelationDialogSelection = () => {
 
   const nextSelection = [...relationDialogState.value.selected];
 
-  formState.value[field.name] = nextSelection[0] ?? "";
+  if (field.type === "relation_many") {
+    formState.value[field.name] = nextSelection;
+  } else {
+    formState.value[field.name] = nextSelection[0] ?? "";
+  }
 
   closeRelationDialog();
 };
@@ -789,6 +807,10 @@ const coerceFieldValue = (field, rawValue) => {
     }
 
     return rawValue;
+  }
+
+  if (field.type === "relation_many") {
+    return Array.isArray(rawValue) ? rawValue : [];
   }
 
   return rawValue;
@@ -1216,7 +1238,7 @@ onMounted(async () => {
               </Select>
             </div>
 
-            <Input v-else-if="field.type !== 'boolean' && field.type !== 'relation'"
+            <Input v-else-if="field.type !== 'boolean' && !['relation', 'relation_many'].includes(field.type)"
               :id="`field-${sheetId}-${field.name}`" v-model="formState[field.name]" :type="resolveInputType(field)"
               :disabled="isDisabledField(field)" :placeholder="`Enter ${displayFieldName(field.name)}...`"
               @input="modifyRecord" />
@@ -1226,7 +1248,7 @@ onMounted(async () => {
                 @update:model-value="(value) => { formState[field.name] = value; modifyRecord(); }" />
             </div>
 
-            <div v-else class="space-y-2">
+            <div v-else-if="['relation', 'relation_many'].includes(field.type)" class="space-y-2">
               <Button variant="outline" type="button" class="w-full justify-start font-normal"
                 @click="openRelationDialog(field)">
                 {{ relationSelectionSummary(field) }}

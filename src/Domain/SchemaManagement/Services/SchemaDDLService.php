@@ -41,7 +41,7 @@ readonly class SchemaDDLService
     /**
      * @throws InvalidArgumentException
      */
-    public function renameTable(string $from, string $to): void
+    public function renameTable(string $from, string $to, bool $ignoreMissingFrom = false): void
     {
         $this->namingPolicy->assertValidTableName($to);
 
@@ -49,7 +49,7 @@ readonly class SchemaDDLService
             throw new InvalidArgumentException('Table already exists');
         }
 
-        if (! Schema::hasTable($from)) {
+        if (! Schema::hasTable($from) && ! $ignoreMissingFrom) { 
             throw new InvalidArgumentException('Table does not exist');
         }
 
@@ -81,9 +81,14 @@ readonly class SchemaDDLService
             CollectionFieldType::Json => $blueprint->json($name),
             CollectionFieldType::File => $blueprint->json($name),
             CollectionFieldType::Relation => $blueprint->char($name, 26),
+            CollectionFieldType::RelationMany => null,
             CollectionFieldType::Select => $blueprint->string($name, 255),
             default => throw new InvalidArgumentException('Unsupported column type: '.$type)
         };
+
+        if ($type === CollectionFieldType::RelationMany) {
+            return;
+        }
 
         if (($column['nullable'] ?? false) === true) {
             $col->nullable();
@@ -136,6 +141,88 @@ readonly class SchemaDDLService
     {
         $this->runDDL(function () use ($table): void {
             Schema::dropIfExists($table);
+        });
+    }
+    
+    /**
+     * Creates the pivot table only if it does not already exist.
+     */
+    public function createPivotTable(
+        string $pivotTable,
+        string $sourceIdCol,
+        string $targetIdCol,
+        array $extraColumns = [],
+    ): void {
+        if (Schema::hasTable($pivotTable)) {
+            return;
+        }
+
+        $this->runDDL(function () use ($pivotTable, $sourceIdCol, $targetIdCol, $extraColumns): void {
+            Schema::create($pivotTable, function (Blueprint $blueprint) use ($pivotTable, $sourceIdCol, $targetIdCol, $extraColumns) {
+                $blueprint->ulid('id')->primary();
+                $blueprint->char($sourceIdCol, 26);
+                $blueprint->char($targetIdCol, 26);
+
+                foreach ($extraColumns as $column) {
+                    $columnName = is_array($column) ? ($column['name'] ?? null) : $column;
+                    $columnType = is_array($column) ? ($column['type'] ?? 'text') : 'text';
+
+                    if (! $columnName) continue;
+
+                    match ($columnType) {
+                        'number' => $blueprint->double($columnName)->nullable(),
+                        'boolean' => $blueprint->boolean($columnName)->nullable(),
+                        'datetime' => $blueprint->dateTime($columnName)->nullable(),
+                        'json' => $blueprint->json($columnName)->nullable(),
+                        'longtext' => $blueprint->longText($columnName)->nullable(),
+                        'select' => $blueprint->string($columnName)->nullable(),
+                        default => $blueprint->text($columnName)->nullable(),
+                    };
+                }
+
+                $blueprint->dateTime('created_at')->useCurrent();
+                $blueprint->unique([$sourceIdCol, $targetIdCol], 'idx_' . md5($pivotTable . '_unq'));
+            });
+        });
+    }
+
+    /**
+     * Adds columns that are in $newColumns but not yet in the pivot table. Never drops.
+     */
+    public function syncPivotColumns(string $pivotTable, array $newColumns): void
+    {
+        if (! Schema::hasTable($pivotTable)) {
+            return;
+        }
+
+        $existingColumns = Schema::getColumnListing($pivotTable);
+        
+        $missingColumns = array_filter($newColumns, function ($column) use ($existingColumns) {
+            $name = is_array($column) ? ($column['name'] ?? null) : $column;
+            return $name && ! in_array($name, $existingColumns);
+        });
+ 
+        if (empty($missingColumns)) {
+            return;
+        }
+ 
+        $this->runDDL(function () use ($pivotTable, $missingColumns): void {
+            Schema::table($pivotTable, function (Blueprint $blueprint) use ($missingColumns) {
+                foreach ($missingColumns as $column) {
+                    $columnName = is_array($column) ? ($column['name'] ?? null) : $column;
+                    $columnType = is_array($column) ? ($column['type'] ?? 'text') : 'text';
+
+                    match ($columnType) {
+                        'number' => $blueprint->double($columnName)->nullable(),
+                        'boolean' => $blueprint->boolean($columnName)->nullable(),
+                        'datetime' => $blueprint->dateTime($columnName)->nullable(),
+                        'json' => $blueprint->json($columnName)->nullable(),
+                        'longtext' => $blueprint->longText($columnName)->nullable(),
+                        'select' => $blueprint->string($columnName)->nullable(),
+                        default => $blueprint->text($columnName)->nullable(),
+                    };
+                }
+            });
         });
     }
 

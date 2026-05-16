@@ -43,13 +43,24 @@ class AllowedFieldsResolver
                 $fieldType = $fieldType->value;
             }
 
-            if ($fieldType !== CollectionFieldType::Relation->value) {
+            if ($fieldType !== CollectionFieldType::Relation->value && $fieldType !== CollectionFieldType::RelationMany->value) {
                 continue;
             }
 
             $allowedFields[] = "{$fullPath}.id";
             $allowedFields[] = "{$fullPath}.created_at";
             $allowedFields[] = "{$fullPath}.updated_at";
+
+            if ($fieldType === CollectionFieldType::RelationMany->value) {
+                $allowedFields[] = "{$fullPath}.pivot";
+                $pivotFields = $fieldDefinition['pivot_fields'] ?? [];
+                foreach ($pivotFields as $pivotField) {
+                    $pivotFieldName = is_array($pivotField) ? ($pivotField['name'] ?? null) : $pivotField;
+                    if ($pivotFieldName) {
+                        $allowedFields[] = "{$fullPath}.pivot.{$pivotFieldName}";
+                    }
+                }
+            }
 
             $targetCollectionId = $fieldDefinition['target_collection_id'] ?? null;
             if (! is_string($targetCollectionId) || $targetCollectionId === '') {

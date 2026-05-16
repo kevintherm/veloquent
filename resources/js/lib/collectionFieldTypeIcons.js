@@ -27,6 +27,7 @@ const fieldTypeIcons = {
     json: WholeWord,
     file: Paperclip,
     relation: ListTree,
+    relation_many: ListTree,
     select: List,
 };
 

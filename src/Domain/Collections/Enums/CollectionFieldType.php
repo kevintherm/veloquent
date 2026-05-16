@@ -16,6 +16,7 @@ enum CollectionFieldType: string
     case Json = 'json';
     case File = 'file';
     case Relation = 'relation';
+    case RelationMany = 'relation_many';
     case Select = 'select';
 
     public function typeProperties(): array
@@ -28,6 +29,7 @@ enum CollectionFieldType: string
             self::LongText => [],
             self::RichText => [],
             self::Relation => ['target_collection_id' => null, 'cascade_on_delete' => false],
+            self::RelationMany => ['target_collection_id' => null, 'pivot_fields' => []],
             self::Number => ['min' => null, 'max' => null, 'allow_decimals' => false],
             self::Select => ['options' => []],
             self::Boolean, self::Datetime, self::Date, self::Json => [],
@@ -78,6 +80,15 @@ enum CollectionFieldType: string
                 ),
                 "{$prefix}.cascade_on_delete" => ['sometimes', 'boolean'],
             ],
+            self::RelationMany => [
+                "{$prefix}.target_collection_id" => array_merge(
+                    ['required', 'string'],
+                    $skipRelationExists ? [] : ['exists:collections,id']
+                ),
+                "{$prefix}.pivot_fields" => ['sometimes', 'array'],
+                "{$prefix}.pivot_fields.*.name" => ['required', 'string'],
+                "{$prefix}.pivot_fields.*.type" => ['required', 'string', 'in:text,datetime,json,number,select,boolean,longtext'],
+            ],
             self::Select => [
                 "{$prefix}.options" => ['required', 'array', 'min:1'],
                 "{$prefix}.options.*" => ['required', 'string', 'min:1', 'max:255'],
@@ -96,6 +107,7 @@ enum CollectionFieldType: string
             self::Url => 'url',
             self::Json => 'json',
             self::File => 'array',
+            self::RelationMany => 'array',
             self::Relation, self::Select => 'string',
         };
     }
@@ -115,7 +127,7 @@ enum CollectionFieldType: string
 
     public function isIndexable(): bool
     {
-        return ! in_array($this, [self::Json, self::LongText, self::Url, self::File], true);
+        return ! in_array($this, [self::Json, self::LongText, self::Url, self::File, self::RelationMany], true);
     }
 
     public static function commonPropertyNames(): array

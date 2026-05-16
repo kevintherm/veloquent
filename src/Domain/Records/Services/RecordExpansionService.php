@@ -11,6 +11,9 @@ use Veloquent\Core\Domain\Records\Models\Record;
 use Veloquent\Core\Domain\Records\Resources\RecordResource;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Veloquent\Core\Domain\Records\Support\PivotTableName;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class RecordExpansionService
 {
@@ -22,9 +25,12 @@ class RecordExpansionService
             return;
         }
 
-        $relationIdsByField = [];
-        $targetCollectionIds = [];
+        $recordIds = collect($records)->map(fn ($r) => (string) $r->getKey())->all();
+        if (empty($recordIds)) {
+            return;
+        }
 
+        $targetCollectionIds = [];
         foreach ($relationFields as $field) {
             if ($id = ($field['target_collection_id'] ?? null)) {
                 $targetCollectionIds[] = $id;
@@ -36,20 +42,44 @@ class RecordExpansionService
             ->get()
             ->keyBy('id');
 
-        foreach ($records as $record) {
-            if (! $record instanceof Record) {
+        $pivotDataByField = []; // fieldName -> sourceId -> targetIds
+        $relationIdsByField = []; // fieldName -> [targetIds]
+
+        foreach ($relationFields as $fieldName => $field) {
+            $fieldType = $field['type'] ?? '';
+            $targetCollection = $targetCollectionsById->get($field['target_collection_id'] ?? '');
+
+            if (! $targetCollection) {
+                Log::warning('EXPANSION_TARGET_COLLECTION_MISSING', [
+                    'source_collection' => $sourceCollection->id,
+                    'field' => $fieldName,
+                    'target_collection_id' => $field['target_collection_id'] ?? null,
+                ]);
                 continue;
             }
 
-            foreach ($relationFields as $fieldName => $field) {
-                $relationId = $record->getAttribute($fieldName);
+            if ($fieldType === CollectionFieldType::RelationMany->value) {
+                $pivotTable = PivotTableName::for($sourceCollection->getPhysicalTableName(), $targetCollection->getPhysicalTableName(), $fieldName);
 
-                if (! is_string($relationId) || $relationId === '') {
+                if (! Schema::hasTable($pivotTable)) {
                     continue;
                 }
 
-                $relationIdsByField[$fieldName] ??= [];
-                $relationIdsByField[$fieldName][] = $relationId;
+                $pivotRows = DB::table($pivotTable)
+                    ->whereIn('source_id', $recordIds)
+                    ->get();
+
+                foreach ($pivotRows as $row) {
+                    $pivotDataByField[$fieldName][$row->source_id][] = (array) $row;
+                    $relationIdsByField[$fieldName][] = $row->target_id;
+                }
+            } else {
+                foreach ($records as $record) {
+                    $relationId = $record->getAttribute($fieldName);
+                    if (is_string($relationId) && $relationId !== '') {
+                        $relationIdsByField[$fieldName][] = $relationId;
+                    }
+                }
             }
         }
 
@@ -61,25 +91,12 @@ class RecordExpansionService
             $targetCollection = $targetCollectionsById->get($field['target_collection_id'] ?? '');
             $relationIds = array_values(array_unique($relationIdsByField[$fieldName] ?? []));
 
-            if ($targetCollection === null) {
-                Log::warning('EXPANSION_TARGET_COLLECTION_MISSING', [
-                    'source_collection' => $sourceCollection->id,
-                    'field' => $fieldName,
-                    'target_collection_id' => $field['target_collection_id'] ?? null,
-                ]);
+            if ($targetCollection === null || empty($relationIds)) {
                 $resolvedByField[$fieldName] = [];
-
-                continue;
-            }
-
-            if ($relationIds === []) {
-                $resolvedByField[$fieldName] = [];
-
                 continue;
             }
 
             $query = Record::of($targetCollection)->newQuery();
-
             if (! $bypassApiRules) {
                 $query->applyRule('view');
             }
@@ -88,9 +105,7 @@ class RecordExpansionService
                 ->whereIn('id', $relationIds)
                 ->get()
                 ->mapWithKeys(function (Record $targetRecord): array {
-                    $resource = new RecordResource($targetRecord);
-
-                    return [(string) $targetRecord->getAttribute('id') => $resource->resolve()];
+                    return [(string) $targetRecord->getAttribute('id') => $targetRecord];
                 })
                 ->all();
         }
@@ -100,16 +115,51 @@ class RecordExpansionService
                 continue;
             }
 
-            $expanded = [];
+            $sourceId = (string) $record->getKey();
 
             foreach ($relationFields as $fieldName => $field) {
-                $relationId = $record->getAttribute($fieldName);
+                $fieldType = $field['type'] ?? '';
                 $resolved = $resolvedByField[$fieldName] ?? [];
 
-                $expanded[$fieldName] = is_string($relationId) ? ($resolved[$relationId] ?? null) : null;
-            }
+                if ($fieldType === CollectionFieldType::RelationMany->value) {
+                    $pivots = $pivotDataByField[$fieldName][$sourceId] ?? [];
+                    $expandedItems = [];
+                    $ids = [];
 
-            $record->expandedRelations = $expanded;
+                    foreach ($pivots as $pivot) {
+                        $targetId = $pivot['target_id'];
+                        if (isset($resolved[$targetId])) {
+                            $targetRecord = $resolved[$targetId];
+                            $ids[] = $targetId;
+
+                            $resource = new RecordResource($targetRecord);
+                            $data = $resource->resolve();
+
+                            // Inject pivot data
+                            $pivotFields = $field['pivot_fields'] ?? [];
+                            $pivotFieldNames = collect($pivotFields)->map(function ($f) {
+                                return is_array($f) ? ($f['name'] ?? null) : $f;
+                            })->filter()->all();
+                            
+                            $data['pivot'] = collect($pivot)->only($pivotFieldNames)->all();
+
+                            $expandedItems[] = $data;
+                        }
+                    }
+
+                    $record->relationManyIds[$fieldName] = $ids;
+                    $record->expandedRelations[$fieldName] = $expandedItems;
+                } else {
+                    $relationId = $record->getAttribute($fieldName);
+                    if (is_string($relationId) && isset($resolved[$relationId])) {
+                        $targetRecord = $resolved[$relationId];
+                        $resource = new RecordResource($targetRecord);
+                        $record->expandedRelations[$fieldName] = $resource->resolve();
+                    } else {
+                        $record->expandedRelations[$fieldName] = null;
+                    }
+                }
+            }
         }
     }
 
@@ -153,8 +203,9 @@ class RecordExpansionService
             }
 
             $field = $fieldsByName[$fieldName];
+            $fieldType = $field['type'] ?? null;
 
-            if (($field['type'] ?? null) !== CollectionFieldType::Relation->value) {
+            if ($fieldType !== CollectionFieldType::Relation->value && $fieldType !== CollectionFieldType::RelationMany->value) {
                 throw new InvalidRuleExpressionException("Field '{$fieldName}' is not a relation field.");
             }
 

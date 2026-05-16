@@ -1,21 +1,22 @@
 <?php
 
+use Illuminate\Support\Facades\Route;
+use Illuminate\Broadcasting\BroadcastController;
+use Veloquent\Core\Http\Controllers\OAuthController;
+use Veloquent\Core\Http\Controllers\LogViewerController;
+use Veloquent\Core\Http\Controllers\OnboardingController;
 use Veloquent\Core\Domain\Auth\Controllers\AuthController;
-use Veloquent\Core\Domain\Collections\Controllers\CollectionController;
-use Veloquent\Core\Domain\Emails\Controllers\EmailTemplateController;
-use Veloquent\Core\Domain\Realtime\Controllers\SubscribeController;
+use Veloquent\Core\Http\Controllers\OAuthProviderController;
 use Veloquent\Core\Domain\Records\Controllers\RecordController;
+use Veloquent\Core\Http\Controllers\Settings\SettingsController;
+use Veloquent\Core\Domain\Realtime\Controllers\SubscribeController;
 use Veloquent\Core\Domain\Records\Controllers\RecordFileController;
+use Veloquent\Core\Domain\Emails\Controllers\EmailTemplateController;
+use Veloquent\Core\Domain\Records\Controllers\RelationSyncController;
+use Veloquent\Core\Domain\Collections\Controllers\CollectionController;
 use Veloquent\Core\Domain\SchemaManagement\Controllers\OrphanTableController;
 use Veloquent\Core\Domain\SchemaManagement\Controllers\SchemaRecoveryController;
 use Veloquent\Core\Domain\SchemaManagement\Controllers\SchemaTransferController;
-use Veloquent\Core\Http\Controllers\LogViewerController;
-use Veloquent\Core\Http\Controllers\OAuthController;
-use Veloquent\Core\Http\Controllers\OAuthProviderController;
-use Veloquent\Core\Http\Controllers\OnboardingController;
-use Veloquent\Core\Http\Controllers\Settings\SettingsController;
-use Illuminate\Support\Facades\Route;
-use Illuminate\Broadcasting\BroadcastController;
 
 /*
 |--------------------------------------------------------------------------
@@ -52,6 +53,9 @@ Route::prefix('collections/{collection}/records')->group(function () {
     Route::get('/{record}', [RecordController::class, 'show'])->name('records.show');
     Route::match(['PUT', 'PATCH'], '/{record}', [RecordController::class, 'update'])->name('records.update');
     Route::delete('/{record}', [RecordController::class, 'destroy'])->name('records.destroy');
+
+    Route::patch('/{record}/relations/{field}', [RelationSyncController::class, 'sync'])->name('records.relations.sync');
+    Route::delete('/{record}/relations/{field}', [RelationSyncController::class, 'detach'])->name('records.relations.detach');
 });
 
 /*

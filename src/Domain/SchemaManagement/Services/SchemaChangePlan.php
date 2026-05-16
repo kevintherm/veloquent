@@ -183,6 +183,7 @@ final class SchemaChangePlan
         return collect($fields)
             ->map(fn (array|Field $field) => self::normalizeInputField($field))
             ->reject(fn (array $field) => in_array($field['name'], self::BASE_RESERVED_FIELD_NAMES, true))
+            ->reject(fn (array $field) => ($field['type'] ?? '') === CollectionFieldType::RelationMany->value)
             ->map(function (array $field): array {
                 unset($field['order']);
 

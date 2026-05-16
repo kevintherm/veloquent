@@ -9,11 +9,18 @@ use Veloquent\Core\Domain\Hooks\HookRunner;
 use Veloquent\Core\Domain\Hooks\HookPayload;
 use Veloquent\Core\Domain\Records\Models\Record;
 use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\Collections\ValueObjects\Field;
+use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
+use Veloquent\Core\Domain\Records\Services\PivotSyncService;
+use Veloquent\Core\Domain\Records\Support\PivotTableName;
+use Veloquent\Core\Domain\Records\Services\RelationIntegrityService;
 
 class DeleteRecordAction
 {
     public function __construct(
         private readonly HookRunner $hookRunner,
+        private readonly PivotSyncService $pivotSyncService,
+        private readonly RelationIntegrityService $relationIntegrityService,
     ) {}
     public function execute(Collection $collection, string $recordId): void
     {
@@ -40,6 +47,42 @@ class DeleteRecordAction
             ));
 
             $record->delete();
+
+            $relationManyFields = collect($collection->fields ?? [])
+                ->filter(fn (Field|array $f) => ($f['type'] ?? '') === CollectionFieldType::RelationMany->value)
+                ->all();
+
+            foreach ($relationManyFields as $field) {
+                $targetCollection = Collection::find($field['target_collection_id'] ?? '');
+                if ($targetCollection) {
+                    $pivotTable = PivotTableName::for($collection->getPhysicalTableName(), $targetCollection->getPhysicalTableName(), $field['name']);
+                    $this->pivotSyncService->detachAll(
+                        $pivotTable,
+                        'source_id',
+                        (string) $record->getKey()
+                    );
+                }
+            }
+
+            // Clean up pivot entries where the record is the TARGET
+            $referencingFields = $this->relationIntegrityService->findReferencingFields($collection->id);
+            foreach ($referencingFields as $ref) {
+                $refCollection = $ref['collection'];
+                $refField = $ref['field'];
+
+                if (($refField['type'] ?? '') === CollectionFieldType::RelationMany->value) {
+                    $pivotTable = PivotTableName::for(
+                        $refCollection->getPhysicalTableName(),
+                        $collection->getPhysicalTableName(),
+                        $refField['name']
+                    );
+                    $this->pivotSyncService->detachAll(
+                        $pivotTable,
+                        'target_id',
+                        (string) $record->getKey()
+                    );
+                }
+            }
         });
 
         $this->hookRunner->run(new HookPayload(

@@ -36,6 +36,10 @@ class Record extends Authenticatable
 
     public array $expandedRelations = [];
 
+    public array $relationManyIds = [];
+
+    public array $pivotData = [];
+
     public function __construct(array $attributes = [])
     {
         if (! static::$allowDirectInstantiation) {
@@ -123,18 +127,34 @@ class Record extends Authenticatable
         }
 
         foreach ($this->collection->fields ?? [] as $field) {
-            if (($field['type'] ?? null) !== CollectionFieldType::File->value) {
-                continue;
-            }
-
+            $type = $field['type'] ?? null;
             $fieldName = (string) ($field['name'] ?? '');
-            if ($fieldName === '' || ! array_key_exists($fieldName, $data)) {
+
+            if ($fieldName === '') {
                 continue;
             }
 
-            $isMultiple = (bool) ($field['multiple'] ?? false);
-            $isProtected = (bool) ($field['protected'] ?? false);
-            $data[$fieldName] = $this->normalizeFileOutputValue($data[$fieldName], $isMultiple, $isProtected, $fieldName);
+            if ($type === CollectionFieldType::File->value) {
+                if (! array_key_exists($fieldName, $data)) {
+                    continue;
+                }
+
+                $isMultiple = (bool) ($field['multiple'] ?? false);
+                $isProtected = (bool) ($field['protected'] ?? false);
+
+                $data[$fieldName] = $this->normalizeFileOutputValue(
+                    $data[$fieldName],
+                    $isMultiple,
+                    $isProtected,
+                    $fieldName,
+                );
+
+                continue;
+            }
+
+            if ($type === CollectionFieldType::RelationMany->value) {
+                $data[$fieldName] = $this->relationManyIds[$fieldName] ?? [];
+            }
         }
 
         return $data;

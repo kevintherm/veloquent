@@ -507,6 +507,7 @@ const resolveColumnWidthClass = (column, columnTypes) => {
         case "longtext":
             return "min-w-80";
         case "relation":
+        case "relation_many":
             return "min-w-48";
         case "file":
             return "min-w-64";

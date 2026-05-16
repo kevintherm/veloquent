@@ -2,19 +2,21 @@
 
 namespace Veloquent\Core\Domain\Collections\Observers;
 
-use Veloquent\Core\Domain\Collections\Enums\CollectionType;
+use Illuminate\Support\Facades\DB;
 use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\Collections\ValueObjects\Field;
 use Veloquent\Core\Domain\Collections\ValueObjects\Index;
-use Veloquent\Core\Domain\Records\Services\RelationIntegrityService;
-use Veloquent\Core\Domain\SchemaManagement\Enums\SchemaOperation;
+use Veloquent\Core\Domain\Records\Support\PivotTableName;
+use Veloquent\Core\Domain\Collections\Enums\CollectionType;
 use Veloquent\Core\Domain\SchemaManagement\Models\SchemaJob;
+use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
+use Veloquent\Core\Domain\SchemaManagement\Enums\SchemaOperation;
+use Veloquent\Core\Domain\Records\Services\RelationIntegrityService;
 use Veloquent\Core\Domain\SchemaManagement\Services\IndexSyncService;
 use Veloquent\Core\Domain\SchemaManagement\Services\SchemaChangePlan;
-use Veloquent\Core\Domain\SchemaManagement\Services\SchemaCorruptGuard;
 use Veloquent\Core\Domain\SchemaManagement\Services\SchemaDDLService;
 use Veloquent\Core\Infrastructure\Exceptions\InvalidArgumentException;
-use Exception;
-use Illuminate\Support\Facades\DB;
+use Veloquent\Core\Domain\SchemaManagement\Services\SchemaCorruptGuard;
 
 readonly class CollectionObserver
 {
@@ -81,7 +83,9 @@ readonly class CollectionObserver
         $this->startJob($collection, SchemaOperation::Drop);
 
         try {
-            $this->ddlService->deleteTable($collection->getPhysicalTableName());
+            $tableName = $collection->getPhysicalTableName();
+            $this->ddlService->deleteTable($tableName);
+            $this->deletePivotTables($collection);
         } catch (\Throwable $e) {
             $this->handleJobFailure($collection, $e);
         }
@@ -144,6 +148,7 @@ readonly class CollectionObserver
 
         $fieldsForDDL = SchemaChangePlan::stripForDDL($collection->fields ?? []);
         $this->ddlService->createTable($tableName, $fieldsForDDL);
+        $this->createPivotTables($collection);
 
         $desiredIndexes = Index::collection($collection->indexes ?? []);
         $effectiveFields = $this->syncFieldUniqueFlags(
@@ -192,6 +197,8 @@ readonly class CollectionObserver
                 SchemaChangePlan::stripForDDL($newFields),
                 $isAuthCollection
             );
+
+            $this->syncPivotTables($collection, $originalFields, $newFields);
         }
 
         $effectiveFields = $fieldsWereDirty ? $newFields : $this->extractFields($collection->fields ?? []);
@@ -431,5 +438,107 @@ readonly class CollectionObserver
             ->all();
 
         return array_values(array_unique([...$renamedFrom, ...$dropped]));
+    }
+
+    private function createPivotTables(Collection $collection): void
+    {
+        foreach ($collection->fields ?? [] as $field) {
+            if (($field['type'] ?? '') !== CollectionFieldType::RelationMany->value) {
+                continue;
+            }
+
+            $this->createPivotTableForField($collection, $field);
+        }
+    }
+
+    private function syncPivotTables(Collection $collection, array $oldFields, array $newFields): void
+    {
+        $oldById = collect($oldFields)->keyBy('id');
+        $newById = collect($newFields)->keyBy('id');
+
+        foreach ($newById as $id => $field) {
+            if (($field['type'] ?? '') !== CollectionFieldType::RelationMany->value) {
+                if ($oldById->has($id) && ($oldById->get($id)['type'] ?? '') === CollectionFieldType::RelationMany->value) {
+                    $this->deletePivotTableForField($collection, $oldById->get($id));
+                }
+                continue;
+            }
+
+            if (! $oldById->has($id)) {
+                $this->createPivotTableForField($collection, $field);
+                continue;
+            }
+
+            $oldField = $oldById->get($id);
+            if (($oldField['type'] ?? '') !== CollectionFieldType::RelationMany->value) {
+                $this->createPivotTableForField($collection, $field);
+                continue;
+            }
+
+            if (($field['name'] ?? '') !== ($oldField['name'] ?? '')) {
+                $targetTable = Collection::findByIdCached($field['target_collection_id'])?->getPhysicalTableName();
+
+                if ($targetTable) {
+                    $oldPivotTable = PivotTableName::for($collection->getPhysicalTableName(), $targetTable, $oldField['name']);
+                    $newPivotTable = PivotTableName::for($collection->getPhysicalTableName(), $targetTable, $field['name']);
+                    $this->ddlService->renameTable($oldPivotTable, $newPivotTable, true);
+                }
+            }
+
+            // Sync columns if pivot_fields changed
+            $newPivotFields = $field['pivot_fields'] ?? [];
+            $oldPivotFields = $oldField['pivot_fields'] ?? [];
+            if ($newPivotFields !== $oldPivotFields) {
+                $targetTable = Collection::findByIdCached($field['target_collection_id'])?->getPhysicalTableName();
+                if ($targetTable) {
+                    $pivotTable = PivotTableName::for($collection->getPhysicalTableName(), $targetTable, $field['name']);
+                    $this->ddlService->syncPivotColumns($pivotTable, $newPivotFields);
+                }
+            }
+        }
+
+        foreach ($oldById as $id => $field) {
+            if (($field['type'] ?? '') === CollectionFieldType::RelationMany->value && ! $newById->has($id)) {
+                $this->deletePivotTableForField($collection, $field);
+            }
+        }
+    }
+
+    private function deletePivotTables(Collection $collection): void
+    {
+        foreach ($collection->fields ?? [] as $field) {
+            if (($field['type'] ?? '') === CollectionFieldType::RelationMany->value) {
+                $this->deletePivotTableForField($collection, $field);
+            }
+        }
+    }
+
+    private function createPivotTableForField(Collection $collection, Field|array $field): void
+    {
+        $targetTable = Collection::findByIdCached($field['target_collection_id'])?->getPhysicalTableName();
+
+        if (! $targetTable) {
+            return;
+        }
+
+        $pivotTable = PivotTableName::for($collection->getPhysicalTableName(), $targetTable, $field["name"]);
+        $this->ddlService->createPivotTable(
+            $pivotTable,
+            'source_id',
+            'target_id',
+            $field['pivot_fields'] ?? []
+        );
+    }
+
+    private function deletePivotTableForField(Collection $collection, Field|array $field): void
+    {
+        $targetTable = Collection::findByIdCached($field['target_collection_id'])?->getPhysicalTableName();
+
+        if (! $targetTable) {
+            return;
+        }
+
+        $pivotTable = PivotTableName::for($collection->getPhysicalTableName(), $targetTable, $field["name"]);
+        $this->ddlService->deleteTable($pivotTable);
     }
 }
