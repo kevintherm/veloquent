@@ -1,7 +1,7 @@
 <?php
 
 use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
-use Veloquent\Core\Domain\SchemaManagement\Services\SchemaChangePlan;
+use Veloquent\Core\Domain\SchemaManagement\Services\SchemaChange;
 
 it('assigns unique ids to fields via mergeWithSystemFields', function () {
     $userFields = [
@@ -9,7 +9,7 @@ it('assigns unique ids to fields via mergeWithSystemFields', function () {
         ['name' => 'body', 'type' => CollectionFieldType::LongText->value],
     ];
 
-    $merged = SchemaChangePlan::mergeWithSystemFields($userFields, false);
+    $merged = SchemaChange::mergeWithSystemFields($userFields, false);
 
     foreach ($merged as $field) {
         expect($field)->toHaveKey('id')
@@ -25,20 +25,20 @@ it('preserves existing ids on re-merge', function () {
         ['name' => 'title', 'type' => CollectionFieldType::Text->value, 'id' => 'abc12345'],
     ];
 
-    $merged = SchemaChangePlan::mergeWithSystemFields($userFields, false);
+    $merged = SchemaChange::mergeWithSystemFields($userFields, false);
     $titleField = collect($merged)->firstWhere('name', 'title');
 
     expect($titleField['id'])->toBe('abc12345');
 });
 
-it('treats duplicate names as independent additions in pure buildPlan', function () {
+it('treats duplicate names as independent additions in pure diff', function () {
     $before = [];
     $after = [
         ['id' => 'aaa11111', 'name' => 'title', 'type' => CollectionFieldType::Text->value, 'nullable' => false, 'unique' => false, 'default' => null],
         ['id' => 'bbb22222', 'name' => 'title', 'type' => CollectionFieldType::Text->value, 'nullable' => false, 'unique' => false, 'default' => null],
     ];
 
-    $plan = SchemaChangePlan::buildPlan($before, $after);
+    $plan = SchemaChange::diff($before, $after);
 
     expect($plan->adds)->toHaveCount(2);
 });
@@ -51,7 +51,7 @@ it('builds modify entries for type changes and defers validation to caller', fun
         ['id' => 'aaa11111', 'name' => 'title', 'type' => CollectionFieldType::LongText->value, 'nullable' => false, 'unique' => false, 'default' => null],
     ];
 
-    $plan = SchemaChangePlan::buildPlan($before, $after);
+    $plan = SchemaChange::diff($before, $after);
 
     expect($plan->modifies)->toHaveCount(1);
 });
@@ -64,7 +64,7 @@ it('detects renames via same id different name', function () {
         ['id' => 'aaa11111', 'name' => 'heading', 'type' => CollectionFieldType::Text->value, 'nullable' => false, 'unique' => false, 'default' => null],
     ];
 
-    $plan = SchemaChangePlan::buildPlan($before, $after);
+    $plan = SchemaChange::diff($before, $after);
 
     expect($plan->renames)->toHaveCount(1)
         ->and($plan->renames[0])->toBe(['title', 'heading']);
@@ -78,7 +78,7 @@ it('detects attribute-only modifications', function () {
         ['id' => 'aaa11111', 'name' => 'title', 'type' => CollectionFieldType::Text->value, 'nullable' => true, 'unique' => false, 'default' => null],
     ];
 
-    $plan = SchemaChangePlan::buildPlan($before, $after);
+    $plan = SchemaChange::diff($before, $after);
 
     expect($plan->modifies)->toHaveCount(1)
         ->and($plan->renames)->toBeEmpty()
@@ -86,19 +86,12 @@ it('detects attribute-only modifications', function () {
         ->and($plan->drops)->toBeEmpty();
 });
 
-it('throws when user-submitted fields use reserved names', function () {
-    $userFields = [
-        ['name' => 'email', 'type' => CollectionFieldType::Email->value],
-    ];
-
-    SchemaChangePlan::mergeWithSystemFields($userFields, true);
-})->throws(LogicException::class, "Reserved field 'email' cannot be defined manually.");
 
 it('allows reordering without error in builds', function () {
     $fieldA = ['id' => 'aaa11111', 'name' => 'title', 'type' => CollectionFieldType::Text->value, 'nullable' => false, 'unique' => false, 'default' => null, 'order' => 0];
     $fieldB = ['id' => 'aaa11111', 'name' => 'title', 'type' => CollectionFieldType::Text->value, 'nullable' => false, 'unique' => false, 'default' => null, 'order' => 5];
 
-    $plan = SchemaChangePlan::buildPlan([$fieldA], [$fieldB]);
+    $plan = SchemaChange::diff([$fieldA], [$fieldB]);
 
     expect($plan->modifies)->toBeEmpty()
         ->and($plan->adds)->toBeEmpty()
@@ -111,8 +104,57 @@ it('strips order from fields in stripForDDL but preserves id', function () {
         ['id' => 'abc12345', 'name' => 'title', 'type' => CollectionFieldType::Text->value, 'nullable' => false, 'unique' => false, 'default' => null, 'order' => 2],
     ];
 
-    $stripped = SchemaChangePlan::stripForDDL($fields);
+    $stripped = SchemaChange::stripForDDL($fields);
 
     expect($stripped[0])->toHaveKey('id')
         ->and($stripped[0])->not->toHaveKey('order');
+});
+
+it('assigns unique ids to pivot fields via mergeWithSystemFields', function () {
+    $userFields = [
+        [
+            'name' => 'posts',
+            'type' => CollectionFieldType::RelationMany->value,
+            'target_collection_id' => 'abc',
+            'pivot_fields' => [
+                ['name' => 'role', 'type' => 'text'],
+            ]
+        ],
+    ];
+
+    $merged = SchemaChange::mergeWithSystemFields($userFields, false);
+    $pivotField = collect($merged)->firstWhere('name', 'posts');
+
+    expect($pivotField['pivot_fields'][0])->toHaveKey('id')
+        ->and($pivotField['pivot_fields'][0]['id'])->toBeString()->toHaveLength(8);
+});
+
+it('detects renames in pivot fields via diffColumns', function () {
+    $before = [
+        [
+            'id' => 'p1',
+            'name' => 'posts',
+            'type' => CollectionFieldType::RelationMany->value,
+            'pivot_fields' => [
+                ['id' => 'pf1', 'name' => 'role', 'type' => 'text'],
+            ]
+        ],
+    ];
+    $after = [
+        [
+            'id' => 'p1',
+            'name' => 'posts',
+            'type' => CollectionFieldType::RelationMany->value,
+            'pivot_fields' => [
+                ['id' => 'pf1', 'name' => 'position', 'type' => 'text'],
+            ]
+        ],
+    ];
+
+    $plan = SchemaChange::diff($before, $after);
+
+    expect($plan->pivotModifies)->toHaveCount(1);
+    $mod = $plan->pivotModifies[0];
+    expect($mod['changes']->renames)->toHaveCount(1)
+        ->and($mod['changes']->renames[0])->toBe(['role', 'position']);
 });

@@ -2,14 +2,14 @@
 
 namespace Veloquent\Core\Domain\SchemaManagement\Services;
 
+use Throwable;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\QueryException;
+use Illuminate\Database\Schema\Blueprint;
 use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
 use Veloquent\Core\Domain\SchemaManagement\Policies\SchemaPolicy;
 use Veloquent\Core\Infrastructure\Exceptions\InvalidArgumentException;
-use Illuminate\Database\QueryException;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
-use Throwable;
 
 readonly class SchemaDDLService
 {
@@ -105,36 +105,43 @@ readonly class SchemaDDLService
         if ($after) {
             $col->after($after);
         }
-
-        $col->nullable();
     }
 
     /**
      * @throws InvalidArgumentException
      */
-    public function updateTable(string $table, array $before, array $after, bool $isAuthCollection = false): void
+    public function applyChange(string $table, SchemaChange $change): void
     {
-        $plan = SchemaChangePlan::buildPlan($before, $after, $isAuthCollection);
-
-        $this->runDDL(function () use ($table, $plan): void {
-            Schema::table($table, function (Blueprint $t) use ($plan) {
-                foreach ($plan->renames as [$from, $to]) {
+        $this->runDDL(function () use ($table, $change): void {
+            Schema::table($table, function (Blueprint $t) use ($change) {
+                foreach ($change->renames as [$from, $to]) {
                     $t->renameColumn($from, $to);
                 }
 
-                foreach ($plan->modifies as [, $field]) {
+                foreach ($change->modifies as [, $field]) {
                     $this->columnBlueprint($t, $field, change: true);
                 }
 
-                foreach ($plan->drops as $field) {
+                foreach ($change->drops as $field) {
                     $t->dropColumn($field['name']);
                 }
 
-                foreach ($plan->adds as $field) {
+                foreach ($change->adds as $field) {
                     $this->columnBlueprint($t, $field);
                 }
             });
         });
+    }
+
+    /**
+     * @throws InvalidArgumentException
+     */
+    /**
+     * @throws InvalidArgumentException
+     */
+    public function updateTable(string $table, array $before, array $after): void
+    {
+        $this->applyChange($table, SchemaChange::diff($before, $after));
     }
 
     public function deleteTable(string $table): void
@@ -153,37 +160,78 @@ readonly class SchemaDDLService
         string $targetIdCol,
         array $extraColumns = [],
     ): void {
-        if (Schema::hasTable($pivotTable)) {
+        if (! Schema::hasTable($pivotTable)) {
+            $this->runDDL(function () use ($pivotTable, $sourceIdCol, $targetIdCol, $extraColumns): void {
+                Schema::create($pivotTable, function (Blueprint $blueprint) use ($pivotTable, $sourceIdCol, $targetIdCol, $extraColumns) {
+                    $blueprint->ulid('id')->primary();
+                    $blueprint->char($sourceIdCol, 26);
+                    $blueprint->char($targetIdCol, 26);
+
+                    $this->addPivotColumns($blueprint, $extraColumns);
+
+                    $blueprint->dateTime('created_at')->useCurrent();
+                    $blueprint->unique([$sourceIdCol, $targetIdCol], 'idx_' . md5($pivotTable . '_unq'));
+                });
+            });
+
             return;
         }
 
-        $this->runDDL(function () use ($pivotTable, $sourceIdCol, $targetIdCol, $extraColumns): void {
-            Schema::create($pivotTable, function (Blueprint $blueprint) use ($pivotTable, $sourceIdCol, $targetIdCol, $extraColumns) {
-                $blueprint->ulid('id')->primary();
-                $blueprint->char($sourceIdCol, 26);
-                $blueprint->char($targetIdCol, 26);
+        $existingColumns = Schema::getColumnListing($pivotTable);
+        $missing = [];
 
-                foreach ($extraColumns as $column) {
-                    $columnName = is_array($column) ? ($column['name'] ?? null) : $column;
-                    $columnType = is_array($column) ? ($column['type'] ?? 'text') : 'text';
+        if (! in_array($sourceIdCol, $existingColumns)) {
+            $missing[] = ['name' => $sourceIdCol, 'type' => 'id'];
+        }
 
-                    if (! $columnName) continue;
+        if (! in_array($targetIdCol, $existingColumns)) {
+            $missing[] = ['name' => $targetIdCol, 'type' => 'id'];
+        }
 
-                    match ($columnType) {
-                        'number' => $blueprint->double($columnName)->nullable(),
-                        'boolean' => $blueprint->boolean($columnName)->nullable(),
-                        'datetime' => $blueprint->dateTime($columnName)->nullable(),
-                        'json' => $blueprint->json($columnName)->nullable(),
-                        'longtext' => $blueprint->longText($columnName)->nullable(),
-                        'select' => $blueprint->string($columnName)->nullable(),
-                        default => $blueprint->text($columnName)->nullable(),
-                    };
-                }
+        if (! in_array('created_at', $existingColumns)) {
+            $missing[] = ['name' => 'created_at', 'type' => 'datetime_now'];
+        }
 
-                $blueprint->dateTime('created_at')->useCurrent();
-                $blueprint->unique([$sourceIdCol, $targetIdCol], 'idx_' . md5($pivotTable . '_unq'));
+        foreach ($extraColumns as $column) {
+            $name = is_array($column) ? ($column['name'] ?? null) : $column;
+            if ($name && ! in_array($name, $existingColumns)) {
+                $missing[] = $column;
+            }
+        }
+
+        if (empty($missing)) {
+            return;
+        }
+
+        $this->runDDL(function () use ($pivotTable, $missing): void {
+            Schema::table($pivotTable, function (Blueprint $blueprint) use ($missing) {
+                $this->addPivotColumns($blueprint, $missing);
             });
         });
+    }
+
+    private function addPivotColumns(Blueprint $blueprint, array $columns): void
+    {
+        foreach ($columns as $column) {
+            $columnName = is_array($column) ? ($column['name'] ?? null) : $column;
+            $columnType = is_array($column) ? ($column['type'] ?? 'text') : 'text';
+
+            if (! $columnName) {
+                continue;
+            }
+
+            match ($columnType) {
+                'id' => $blueprint->char($columnName, 26),
+                'datetime_now' => $blueprint->dateTime($columnName)->useCurrent(),
+                'number' => $blueprint->double($columnName)->nullable(),
+                'boolean' => $blueprint->boolean($columnName)->nullable(),
+                'datetime' => $blueprint->dateTime($columnName)->nullable(),
+                'json' => $blueprint->json($columnName)->nullable(),
+                'longtext' => $blueprint->longText($columnName)->nullable(),
+                'select' => $blueprint->string($columnName)->nullable(),
+                default => $blueprint->text($columnName)->nullable(),
+            };
+        }
     }
 
     /**
@@ -208,20 +256,7 @@ readonly class SchemaDDLService
  
         $this->runDDL(function () use ($pivotTable, $missingColumns): void {
             Schema::table($pivotTable, function (Blueprint $blueprint) use ($missingColumns) {
-                foreach ($missingColumns as $column) {
-                    $columnName = is_array($column) ? ($column['name'] ?? null) : $column;
-                    $columnType = is_array($column) ? ($column['type'] ?? 'text') : 'text';
-
-                    match ($columnType) {
-                        'number' => $blueprint->double($columnName)->nullable(),
-                        'boolean' => $blueprint->boolean($columnName)->nullable(),
-                        'datetime' => $blueprint->dateTime($columnName)->nullable(),
-                        'json' => $blueprint->json($columnName)->nullable(),
-                        'longtext' => $blueprint->longText($columnName)->nullable(),
-                        'select' => $blueprint->string($columnName)->nullable(),
-                        default => $blueprint->text($columnName)->nullable(),
-                    };
-                }
+                $this->addPivotColumns($blueprint, $missingColumns);
             });
         });
     }

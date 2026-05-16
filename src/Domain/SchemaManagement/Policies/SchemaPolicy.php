@@ -21,9 +21,9 @@ final class SchemaPolicy
      */
     public function assertValidColumnName(string $column): void
     {
-        if (! preg_match('/^[a-zA-Z0-9_]+$/', $column)) {
+        if (! preg_match('/^[a-zA-Z][a-zA-Z0-9_]*$/', $column)) {
             throw new InvalidArgumentException(
-                "Invalid column name '{$column}'. Only letters, numbers and underscore allowed."
+                "Invalid column name '{$column}'. Must start with a letter and only contain letters, numbers, and underscores."
             );
         }
     }

@@ -2,15 +2,15 @@
 
 namespace Veloquent\Core\Infrastructure\Exceptions;
 
-class InvalidArgumentException extends VeloquentException
+class UnauthorizedException extends VeloquentException
 {
     protected function httpStatus(): int
     {
-        return 400;
+        return 403;
     }
 
     protected function errorCode(): string
     {
-        return 'INVALID_ARGUMENT';
+        return 'UNAUTHORIZED';
     }
 }

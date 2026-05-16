@@ -54,7 +54,7 @@ class SchemaRecoveryService
 
         $this->ddlService->deleteTable($tableName);
 
-        $fieldsForDDL = SchemaChangePlan::stripForDDL($collection->fields ?? []);
+        $fieldsForDDL = SchemaChange::stripForDDL($collection->fields ?? []);
         $this->ddlService->createTable($tableName, $fieldsForDDL);
 
         $desiredIndexes = Index::collection($collection->indexes ?? []);

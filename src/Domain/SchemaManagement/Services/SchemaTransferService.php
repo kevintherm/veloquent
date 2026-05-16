@@ -317,7 +317,7 @@ class SchemaTransferService
                     return true;
                 }
 
-                return in_array($fieldName, SchemaChangePlan::getAllReservedFields($isAuthCollection), true);
+                return in_array($fieldName, SchemaChange::getAllReservedFields($isAuthCollection), true);
             })
             ->values()
             ->all();
@@ -368,7 +368,7 @@ class SchemaTransferService
         $reservedFields = collect($existing->fields ?? [])
             ->map(fn ($field) => is_array($field) ? $field : (array) $field)
             ->filter(function (array $field) use ($isAuthCollection): bool {
-                return in_array($field['name'] ?? '', SchemaChangePlan::getAllReservedFields($isAuthCollection), true);
+                return in_array($field['name'] ?? '', SchemaChange::getAllReservedFields($isAuthCollection), true);
             })
             ->values()
             ->all();
@@ -376,7 +376,7 @@ class SchemaTransferService
         $updatePayload = Arr::except($payload, ['type', 'is_system']);
         $updatePayload['fields'] = array_merge($reservedFields, $filteredFields);
  
-        $updated = $this->updateCollectionAction->execute($existing, $updatePayload, true);
+        $updated = $this->updateCollectionAction->execute($existing, $updatePayload, true, true);
 
         $result = [
             'collection' => $updated->name,
