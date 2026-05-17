@@ -2,19 +2,19 @@
 
 namespace Veloquent\Core\Domain\Collections\Models;
 
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Veloquent\Core\Database\Factories\CollectionFactory;
+use Veloquent\Core\Domain\Collections\Enums\CollectionType;
+use Illuminate\Database\Eloquent\Attributes\UseEloquentBuilder;
 use Veloquent\Core\Domain\Collections\Casts\FieldCollectionCast;
 use Veloquent\Core\Domain\Collections\Casts\IndexCollectionCast;
 use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
-use Veloquent\Core\Domain\Collections\Enums\CollectionType;
 use Veloquent\Core\Domain\Collections\Observers\CollectionObserver;
 use Veloquent\Core\Domain\Collections\QueryBuilder\CollectionBuilder;
-use Veloquent\Core\Database\Factories\CollectionFactory;
-use Illuminate\Database\Eloquent\Attributes\ObservedBy;
-use Illuminate\Database\Eloquent\Attributes\UseEloquentBuilder;
-use Illuminate\Database\Eloquent\Concerns\HasUlids;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Cache;
 
 #[ObservedBy(CollectionObserver::class)]
 #[UseEloquentBuilder(CollectionBuilder::class)]
@@ -146,7 +146,7 @@ class Collection extends Model
     }
 
     /**
-     * @deprecated Use SchemaChange::generateTableName($collectionName, $isSystem) instead for new collections.
+     * @deprecated Use TableName::for($collectionName, $isSystem) instead for new collections.
      */
     public static function formatTableName(string $collectionName, ?bool $isSystem = false): string
     {

@@ -3,8 +3,8 @@
 namespace Veloquent\Core\Domain\Collections\Observers;
 
 use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\SchemaManagement\Support\TableName;
 use Veloquent\Core\Domain\SchemaManagement\Enums\SchemaOperation;
-use Veloquent\Core\Domain\SchemaManagement\Services\SchemaChange;
 use Veloquent\Core\Infrastructure\Exceptions\InvalidArgumentException;
 use Veloquent\Core\Domain\SchemaManagement\Services\CollectionSyncService;
 
@@ -52,7 +52,7 @@ readonly class CollectionObserver
     private function ensureTableNameIsSet(Collection $collection): void
     {
         if (empty($collection->table_name)) {
-            $collection->table_name = SchemaChange::generateTableName(
+            $collection->table_name = TableName::for(
                 $collection->name,
                 $collection->is_system ?? false
             );

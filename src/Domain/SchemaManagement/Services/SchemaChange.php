@@ -49,14 +49,6 @@ final class SchemaChange
         return $fields;
     }
 
-    public static function generateTableName(string $collectionName, bool $isSystem = false): string
-    {
-        if ($isSystem) {
-            return $collectionName;
-        }
-        return config('velo.collection_prefix', '_velo_') . $collectionName;
-    }
-
     public static function getSystemFields(): array
     {
         return [

@@ -4,6 +4,7 @@ namespace Veloquent\Core\Domain\SchemaManagement\Pipeline;
 
 use Closure;
 use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\SchemaManagement\Support\TableName;
 use Veloquent\Core\Domain\SchemaManagement\Services\SchemaChange;
 
 class CreateCollectionRecord
@@ -18,7 +19,7 @@ class CreateCollectionRecord
         $isAuthCollection = ($data['type'] ?? '') === 'auth';
         
         $mergedFields = SchemaChange::mergeWithSystemFields($data['fields'], $isAuthCollection);
-        $tableName = SchemaChange::generateTableName($data['name'], $data['is_system'] ?? false);
+        $tableName = TableName::for($data['name'], $data['is_system'] ?? false);
 
         $context->collection = Collection::create([
             'is_system' => $data['is_system'] ?? false,
