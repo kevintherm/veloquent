@@ -17,8 +17,3 @@
 
 - Admin panel: Implement AbortController to prevent race conditions when switching collections
 - Admin panel: fix recreating a field adds "expand" object to columns
-
-## Docs
-
-- RelationMany field type
-- Extending
