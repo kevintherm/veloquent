@@ -19,11 +19,6 @@
 - Admin panel: Implement AbortController to prevent race conditions when switching collections
 - Admin panel: fix recreating a field adds "expand" object to columns
 
-## Testing
-- Implement load testing to simulate high subscriber/tenant volume.
-- Tenant leak tests: verify cross-tenant event isolation at the worker level.
-- Parallel worker execution tests.
-
 ## SDK Compatibility
 
 - Unify 422 response shape: Laravel FormRequest failures emit `{"message","errors"}` 
