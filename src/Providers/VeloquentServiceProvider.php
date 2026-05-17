@@ -1,22 +1,22 @@
 <?php
 
-namespace Veloquent\Core;
+namespace Veloquent\Core\Providers;
 
-use Illuminate\Support\ServiceProvider;
-use Veloquent\Core\Domain\Auth\Services\TokenAuthService;
-use Veloquent\Core\Domain\Collections\Models\Collection;
-use Veloquent\Core\Domain\Records\Models\Record;
-use Veloquent\Core\Support\Guards\TokenGuard;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
-use Veloquent\Core\Providers\LogsServiceProvider;
-use Veloquent\Core\Domain\Realtime\Providers\RealtimeServiceProvider;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\ServiceProvider;
 use Illuminate\Cache\RateLimiting\Limit;
-use Illuminate\Http\Request;
-use Veloquent\Core\Domain\Hooks\HookRegistry;
+use Illuminate\Support\Facades\RateLimiter;
 use Veloquent\Core\Domain\Hooks\HookRunner;
+use Veloquent\Core\Domain\Hooks\HookRegistry;
+use Veloquent\Core\Support\Guards\TokenGuard;
+use Veloquent\Core\Domain\Records\Models\Record;
+use Veloquent\Core\Providers\LogsServiceProvider;
+use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\Auth\Services\TokenAuthService;
+use Veloquent\Core\Domain\Realtime\Providers\RealtimeServiceProvider;
 
 class VeloquentServiceProvider extends ServiceProvider
 {
