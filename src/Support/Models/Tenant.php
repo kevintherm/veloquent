@@ -23,16 +23,16 @@ class Tenant extends SpatieTenant
         $key = "velo:tenant:id:{$id}";
 
         $cached = Cache::get($key);
-        if ($cached instanceof self) {
-            return $cached;
+        if (is_array($cached)) {
+            return (new self())->newFromBuilder($cached);
         }
 
         $tenant = self::find($id);
 
         if ($tenant) {
             $ttl > 0
-                ? Cache::put($key, $tenant, $ttl)
-                : Cache::forever($key, $tenant);
+                ? Cache::put($key, $tenant->getAttributes(), $ttl)
+                : Cache::forever($key, $tenant->getAttributes());
         }
 
         return $tenant;
@@ -48,16 +48,16 @@ class Tenant extends SpatieTenant
         $key = "velo:tenant:domain:{$domain}";
 
         $cached = Cache::get($key);
-        if ($cached instanceof self) {
-            return $cached;
+        if (is_array($cached)) {
+            return (new self())->newFromBuilder($cached);
         }
 
         $tenant = self::where('domain', $domain)->first();
 
         if ($tenant) {
             $ttl > 0
-                ? Cache::put($key, $tenant, $ttl)
-                : Cache::forever($key, $tenant);
+                ? Cache::put($key, $tenant->getAttributes(), $ttl)
+                : Cache::forever($key, $tenant->getAttributes());
         }
 
         return $tenant;

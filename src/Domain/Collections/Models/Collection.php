@@ -60,16 +60,16 @@ class Collection extends Model
         $key = "velo:collection:id:{$id}";
 
         $cached = Cache::get($key);
-        if ($cached instanceof self) {
-            return $cached;
+        if (is_array($cached)) {
+            return (new self())->newFromBuilder($cached);
         }
 
         $collection = self::find($id);
 
         if ($collection) {
             $ttl > 0
-                ? Cache::put($key, $collection, $ttl)
-                : Cache::forever($key, $collection);
+                ? Cache::put($key, $collection->getAttributes(), $ttl)
+                : Cache::forever($key, $collection->getAttributes());
         }
 
         return $collection;
@@ -81,16 +81,16 @@ class Collection extends Model
         $key = "velo:collection:name:{$name}";
 
         $cached = Cache::get($key);
-        if ($cached instanceof self) {
-            return $cached;
+        if (is_array($cached)) {
+            return (new self())->newFromBuilder($cached);
         }
 
         $collection = self::where('name', $name)->first();
 
         if ($collection) {
             $ttl > 0
-                ? Cache::put($key, $collection, $ttl)
-                : Cache::forever($key, $collection);
+                ? Cache::put($key, $collection->getAttributes(), $ttl)
+                : Cache::forever($key, $collection->getAttributes());
         }
 
         return $collection;

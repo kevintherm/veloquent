@@ -95,7 +95,7 @@ it('recovers from failed update by rebuilding the table', function () {
 });
 
 it('recovers from failed create by dropping the table', function () {
-    $collectionId = 'test-id';
+    $collectionId = (string) \Illuminate\Support\Str::ulid();
     $tableName = '_velo_failed_create';
 
     // Create a temporary collection record first (without corruption yet)

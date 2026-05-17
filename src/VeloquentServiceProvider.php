@@ -2,6 +2,7 @@
 
 namespace Veloquent\Core;
 
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
@@ -172,8 +173,14 @@ class VeloquentServiceProvider extends ServiceProvider
                 abort(404, 'Tenant not found');
             }
 
-            return Collection::findByIdCached($value)
-                ?? Collection::findByNameCached($value)
+            if (Str::isUlid($value)) {
+                $collection = Collection::findByIdCached($value);
+                if ($collection) {
+                    return $collection;
+                }
+            }
+
+            return Collection::findByNameCached($value)
                 ?? abort(404, 'Collection not found');
         });
     }
