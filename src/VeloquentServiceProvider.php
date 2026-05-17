@@ -51,6 +51,8 @@ class VeloquentServiceProvider extends ServiceProvider
         config(['auth.providers' => array_merge(config('auth.providers', []), $veloAuth['providers'] ?? [])]);
         config(['auth.defaults.guard' => $veloAuth['defaults']['guard'] ?? config('auth.defaults.guard')]);
 
+        config(['settings.cache.enabled' => env('SETTINGS_CACHE_ENABLED', true)]);
+
         $this->app->register(LogsServiceProvider::class);
         $this->app->register(RealtimeServiceProvider::class);
 

@@ -70,7 +70,7 @@ class TokenAuthService
             return null;
         }
 
-        $collection = Collection::find($authToken->collection_id);
+        $collection = Collection::findByIdCached($authToken->collection_id);
 
         if (! $collection) {
             return null;

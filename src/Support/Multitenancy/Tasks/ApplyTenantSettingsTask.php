@@ -4,6 +4,7 @@ namespace Veloquent\Core\Support\Multitenancy\Tasks;
 
 use Veloquent\Core\Domain\Settings\EmailSettings;
 use Veloquent\Core\Domain\Settings\GeneralSettings;
+use Spatie\LaravelSettings\SettingsContainer;
 use Spatie\Multitenancy\Contracts\IsTenant;
 use Spatie\Multitenancy\Tasks\SwitchTenantTask;
 
@@ -13,6 +14,8 @@ class ApplyTenantSettingsTask implements SwitchTenantTask
 
     public function makeCurrent(IsTenant $tenant): void
     {
+        $this->clearSettingsContainerInstances();
+
         $this->originalConfig = [
             'app.name' => config('app.name'),
             'app.locale' => config('app.locale'),
@@ -49,10 +52,22 @@ class ApplyTenantSettingsTask implements SwitchTenantTask
 
     public function forgetCurrent(): void
     {
+        $this->clearSettingsContainerInstances();
+
         config($this->originalConfig);
 
         if (app()->bound('mailer')) {
             app()->forgetInstance('mailer');
+        }
+    }
+
+    protected function clearSettingsContainerInstances(): void
+    {
+        if (app()->bound(SettingsContainer::class)) {
+            $classes = app(SettingsContainer::class)->getSettingClasses();
+            foreach ($classes as $class) {
+                app()->forgetInstance($class);
+            }
         }
     }
 }
