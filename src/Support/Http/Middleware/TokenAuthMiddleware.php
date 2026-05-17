@@ -18,12 +18,7 @@ class TokenAuthMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $token = $this->tokenService->extractTokenFromRequest($request);
-        $user = $token ? $this->tokenService->authenticate($token) : null;
-        
-        if ($user) {
-            Auth::guard('api')->setUser($user);
-        }
+        Auth::guard('api')->user();
 
         return $next($request);
     }
