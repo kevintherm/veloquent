@@ -1,13 +1,7 @@
 <?php
 
-use App\Domain\Otp\Services\OtpService;
-use Illuminate\Foundation\Inspiring;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
-
-Artisan::command('inspire', function () {
-    $this->comment(Inspiring::quote());
-})->purpose('Display an inspiring quote');
+use Veloquent\Core\Domain\Otp\Services\OtpService;
 
 Schedule::command('realtime:prune-expired-subscriptions')
     ->everyMinute()
