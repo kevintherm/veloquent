@@ -2,10 +2,10 @@
 
 namespace Veloquent\Core\Domain\Collections\Validators;
 
-use Veloquent\Core\Domain\Collections\Models\Collection;
-use Veloquent\Core\Domain\QueryCompiler\Services\AllowedFieldsResolver;
-use Veloquent\Core\Domain\QueryCompiler\Services\QueryFilter;
 use Illuminate\Validation\ValidationException;
+use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\QueryCompiler\Services\QueryFilter;
+use Veloquent\Core\Domain\QueryCompiler\Services\AllowedFieldsResolver;
 
 class ApiRulesValidator
 {
@@ -16,7 +16,6 @@ class ApiRulesValidator
     public function validate(array $apiRules, array $fields, bool $isAuthCollection): array
     {
         $requiredApiKeys = ['list', 'create', 'view', 'update', 'delete'];
-        $inMemoryActions = ['create', 'update', 'manage'];
 
         if ($isAuthCollection) {
             $requiredApiKeys[] = 'manage';
@@ -33,8 +32,7 @@ class ApiRulesValidator
         $allowedFields = $this->allowedFieldsResolver->resolveFromFieldDefinitions($fields);
 
         foreach ($requiredApiKeys as $rule) {
-            $inMemory = in_array($rule, $inMemoryActions, true);
-            QueryFilter::for(Collection::query(), $allowedFields)->lint($apiRules[$rule], $inMemory);
+            QueryFilter::for(Collection::query(), $allowedFields)->lint($apiRules[$rule]);
         }
 
         $validated = array_intersect_key($apiRules, array_flip($requiredApiKeys));

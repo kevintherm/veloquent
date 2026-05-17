@@ -2,8 +2,8 @@
 
 namespace Veloquent\Core\Domain\Collections\Validators;
 
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
 class AuthOptionsValidator
