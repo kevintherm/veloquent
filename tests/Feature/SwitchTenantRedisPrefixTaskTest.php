@@ -1,7 +1,7 @@
 <?php
 
-use Veloquent\Core\Infrastructure\Models\Tenant;
-use Veloquent\Core\Infrastructure\Multitenancy\Tasks\SwitchTenantRedisPrefixTask;
+use Veloquent\Core\Support\Models\Tenant;
+use Veloquent\Core\Support\Multitenancy\Tasks\SwitchTenantRedisPrefixTask;
 
 beforeEach(function (): void {
     config()->set('database.redis.options.prefix', 'velo-database-');

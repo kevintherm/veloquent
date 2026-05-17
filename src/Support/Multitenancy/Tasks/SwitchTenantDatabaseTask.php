@@ -1,6 +1,6 @@
 <?php
 
-namespace Veloquent\Core\Infrastructure\Multitenancy\Tasks;
+namespace Veloquent\Core\Support\Multitenancy\Tasks;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;

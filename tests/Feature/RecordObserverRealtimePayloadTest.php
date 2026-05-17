@@ -5,7 +5,7 @@ use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Realtime\Contracts\RealtimeBusDriver;
 use Veloquent\Core\Domain\Records\Models\Record;
 use Veloquent\Core\Domain\Records\Observers\RecordObserver;
-use Veloquent\Core\Infrastructure\Models\Tenant;
+use Veloquent\Core\Support\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 

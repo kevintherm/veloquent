@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Artisan;
-use Veloquent\Core\Infrastructure\Models\Tenant;
+use Veloquent\Core\Support\Models\Tenant;
 
 class TenantObserver
 {

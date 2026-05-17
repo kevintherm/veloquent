@@ -1,7 +1,7 @@
 <?php
 
-use Veloquent\Core\Infrastructure\Models\Tenant;
-use Veloquent\Core\Infrastructure\Multitenancy\Tasks\SwitchTenantAppUrlTask;
+use Veloquent\Core\Support\Models\Tenant;
+use Veloquent\Core\Support\Multitenancy\Tasks\SwitchTenantAppUrlTask;
 use Illuminate\Support\Facades\URL;
 
 beforeEach(function (): void {

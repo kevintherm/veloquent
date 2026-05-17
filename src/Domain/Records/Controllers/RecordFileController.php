@@ -5,7 +5,7 @@ namespace Veloquent\Core\Domain\Records\Controllers;
 use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Records\Actions\ShowRecordAction;
-use Veloquent\Core\Infrastructure\Http\Controllers\ApiController;
+use Veloquent\Core\Support\Http\Controllers\ApiController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;

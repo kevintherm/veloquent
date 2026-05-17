@@ -5,7 +5,7 @@ use Veloquent\Core\Domain\Collections\Enums\CollectionType;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Realtime\Models\RealtimeSubscription;
 use Veloquent\Core\Domain\Records\Models\Record;
-use Veloquent\Core\Infrastructure\Models\Tenant;
+use Veloquent\Core\Support\Models\Tenant;
 use Carbon\Carbon;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;

@@ -5,7 +5,7 @@ namespace Veloquent\Core\Domain\Emails\Controllers;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Emails\Actions\GetEmailTemplateAction;
 use Veloquent\Core\Domain\Emails\Actions\UpdateEmailTemplateAction;
-use Veloquent\Core\Infrastructure\Http\Controllers\ApiController;
+use Veloquent\Core\Support\Http\Controllers\ApiController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 

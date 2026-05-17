@@ -2,7 +2,7 @@
 
 namespace Veloquent\Core\Domain\Collections\ValueObjects;
 
-use Veloquent\Core\Infrastructure\Exceptions\DomainValidationException;
+use Veloquent\Core\Support\Exceptions\DomainValidationException;
 
 final class ValidationResult
 {

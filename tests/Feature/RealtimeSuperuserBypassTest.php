@@ -7,7 +7,7 @@ use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Realtime\Services\RealtimeDispatcher;
 use Veloquent\Core\Domain\Records\Models\Record;
 use Veloquent\Core\Domain\Realtime\Events\RealtimeRecordEvent;
-use Veloquent\Core\Infrastructure\Models\Tenant;
+use Veloquent\Core\Support\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Event;

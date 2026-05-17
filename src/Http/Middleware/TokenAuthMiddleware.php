@@ -3,7 +3,7 @@
 namespace Veloquent\Core\Http\Middleware;
 
 use Veloquent\Core\Domain\Auth\Services\TokenAuthService;
-use Veloquent\Core\Infrastructure\Guards\TokenGuard;
+use Veloquent\Core\Support\Guards\TokenGuard;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;

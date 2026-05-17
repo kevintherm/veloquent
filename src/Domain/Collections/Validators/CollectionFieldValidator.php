@@ -8,7 +8,7 @@ use Veloquent\Core\Domain\Collections\ValueObjects\Index;
 use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
 use Veloquent\Core\Domain\SchemaManagement\Policies\SchemaPolicy;
 use Veloquent\Core\Domain\SchemaManagement\Services\SchemaChange;
-use Veloquent\Core\Infrastructure\Exceptions\InvalidArgumentException;
+use Veloquent\Core\Support\Exceptions\InvalidArgumentException;
 
 class CollectionFieldValidator
 {

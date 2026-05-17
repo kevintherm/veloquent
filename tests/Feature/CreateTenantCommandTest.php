@@ -1,6 +1,6 @@
 <?php
 
-use Veloquent\Core\Infrastructure\Models\Tenant;
+use Veloquent\Core\Support\Models\Tenant;
 use Illuminate\Console\Command;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;

@@ -7,7 +7,7 @@ use Veloquent\Core\Domain\Realtime\Actions\UnsubscribeFromCollectionAction;
 use Veloquent\Core\Domain\Realtime\Contracts\RealtimeBusDriver;
 use Veloquent\Core\Domain\Realtime\Models\RealtimeSubscription;
 use Veloquent\Core\Domain\Records\Models\Record;
-use Veloquent\Core\Infrastructure\Models\Tenant;
+use Veloquent\Core\Support\Models\Tenant;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;

@@ -1,6 +1,6 @@
 <?php
 
-namespace Veloquent\Core\Infrastructure\Multitenancy\Tasks;
+namespace Veloquent\Core\Support\Multitenancy\Tasks;
 
 use Illuminate\Redis\RedisManager;
 use Illuminate\Support\Facades\Redis;

@@ -6,7 +6,7 @@ use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Realtime\Actions\SubscribeToCollectionAction;
 use Veloquent\Core\Domain\Realtime\Actions\UnsubscribeFromCollectionAction;
 use Veloquent\Core\Domain\Records\Models\Record;
-use Veloquent\Core\Infrastructure\Http\Controllers\ApiController;
+use Veloquent\Core\Support\Http\Controllers\ApiController;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

@@ -5,7 +5,7 @@ namespace Veloquent\Core\Domain\Collections\Observers;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\SchemaManagement\Support\TableName;
 use Veloquent\Core\Domain\SchemaManagement\Enums\SchemaOperation;
-use Veloquent\Core\Infrastructure\Exceptions\InvalidArgumentException;
+use Veloquent\Core\Support\Exceptions\InvalidArgumentException;
 use Veloquent\Core\Domain\SchemaManagement\Services\CollectionSyncService;
 
 readonly class CollectionObserver

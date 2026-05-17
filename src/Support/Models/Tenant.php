@@ -1,6 +1,6 @@
 <?php
 
-namespace Veloquent\Core\Infrastructure\Models;
+namespace Veloquent\Core\Support\Models;
 
 use Veloquent\Core\Observers\TenantObserver;
 use Illuminate\Support\Facades\Cache;

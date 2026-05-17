@@ -1,6 +1,6 @@
 <?php
 
-namespace Veloquent\Core\Infrastructure\Multitenancy\Tasks;
+namespace Veloquent\Core\Support\Multitenancy\Tasks;
 
 use Veloquent\Core\Domain\Settings\Resolvers\TenantStorageResolver;
 use Illuminate\Filesystem\FilesystemManager;

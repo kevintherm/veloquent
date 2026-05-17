@@ -5,7 +5,7 @@ namespace Veloquent\Core\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Veloquent\Core\Infrastructure\Models\Tenant;
+use Veloquent\Core\Support\Models\Tenant;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Throwable;
 

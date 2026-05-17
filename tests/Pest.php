@@ -1,6 +1,6 @@
 <?php
 
-use Veloquent\Core\Infrastructure\Models\Tenant;
+use Veloquent\Core\Support\Models\Tenant;
 use Veloquent\Core\Tests\TestCase;
 
 uses(TestCase::class)->in('Feature');

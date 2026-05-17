@@ -4,7 +4,7 @@ namespace Veloquent\Core\Domain\SchemaManagement\Exceptions;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Veloquent\Core\Infrastructure\Exceptions\VeloquentException;
+use Veloquent\Core\Support\Exceptions\VeloquentException;
 use Veloquent\Core\Domain\SchemaManagement\Enums\SchemaOperation;
 
 class SchemaCorruptException extends VeloquentException

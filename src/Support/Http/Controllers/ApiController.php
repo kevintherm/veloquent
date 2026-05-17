@@ -1,9 +1,9 @@
 <?php
 
-namespace Veloquent\Core\Infrastructure\Http\Controllers;
+namespace Veloquent\Core\Support\Http\Controllers;
 
 use Veloquent\Core\Http\Controllers\Controller;
-use Veloquent\Core\Infrastructure\Traits\ApiResponse;
+use Veloquent\Core\Support\Traits\ApiResponse;
 
 abstract class ApiController extends Controller
 {

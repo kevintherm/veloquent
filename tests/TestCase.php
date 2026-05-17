@@ -2,7 +2,7 @@
 
 namespace Veloquent\Core\Tests;
 
-use Veloquent\Core\Infrastructure\Models\Tenant;
+use Veloquent\Core\Support\Models\Tenant;
 use Orchestra\Testbench\TestCase as OrchestraTestCase;
 use Veloquent\Core\VeloquentServiceProvider;
 use Spatie\Multitenancy\MultitenancyServiceProvider;

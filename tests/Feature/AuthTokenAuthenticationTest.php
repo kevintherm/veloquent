@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Records\Models\Record;
 use Veloquent\Core\Domain\Auth\Models\AuthToken;
-use Veloquent\Core\Infrastructure\Models\Tenant;
+use Veloquent\Core\Support\Models\Tenant;
 use function Pest\Laravel\{postJson, getJson, deleteJson};
 
 uses(Illuminate\Foundation\Testing\RefreshDatabase::class);

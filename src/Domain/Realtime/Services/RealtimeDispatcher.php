@@ -8,7 +8,7 @@ use Spatie\Multitenancy\Landlord;
 use Illuminate\Support\Facades\Log;
 use Veloquent\Core\Domain\Records\Models\Record;
 use Veloquent\Core\Domain\RuleEngine\RuleEngine;
-use Veloquent\Core\Infrastructure\Models\Tenant;
+use Veloquent\Core\Support\Models\Tenant;
 use Veloquent\Core\Domain\Records\Events\RecordChanged;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Realtime\Events\RealtimeRecordEvent;

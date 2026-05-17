@@ -6,7 +6,7 @@ use Illuminate\Support\ServiceProvider;
 use Veloquent\Core\Domain\Auth\Services\TokenAuthService;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Records\Models\Record;
-use Veloquent\Core\Infrastructure\Guards\TokenGuard;
+use Veloquent\Core\Support\Guards\TokenGuard;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Veloquent\Core\Providers\LogsServiceProvider;
@@ -155,7 +155,7 @@ class VeloquentServiceProvider extends ServiceProvider
     protected function registerRouteBindings(): void
     {
         Route::bind('collection', function ($value) {
-            if (! \Veloquent\Core\Infrastructure\Models\Tenant::current()) {
+            if (! \Veloquent\Core\Support\Models\Tenant::current()) {
                 abort(404, 'Tenant not found');
             }
 

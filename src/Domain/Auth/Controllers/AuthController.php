@@ -22,7 +22,7 @@ use Veloquent\Core\Http\Requests\Auth\ConfirmPasswordResetRequest;
 use Veloquent\Core\Http\Requests\Auth\LoginRequest;
 use Veloquent\Core\Http\Requests\Auth\RequestEmailChangeRequest;
 use Veloquent\Core\Http\Requests\Auth\RequestPasswordResetRequest;
-use Veloquent\Core\Infrastructure\Http\Controllers\ApiController;
+use Veloquent\Core\Support\Http\Controllers\ApiController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;

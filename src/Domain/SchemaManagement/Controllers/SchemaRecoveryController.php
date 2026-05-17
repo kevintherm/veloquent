@@ -6,7 +6,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\SchemaManagement\Models\SchemaJob;
-use Veloquent\Core\Infrastructure\Http\Controllers\ApiController;
+use Veloquent\Core\Support\Http\Controllers\ApiController;
 use Veloquent\Core\Domain\SchemaManagement\Services\SchemaRecoveryService;
 
 class SchemaRecoveryController extends ApiController

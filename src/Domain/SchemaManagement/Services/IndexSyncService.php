@@ -4,7 +4,7 @@ namespace Veloquent\Core\Domain\SchemaManagement\Services;
 
 use Veloquent\Core\Domain\Collections\Enums\IndexType;
 use Veloquent\Core\Domain\Collections\ValueObjects\Index;
-use Veloquent\Core\Infrastructure\Exceptions\InvalidArgumentException;
+use Veloquent\Core\Support\Exceptions\InvalidArgumentException;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;

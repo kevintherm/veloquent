@@ -4,7 +4,7 @@ namespace Veloquent\Core\Http\Controllers;
 
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\OAuth\Services\OAuthService;
-use Veloquent\Core\Infrastructure\Http\Controllers\ApiController;
+use Veloquent\Core\Support\Http\Controllers\ApiController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 

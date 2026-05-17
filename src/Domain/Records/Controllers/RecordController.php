@@ -11,7 +11,7 @@ use Veloquent\Core\Domain\Records\Actions\UpdateRecordAction;
 use Veloquent\Core\Domain\Records\Requests\StoreRecordRequest;
 use Veloquent\Core\Domain\Records\Requests\UpdateRecordRequest;
 use Veloquent\Core\Domain\Records\Resources\RecordResource;
-use Veloquent\Core\Infrastructure\Http\Controllers\ApiController;
+use Veloquent\Core\Support\Http\Controllers\ApiController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 

@@ -4,7 +4,7 @@ namespace Veloquent\Core\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Veloquent\Core\Infrastructure\Models\Tenant;
+use Veloquent\Core\Support\Models\Tenant;
 use Symfony\Component\HttpFoundation\Response;
 
 class EnsureTenant

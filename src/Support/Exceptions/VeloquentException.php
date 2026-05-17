@@ -1,6 +1,6 @@
 <?php
 
-namespace Veloquent\Core\Infrastructure\Exceptions;
+namespace Veloquent\Core\Support\Exceptions;
 
 use RuntimeException;
 use Illuminate\Http\Request;

@@ -3,7 +3,7 @@
 namespace Veloquent\Core\Domain\SchemaManagement\Controllers;
 
 use Veloquent\Core\Domain\SchemaManagement\Services\OrphanTableService;
-use Veloquent\Core\Infrastructure\Http\Controllers\ApiController;
+use Veloquent\Core\Support\Http\Controllers\ApiController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
 

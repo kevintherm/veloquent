@@ -4,7 +4,7 @@ namespace Veloquent\Core\Http\Controllers\Settings;
 
 use Veloquent\Core\Domain\Settings\TenantSettingsService;
 use Veloquent\Core\Http\Requests\UpdateSettingsRequest;
-use Veloquent\Core\Infrastructure\Http\Controllers\ApiController;
+use Veloquent\Core\Support\Http\Controllers\ApiController;
 
 class SettingsController extends ApiController
 {

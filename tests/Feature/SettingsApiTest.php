@@ -4,7 +4,7 @@ use Veloquent\Core\Domain\Auth\Models\Superuser;
 use Veloquent\Core\Domain\Settings\GeneralSettings;
 use Veloquent\Core\Domain\Settings\Resolvers\TenantStorageResolver;
 use Veloquent\Core\Http\Middleware\TokenAuthMiddleware;
-use Veloquent\Core\Infrastructure\Models\Tenant;
+use Veloquent\Core\Support\Models\Tenant;
 use Illuminate\Support\Facades\Mail;
 
 use function Pest\Laravel\actingAs;

@@ -3,7 +3,7 @@
 namespace Veloquent\Core\Domain\SchemaManagement\Policies;
 
 use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
-use Veloquent\Core\Infrastructure\Exceptions\InvalidArgumentException;
+use Veloquent\Core\Support\Exceptions\InvalidArgumentException;
 
 final class SchemaPolicy
 {

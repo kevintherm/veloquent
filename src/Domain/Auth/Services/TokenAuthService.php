@@ -6,7 +6,7 @@ use Veloquent\Core\Domain\Auth\Models\AuthToken;
 use Veloquent\Core\Domain\Auth\ValueObjects\TokenData;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Records\Models\Record;
-use Veloquent\Core\Infrastructure\Models\Tenant;
+use Veloquent\Core\Support\Models\Tenant;
 use Illuminate\Http\Request;
 
 class TokenAuthService

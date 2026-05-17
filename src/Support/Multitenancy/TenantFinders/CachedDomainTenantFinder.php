@@ -1,10 +1,10 @@
 <?php
 
-namespace Veloquent\Core\Infrastructure\Multitenancy\TenantFinders;
+namespace Veloquent\Core\Support\Multitenancy\TenantFinders;
 
 use Illuminate\Http\Request;
 use Spatie\Multitenancy\Contracts\IsTenant;
-use Veloquent\Core\Infrastructure\Models\Tenant;
+use Veloquent\Core\Support\Models\Tenant;
 use Spatie\Multitenancy\TenantFinder\TenantFinder;
 
 class CachedDomainTenantFinder extends TenantFinder

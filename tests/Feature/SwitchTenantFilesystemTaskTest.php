@@ -1,7 +1,7 @@
 <?php
 
-use Veloquent\Core\Infrastructure\Models\Tenant;
-use Veloquent\Core\Infrastructure\Multitenancy\Tasks\SwitchTenantFilesystemTask;
+use Veloquent\Core\Support\Models\Tenant;
+use Veloquent\Core\Support\Multitenancy\Tasks\SwitchTenantFilesystemTask;
 use Illuminate\Support\Facades\File;
 
 beforeEach(function (): void {

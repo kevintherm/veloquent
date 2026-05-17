@@ -9,7 +9,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Database\Schema\Blueprint;
 use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
 use Veloquent\Core\Domain\SchemaManagement\Policies\SchemaPolicy;
-use Veloquent\Core\Infrastructure\Exceptions\InvalidArgumentException;
+use Veloquent\Core\Support\Exceptions\InvalidArgumentException;
 
 readonly class SchemaDDLService
 {

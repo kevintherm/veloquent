@@ -9,7 +9,7 @@ use Veloquent\Core\Domain\Realtime\Services\RealtimeDispatcher;
 use Veloquent\Core\Domain\Records\Models\Record;
 use Veloquent\Core\Domain\Records\Observers\RecordObserver;
 use Veloquent\Core\Domain\Realtime\Events\RealtimeRecordEvent;
-use Veloquent\Core\Infrastructure\Models\Tenant;
+use Veloquent\Core\Support\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Veloquent\Core\Domain\Realtime\Jobs\ProcessRealtimeEventJob;

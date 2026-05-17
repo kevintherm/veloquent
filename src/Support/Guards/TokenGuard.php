@@ -1,6 +1,6 @@
 <?php
 
-namespace Veloquent\Core\Infrastructure\Guards;
+namespace Veloquent\Core\Support\Guards;
 
 use Veloquent\Core\Domain\Auth\Services\TokenAuthService;
 use Illuminate\Auth\GuardHelpers;

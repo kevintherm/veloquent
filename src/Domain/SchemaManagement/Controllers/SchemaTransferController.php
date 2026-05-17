@@ -5,7 +5,7 @@ namespace Veloquent\Core\Domain\SchemaManagement\Controllers;
 use Throwable;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Veloquent\Core\Infrastructure\Http\Controllers\ApiController;
+use Veloquent\Core\Support\Http\Controllers\ApiController;
 use Veloquent\Core\Domain\SchemaManagement\Services\SchemaTransferService;
 
 class SchemaTransferController extends ApiController

@@ -1,7 +1,7 @@
 <?php
 
-use Veloquent\Core\Infrastructure\Models\Tenant;
-use Veloquent\Core\Infrastructure\Multitenancy\TenantFinders\CachedDomainTenantFinder;
+use Veloquent\Core\Support\Models\Tenant;
+use Veloquent\Core\Support\Multitenancy\TenantFinders\CachedDomainTenantFinder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
