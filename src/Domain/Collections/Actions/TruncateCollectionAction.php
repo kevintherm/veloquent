@@ -2,6 +2,7 @@
 
 namespace Veloquent\Core\Domain\Collections\Actions;
 
+use Illuminate\Support\Facades\Cache;
 use Veloquent\Core\Domain\Auth\Models\AuthToken;
 use Veloquent\Core\Domain\Collections\Enums\CollectionType;
 use Veloquent\Core\Domain\Collections\Events\CollectionTruncated;
@@ -24,6 +25,14 @@ class TruncateCollectionAction
         CollectionTruncated::dispatch($collection, $deletedCount);
 
         if ($collection->type === CollectionType::Auth) {
+            $hashes = AuthToken::query()
+                ->where('collection_id', $collection->id)
+                ->pluck('token_hash')
+                ->toArray();
+            foreach ($hashes as $hash) {
+                Cache::forget("velo:auth:{$hash}");
+            }
+
             AuthToken::query()
                 ->where('collection_id', $collection->id)
                 ->delete();

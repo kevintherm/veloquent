@@ -8,6 +8,7 @@ use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Records\Models\Record;
 use Veloquent\Core\Support\Models\Tenant;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class TokenAuthService
 {
@@ -53,6 +54,22 @@ class TokenAuthService
         }
 
         $hashedToken = hash('sha256', $token);
+        $cacheKey = "velo:auth:{$hashedToken}";
+
+        $cachedData = Cache::get($cacheKey);
+
+        if (is_array($cachedData)) {
+            $collectionId = $cachedData['collection_id'] ?? null;
+            $attributes = $cachedData['attributes'] ?? null;
+
+            if ($collectionId && is_array($attributes)) {
+                $collection = Collection::findByIdCached($collectionId);
+                if ($collection) {
+                    $user = Record::of($collection)->newFromBuilder($attributes);
+                    return $user;
+                }
+            }
+        }
 
         try {
             $authToken = AuthToken::query()
@@ -89,12 +106,25 @@ class TokenAuthService
 
         $authToken->update(['last_used_at' => now()]);
 
+        $expiresAt = $authToken->expires_at;
+        if ($expiresAt) {
+            $secondsRemaining = now()->diffInSeconds($expiresAt, false);
+            if ($secondsRemaining > 0) {
+                Cache::put($cacheKey, [
+                    'collection_id' => $collection->id,
+                    'attributes' => $user->getAttributes(),
+                ], min($secondsRemaining, (int) config('velo.auth.token.expiration', 3600)));
+            }
+        }
+
         return $user;
     }
 
     public function revokeToken(string $token): bool
     {
         $hashedToken = hash('sha256', $token);
+
+        Cache::forget("velo:auth:{$hashedToken}");
 
         return (bool) AuthToken::where('token_hash', $hashedToken)->delete();
     }
@@ -105,6 +135,15 @@ class TokenAuthService
 
         if ($tokenHash) {
             $query->where('token_hash', $tokenHash);
+            Cache::forget("velo:auth:{$tokenHash}");
+        } else {
+            $hashes = AuthToken::query()
+                ->forRecord($collectionId, $recordId)
+                ->pluck('token_hash')
+                ->toArray();
+            foreach ($hashes as $hash) {
+                Cache::forget("velo:auth:{$hash}");
+            }
         }
 
         return (bool) $query->delete();
@@ -128,6 +167,12 @@ class TokenAuthService
             return;
         }
 
-        AuthToken::whereIn('id', $tokens->slice($maxTokens)->pluck('id'))->delete();
+        $tokensToDelete = $tokens->slice($maxTokens);
+
+        foreach ($tokensToDelete as $t) {
+            Cache::forget("velo:auth:{$t->token_hash}");
+        }
+
+        AuthToken::whereIn('id', $tokensToDelete->pluck('id'))->delete();
     }
 }
