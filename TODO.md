@@ -18,13 +18,6 @@
 - Admin panel: Implement AbortController to prevent race conditions when switching collections
 - Admin panel: fix recreating a field adds "expand" object to columns
 
-## SDK Compatibility
-
-- Unify 422 response shape: Laravel FormRequest failures emit `{"message","errors"}` 
-      while DomainValidationException emits `{"code","message","errors"}`. After SDK update 
-      to handle the `code` key on all 422s, consider overriding FormRequest's 
-      `failedValidation()` globally to inject `code: "VALIDATION_FAILED"` into the response.
-
 ## Docs
 
 - RelationMany field type

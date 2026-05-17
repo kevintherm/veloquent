@@ -402,6 +402,8 @@ If you render files in browser contexts where headers are not automatically sent
 
 ### SDK Error Handling
 
+When requests fail, Veloquent SDKs throw a `SdkError` containing precise information about the failure, prioritizing server-provided error codes.
+
 **JavaScript:**
 ```javascript
 import { SdkError } from '@veloquent/sdk';
@@ -410,9 +412,15 @@ try {
   const record = await sdk.records.get('posts', 'invalid-id');
 } catch (error) {
   if (error instanceof SdkError) {
-    console.error('Status:', error.status); // e.g., 404, 403
+    console.error('Status Code:', error.statusCode); // e.g., 422, 404, 403
+    console.error('Error Code:', error.code);       // e.g., 'VALIDATION_FAILED', 'SCHEMA_CORRUPT'
     console.error('Message:', error.message);
-    console.error('Errors:', error.errors); // Validation errors
+    
+    // Check validation errors for specific fields
+    if (error.code === 'VALIDATION_FAILED' || error.code === 'VALIDATION_ERROR') {
+      console.error('Email Errors:', error.getFieldErrors('email'));
+      console.error('First Password Error:', error.getFirstFieldError('password'));
+    }
   }
 }
 ```
@@ -425,9 +433,15 @@ try {
   final record = await sdk.records.get('posts', 'invalid-id');
 } catch (error) {
   if (error is SdkError) {
-    print('Status: ${error.status}'); // e.g., 404, 403
+    print('Status Code: ${error.statusCode}'); // e.g., 422, 404, 403
+    print('Error Code: ${error.code}');       // e.g., 'VALIDATION_FAILED', 'SCHEMA_CORRUPT'
     print('Message: ${error.message}');
-    print('Errors: ${error.errors}'); // Validation errors
+    
+    // Check validation errors for specific fields
+    if (error.code == 'VALIDATION_FAILED' || error.code == 'VALIDATION_ERROR') {
+      print('Email Errors: ${error.getFieldErrors('email')}');
+      print('First Password Error: ${error.getFirstFieldError('password')}');
+    }
   }
 }
 ```
