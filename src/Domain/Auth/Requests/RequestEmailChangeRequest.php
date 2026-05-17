@@ -1,10 +1,10 @@
 <?php
 
-namespace Veloquent\Core\Http\Requests\Auth;
+namespace Veloquent\Core\Domain\Auth\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class ConfirmEmailChangeRequest extends FormRequest
+class RequestEmailChangeRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -14,7 +14,6 @@ class ConfirmEmailChangeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'token' => ['required', 'string'],
             'new_email' => ['required', 'string', 'email'],
         ];
     }

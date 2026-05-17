@@ -3,7 +3,7 @@
 use Veloquent\Core\Domain\Auth\Models\Superuser;
 use Veloquent\Core\Domain\Settings\GeneralSettings;
 use Veloquent\Core\Domain\Settings\Resolvers\TenantStorageResolver;
-use Veloquent\Core\Http\Middleware\TokenAuthMiddleware;
+use Veloquent\Core\Support\Http\Middleware\TokenAuthMiddleware;
 use Veloquent\Core\Support\Models\Tenant;
 use Illuminate\Support\Facades\Mail;
 

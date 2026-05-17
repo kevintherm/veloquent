@@ -96,9 +96,9 @@ class VeloquentServiceProvider extends ServiceProvider
     protected function registerMiddleware(): void
     {
         $router = $this->app['router'];
-        $router->aliasMiddleware('superuser', \Veloquent\Core\Http\Middleware\SuperuserOnly::class);
-        $router->aliasMiddleware('token.auth', \Veloquent\Core\Http\Middleware\TokenAuthMiddleware::class);
-        $router->aliasMiddleware('needs.tenant', \Veloquent\Core\Http\Middleware\EnsureTenant::class);
+        $router->aliasMiddleware('superuser', \Veloquent\Core\Support\Http\Middleware\SuperuserOnly::class);
+        $router->aliasMiddleware('token.auth', \Veloquent\Core\Support\Http\Middleware\TokenAuthMiddleware::class);
+        $router->aliasMiddleware('needs.tenant', \Veloquent\Core\Support\Http\Middleware\EnsureTenant::class);
     }
 
     protected function registerAuth(): void

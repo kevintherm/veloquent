@@ -1,6 +1,6 @@
 <?php
 
-namespace Veloquent\Core\Http\Controllers;
+namespace Veloquent\Core\Support\Http\Controllers;
 
 use Veloquent\Core\Domain\Collections\Enums\CollectionType;
 use Veloquent\Core\Domain\Collections\Models\Collection;

@@ -1,7 +1,7 @@
 <?php
 
 use Veloquent\Core\Domain\Auth\Models\Superuser;
-use Veloquent\Core\Http\Middleware\TokenAuthMiddleware;
+use Veloquent\Core\Support\Http\Middleware\TokenAuthMiddleware;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;

@@ -1,10 +1,10 @@
 <?php
 
-namespace Veloquent\Core\Http\Controllers\Settings;
+namespace Veloquent\Core\Support\Http\Controllers;
 
 use Veloquent\Core\Domain\Settings\TenantSettingsService;
-use Veloquent\Core\Http\Requests\UpdateSettingsRequest;
 use Veloquent\Core\Support\Http\Controllers\ApiController;
+use Veloquent\Core\Support\Http\Requests\UpdateSettingsRequest;
 
 class SettingsController extends ApiController
 {

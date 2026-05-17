@@ -1,6 +1,6 @@
 <?php
 
-namespace Veloquent\Core\Http\Middleware;
+namespace Veloquent\Core\Support\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;

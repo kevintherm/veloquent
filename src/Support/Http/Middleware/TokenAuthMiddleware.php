@@ -1,6 +1,6 @@
 <?php
 
-namespace Veloquent\Core\Http\Middleware;
+namespace Veloquent\Core\Support\Http\Middleware;
 
 use Veloquent\Core\Domain\Auth\Services\TokenAuthService;
 use Veloquent\Core\Support\Guards\TokenGuard;

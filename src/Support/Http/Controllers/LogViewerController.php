@@ -1,8 +1,8 @@
 <?php
 
-namespace Veloquent\Core\Http\Controllers;
+namespace Veloquent\Core\Support\Http\Controllers;
 
-use Veloquent\Core\Http\Requests\LogViewerRequest;
+use Veloquent\Core\Support\Http\Requests\LogViewerRequest;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 

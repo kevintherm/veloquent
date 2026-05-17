@@ -1,6 +1,6 @@
 <?php
 
-namespace Veloquent\Core\Http\Requests;
+namespace Veloquent\Core\Support\Http\Requests;
 
 use Veloquent\Core\Domain\Settings\EmailSettings;
 use Veloquent\Core\Domain\Settings\Resolvers\TenantStorageResolver;

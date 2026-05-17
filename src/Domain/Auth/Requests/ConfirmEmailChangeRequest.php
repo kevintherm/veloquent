@@ -1,10 +1,10 @@
 <?php
 
-namespace Veloquent\Core\Http\Requests\Auth;
+namespace Veloquent\Core\Domain\Auth\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class ConfirmPasswordResetRequest extends FormRequest
+class ConfirmEmailChangeRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -15,8 +15,7 @@ class ConfirmPasswordResetRequest extends FormRequest
     {
         return [
             'token' => ['required', 'string'],
-            'email' => ['required', 'string', 'email'],
-            'new_password' => ['required', 'string', 'min:8'],
+            'new_email' => ['required', 'string', 'email'],
         ];
     }
 }

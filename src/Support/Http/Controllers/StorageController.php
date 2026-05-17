@@ -1,6 +1,6 @@
 <?php
 
-namespace Veloquent\Core\Http\Controllers;
+namespace Veloquent\Core\Support\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;

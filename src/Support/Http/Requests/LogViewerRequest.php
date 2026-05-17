@@ -1,12 +1,11 @@
 <?php
 
-namespace Veloquent\Core\Http\Requests\Auth;
+namespace Veloquent\Core\Support\Http\Requests;
 
-use Veloquent\Core\Domain\Auth\Models\Superuser;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
-class RegisterRequest extends FormRequest
+class LogViewerRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -24,9 +23,12 @@ class RegisterRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:'.Superuser::class],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'date' => ['nullable', 'date_format:Y-m-d'],
+            'level' => ['nullable', 'string'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:500'],
+            'hour' => ['nullable', 'integer', 'min:0', 'max:23'],
+            'query' => ['nullable', 'string', 'max:255'],
         ];
     }
 }

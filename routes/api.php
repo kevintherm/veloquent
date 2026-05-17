@@ -2,13 +2,13 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Broadcasting\BroadcastController;
-use Veloquent\Core\Http\Controllers\OAuthController;
-use Veloquent\Core\Http\Controllers\LogViewerController;
-use Veloquent\Core\Http\Controllers\OnboardingController;
+use Veloquent\Core\Support\Http\Controllers\OAuthController;
+use Veloquent\Core\Support\Http\Controllers\LogViewerController;
+use Veloquent\Core\Support\Http\Controllers\OnboardingController;
 use Veloquent\Core\Domain\Auth\Controllers\AuthController;
-use Veloquent\Core\Http\Controllers\OAuthProviderController;
+use Veloquent\Core\Support\Http\Controllers\OAuthProviderController;
 use Veloquent\Core\Domain\Records\Controllers\RecordController;
-use Veloquent\Core\Http\Controllers\Settings\SettingsController;
+use Veloquent\Core\Support\Http\Controllers\SettingsController;
 use Veloquent\Core\Domain\Realtime\Controllers\SubscribeController;
 use Veloquent\Core\Domain\Records\Controllers\RecordFileController;
 use Veloquent\Core\Domain\Emails\Controllers\EmailTemplateController;

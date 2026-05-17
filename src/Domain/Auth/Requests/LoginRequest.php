@@ -1,6 +1,6 @@
 <?php
 
-namespace Veloquent\Core\Http\Requests\Auth;
+namespace Veloquent\Core\Domain\Auth\Requests;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
