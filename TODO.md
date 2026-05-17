@@ -12,8 +12,3 @@
 - Add octane support?
 - Full app backup?
 - Schema SDK sync (Typed)?
-
-## Issues
-
-- Admin panel: Implement AbortController to prevent race conditions when switching collections
-- Admin panel: fix recreating a field adds "expand" object to columns

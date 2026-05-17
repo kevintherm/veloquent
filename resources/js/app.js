@@ -10,6 +10,10 @@ import router from './router';
 axios.interceptors.response.use(
 	(response) => response,
 	async (error) => {
+		if (axios.isCancel(error)) {
+			return Promise.reject(error);
+		}
+
 		if (error?.config && !error.config.__toastHandled) {
 			const message = error?.response?.data?.message || error?.message || 'Something went wrong.';
 			toast.error(message);

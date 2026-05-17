@@ -16,7 +16,7 @@ const routes = [
   { path: '/register', component: Register },
   { path: '/settings', component: Settings },
   { path: '/logs', component: LogsOverview },
-  { path: '/:collection', component: Dashboard },
+  { path: '/collections/:collection', component: Dashboard },
   {
     path: '/:pathMatch(.*)*',
     component: NotFound,

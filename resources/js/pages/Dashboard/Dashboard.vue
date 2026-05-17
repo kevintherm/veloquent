@@ -45,6 +45,7 @@ const isAutoOpeningRecord = ref(false);
 const bulkActionProcessing = ref(false);
 const showBulkDeleteDialog = ref(false);
 let searchDebounceTimer = null;
+let currentAbortController = null;
 
 const normalizeRecordsPayload = (payload) => {
     if (Array.isArray(payload)) {
@@ -76,6 +77,12 @@ const fetchRecords = async () => {
         return;
     }
 
+    if (currentAbortController) {
+        currentAbortController.abort();
+    }
+    currentAbortController = new AbortController();
+    const signal = currentAbortController.signal;
+
     loading.value = true;
 
     const query = debouncedSearchQuery.value.trim();
@@ -94,6 +101,7 @@ const fetchRecords = async () => {
                 sort,
                 expand,
             },
+            signal,
         });
 
         const { rows, meta } = normalizeRecordsPayload(response?.data);
@@ -108,9 +116,17 @@ const fetchRecords = async () => {
             totalPages.value = 1;
             totalRecords.value = rows.length;
         }
+    } catch (error) {
+        if (axios.isCancel(error) || error.name === 'AbortError' || signal.aborted) {
+            return;
+        }
+        console.error("Failed to fetch records:", error);
     } finally {
-        selectedRecords.value = [];
-        loading.value = false;
+        if (currentAbortController?.signal === signal) {
+            selectedRecords.value = [];
+            loading.value = false;
+            currentAbortController = null;
+        }
     }
 };
 

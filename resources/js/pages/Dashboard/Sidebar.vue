@@ -99,7 +99,7 @@ watch(
                 </div>
 
                 <router-link v-for="collection in regularCollections" :key="collection.id"
-                    :to="`/${encodeURIComponent(collection.name)}`" @click="handleCollectionSelect(collection)"
+                    :to="`/collections/${encodeURIComponent(collection.name)}`" @click="handleCollectionSelect(collection)"
                     draggable="false" :class="[
                         'w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors',
                         activeCollection.id === collection.id
@@ -121,7 +121,7 @@ watch(
                     </CollapsibleTrigger>
                     <CollapsibleContent class="flex flex-col gap-2">
                         <router-link v-for="collection in systemCollections" :key="collection.id"
-                            :to="`/${encodeURIComponent(collection.name)}`" @click="handleCollectionSelect(collection)"
+                            :to="`/collections/${encodeURIComponent(collection.name)}`" @click="handleCollectionSelect(collection)"
                             draggable="false" :class="[
                                 'w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors',
                                 activeCollection.id === collection.id

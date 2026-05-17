@@ -58,7 +58,7 @@ const ensureCollectionPath = () => {
         return;
     }
 
-    const expectedPath = `/${encodeURIComponent(collectionName)}`;
+    const expectedPath = `/collections/${encodeURIComponent(collectionName)}`;
 
     if (route.path === expectedPath) {
         return;
