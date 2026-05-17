@@ -12,11 +12,11 @@ use Veloquent\Core\Domain\Hooks\HookPayload;
 use Veloquent\Core\Domain\Records\Models\Record;
 use Illuminate\Auth\Access\AuthorizationException;
 use Veloquent\Core\Domain\Collections\Models\Collection;
-use Veloquent\Core\Domain\Records\Support\PivotTableName;
 use Veloquent\Core\Domain\Records\Services\PivotSyncService;
 use Veloquent\Core\Domain\QueryCompiler\Services\QueryFilter;
 use Veloquent\Core\Domain\Records\Services\FileFieldProcessor;
 use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
+use Veloquent\Core\Domain\SchemaManagement\Support\PivotTableName;
 use Veloquent\Core\Domain\Records\Services\CreateRuleContextBuilder;
 use Veloquent\Core\Domain\Records\Services\RelationIntegrityService;
 

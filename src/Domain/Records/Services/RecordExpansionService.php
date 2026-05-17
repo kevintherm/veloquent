@@ -2,18 +2,18 @@
 
 namespace Veloquent\Core\Domain\Records\Services;
 
-use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
+use Veloquent\Core\Domain\Records\Models\Record;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Collections\ValueObjects\Field;
+use Veloquent\Core\Domain\Records\Resources\RecordResource;
+use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
+use Veloquent\Core\Domain\SchemaManagement\Support\PivotTableName;
 use Veloquent\Core\Domain\QueryCompiler\Exceptions\InvalidRuleExpressionException;
 use Veloquent\Core\Domain\QueryCompiler\Exceptions\UnsupportedQueryFeatureException;
-use Veloquent\Core\Domain\Records\Models\Record;
-use Veloquent\Core\Domain\Records\Resources\RecordResource;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
-use Veloquent\Core\Domain\Records\Support\PivotTableName;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 
 class RecordExpansionService
 {

@@ -4,9 +4,9 @@ namespace Veloquent\Core\Domain\Records\Actions;
  
 use Throwable;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\DB;
 use Veloquent\Core\Domain\Hooks\HookRunner;
 use Veloquent\Core\Domain\Hooks\HookPayload;
 use Illuminate\Validation\ValidationException;
@@ -14,13 +14,13 @@ use Veloquent\Core\Domain\Records\Models\Record;
 use Illuminate\Auth\Access\AuthorizationException;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Collections\Enums\CollectionType;
+use Veloquent\Core\Domain\Records\Services\PivotSyncService;
 use Veloquent\Core\Domain\QueryCompiler\Services\QueryFilter;
 use Veloquent\Core\Domain\Records\Services\FileFieldProcessor;
+use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
+use Veloquent\Core\Domain\SchemaManagement\Support\PivotTableName;
 use Veloquent\Core\Domain\Records\Services\RelationIntegrityService;
 use Veloquent\Core\Domain\Records\Services\UpdateRuleContextBuilder;
-use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
-use Veloquent\Core\Domain\Records\Services\PivotSyncService;
-use Veloquent\Core\Domain\Records\Support\PivotTableName;
  
 class UpdateRecordAction
 {

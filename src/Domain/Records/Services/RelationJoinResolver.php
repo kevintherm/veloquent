@@ -5,7 +5,7 @@ namespace Veloquent\Core\Domain\Records\Services;
 use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Collections\ValueObjects\Field;
-use Veloquent\Core\Domain\Records\Support\PivotTableName;
+use Veloquent\Core\Domain\SchemaManagement\Support\PivotTableName;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\Schema;

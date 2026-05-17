@@ -3,7 +3,7 @@
 namespace Veloquent\Core\Domain\SchemaManagement\Pipeline;
 
 use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
-use Veloquent\Core\Domain\Records\Support\PivotTableName;
+use Veloquent\Core\Domain\SchemaManagement\Support\PivotTableName;
 use Veloquent\Core\Domain\SchemaManagement\Services\SchemaDDLService;
 use Closure;
 

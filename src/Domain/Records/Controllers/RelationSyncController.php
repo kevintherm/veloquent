@@ -2,15 +2,15 @@
 
 namespace Veloquent\Core\Domain\Records\Controllers;
 
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
-use Veloquent\Core\Domain\Collections\Models\Collection;
-use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
 use Veloquent\Core\Domain\Records\Models\Record;
+use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Records\Services\PivotSyncService;
-use Veloquent\Core\Domain\Records\Support\PivotTableName;
+use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
 use Veloquent\Core\Infrastructure\Http\Controllers\ApiController;
+use Veloquent\Core\Domain\SchemaManagement\Support\PivotTableName;
 
 class RelationSyncController extends ApiController
 {

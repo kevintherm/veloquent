@@ -1,6 +1,6 @@
 <?php
 
-namespace Veloquent\Core\Domain\Records\Support;
+namespace Veloquent\Core\Domain\SchemaManagement\Support;
 
 final class PivotTableName
 {

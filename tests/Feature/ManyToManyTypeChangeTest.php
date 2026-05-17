@@ -3,15 +3,12 @@
 namespace Veloquent\Core\Tests\Feature;
 
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Gate;
-use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
-use Veloquent\Core\Domain\Collections\Models\Collection;
-use Veloquent\Core\Domain\Collections\Services\CollectionService;
-use Veloquent\Core\Domain\Records\Models\Record;
-use Veloquent\Core\Domain\SchemaManagement\Services\CollectionSyncService;
-use Veloquent\Core\Domain\Records\Support\PivotTableName;
 use Veloquent\Core\Tests\TestCase;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Schema;
+use Veloquent\Core\Domain\Records\Models\Record;
+use Veloquent\Core\Domain\SchemaManagement\Support\PivotTableName;
+use Veloquent\Core\Domain\SchemaManagement\Services\CollectionSyncService;
 
 class ManyToManyTypeChangeTest extends TestCase
 {

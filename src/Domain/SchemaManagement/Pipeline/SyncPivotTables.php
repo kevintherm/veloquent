@@ -4,7 +4,7 @@ namespace Veloquent\Core\Domain\SchemaManagement\Pipeline;
 
 use Closure;
 use Veloquent\Core\Domain\Collections\Models\Collection;
-use Veloquent\Core\Domain\Records\Support\PivotTableName;
+use Veloquent\Core\Domain\SchemaManagement\Support\PivotTableName;
 use Veloquent\Core\Domain\SchemaManagement\Services\SchemaDDLService;
 
 class SyncPivotTables

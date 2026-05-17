@@ -4,10 +4,10 @@ namespace Veloquent\Core\Domain\Collections\Validators;
 
 use Illuminate\Support\Facades\DB;
 use Veloquent\Core\Domain\Collections\Models\Collection;
-use Veloquent\Core\Domain\Records\Support\PivotTableName;
 use Veloquent\Core\Domain\Collections\Enums\CollectionType;
 use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
 use Veloquent\Core\Domain\SchemaManagement\Services\SchemaChange;
+use Veloquent\Core\Domain\SchemaManagement\Support\PivotTableName;
 use Veloquent\Core\Domain\Collections\ValueObjects\ValidationResult;
 
 class CollectionValidator
