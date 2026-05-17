@@ -8,7 +8,7 @@ use Veloquent\Core\Domain\Collections\ValueObjects\Field;
 use Veloquent\Core\Domain\SchemaManagement\Support\PivotTableName;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
-use Illuminate\Support\Facades\Schema;
+use Veloquent\Core\Support\Database\SchemaCache;
 
 class RelationJoinResolver
 {
@@ -96,7 +96,7 @@ class RelationJoinResolver
             $sourceTable = $this->sourceCollection->getPhysicalTableName();
             $pivotTable = PivotTableName::for($sourceTable, $targetTable, $relationName);
 
-            if (! Schema::hasTable($pivotTable)) {
+            if (! SchemaCache::hasTable($pivotTable)) {
                 return;
             }
 

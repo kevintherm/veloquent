@@ -5,7 +5,7 @@ namespace Veloquent\Core\Domain\Records\Services;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Schema;
+use Veloquent\Core\Support\Database\SchemaCache;
 use Veloquent\Core\Domain\Records\Models\Record;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Collections\ValueObjects\Field;
@@ -61,7 +61,7 @@ class RecordExpansionService
             if ($fieldType === CollectionFieldType::RelationMany->value) {
                 $pivotTable = PivotTableName::for($sourceCollection->getPhysicalTableName(), $targetCollection->getPhysicalTableName(), $fieldName);
 
-                if (! Schema::hasTable($pivotTable)) {
+                if (! SchemaCache::hasTable($pivotTable)) {
                     continue;
                 }
 

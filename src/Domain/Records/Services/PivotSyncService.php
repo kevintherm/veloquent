@@ -4,6 +4,7 @@ namespace Veloquent\Core\Domain\Records\Services;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Veloquent\Core\Support\Database\SchemaCache;
 
 class PivotSyncService
 {
@@ -20,7 +21,7 @@ class PivotSyncService
         string $sourceId,
         array $entries
     ): void {
-        if (! \Illuminate\Support\Facades\Schema::hasTable($pivotTable)) {
+        if (! SchemaCache::hasTable($pivotTable)) {
             return;
         }
 
@@ -43,7 +44,7 @@ class PivotSyncService
      */
     public function detachAll(string $pivotTable, string $sourceIdColumn, string $sourceId): void
     {
-        if (! \Illuminate\Support\Facades\Schema::hasTable($pivotTable)) {
+        if (! SchemaCache::hasTable($pivotTable)) {
             return;
         }
 

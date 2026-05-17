@@ -10,6 +10,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
 use Veloquent\Core\Domain\SchemaManagement\Policies\SchemaPolicy;
 use Veloquent\Core\Support\Exceptions\InvalidArgumentException;
+use Veloquent\Core\Support\Database\SchemaCache;
 
 readonly class SchemaDDLService
 {
@@ -33,6 +34,8 @@ readonly class SchemaDDLService
                 $blueprint->dateTime('updated_at')->useCurrent()->useCurrentOnUpdate();
             });
         });
+
+        SchemaCache::forget($table);
     }
 
     public function renameTable(string $from, string $to, bool $ignoreMissingFrom = false): void
@@ -50,6 +53,9 @@ readonly class SchemaDDLService
         $this->runDDL(function () use ($from, $to): void {
             Schema::rename($from, $to);
         });
+
+        SchemaCache::forget($from);
+        SchemaCache::forget($to);
     }
 
     private function columnBlueprint(Blueprint $blueprint, array $column, ?string $after = null, bool $change = false): void
@@ -131,6 +137,8 @@ readonly class SchemaDDLService
         $this->runDDL(function () use ($table): void {
             Schema::dropIfExists($table);
         });
+
+        SchemaCache::forget($table);
     }
     
     /**
@@ -155,6 +163,8 @@ readonly class SchemaDDLService
                     $blueprint->unique([$sourceIdCol, $targetIdCol], 'idx_' . md5($pivotTable . '_unq'));
                 });
             });
+
+            SchemaCache::forget($pivotTable);
 
             return;
         }
