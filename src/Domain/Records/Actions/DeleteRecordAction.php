@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Veloquent\Core\Domain\Hooks\HookRunner;
-use Veloquent\Core\Domain\Hooks\HookPayload;
+use Veloquent\Core\Domain\Hooks\ValueObjects\HookPayload;
 use Veloquent\Core\Domain\Records\Models\Record;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Collections\ValueObjects\Field;

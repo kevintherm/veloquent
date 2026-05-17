@@ -3,7 +3,7 @@
 namespace Veloquent\Core\Domain\Hooks\Contracts;
 
 use Closure;
-use Veloquent\Core\Domain\Hooks\HookPayload;
+use Veloquent\Core\Domain\Hooks\ValueObjects\HookPayload;
 
 interface HookPipe
 {

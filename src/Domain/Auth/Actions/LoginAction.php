@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Veloquent\Core\Domain\Hooks\HookRunner;
 use Illuminate\Auth\AuthenticationException;
-use Veloquent\Core\Domain\Hooks\HookPayload;
+use Veloquent\Core\Domain\Hooks\ValueObjects\HookPayload;
 use Veloquent\Core\Domain\Records\Models\Record;
 use Illuminate\Auth\Access\AuthorizationException;
 use Veloquent\Core\Domain\Auth\ValueObjects\TokenData;

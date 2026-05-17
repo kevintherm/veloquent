@@ -1,6 +1,6 @@
 <?php
 
-use Veloquent\Core\Domain\Hooks\HookPayload;
+use Veloquent\Core\Domain\Hooks\ValueObjects\HookPayload;
 use Veloquent\Core\Domain\Hooks\HookRegistry;
 use Veloquent\Core\Domain\Hooks\HookRunner;
 use Veloquent\Core\Domain\Hooks\Contracts\HookPipe;

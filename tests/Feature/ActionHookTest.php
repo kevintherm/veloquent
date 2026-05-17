@@ -1,7 +1,7 @@
 <?php
 
 use Veloquent\Core\Domain\Hooks\Facades\Hooks;
-use Veloquent\Core\Domain\Hooks\HookPayload;
+use Veloquent\Core\Domain\Hooks\ValueObjects\HookPayload;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Records\Actions\CreateRecordAction;
 use Veloquent\Core\Domain\Collections\Enums\CollectionType;

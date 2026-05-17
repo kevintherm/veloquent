@@ -4,6 +4,7 @@ namespace Veloquent\Core\Domain\Hooks;
 
 use Illuminate\Pipeline\Pipeline;
 use Illuminate\Support\Facades\Log;
+use Veloquent\Core\Domain\Hooks\ValueObjects\HookPayload;
 
 class HookRunner
 {

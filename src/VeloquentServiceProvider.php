@@ -1,6 +1,6 @@
 <?php
 
-namespace Veloquent\Core\Providers;
+namespace Veloquent\Core;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -8,14 +8,25 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Cache\RateLimiting\Limit;
+use \Veloquent\Core\Support\Models\Tenant;
 use Illuminate\Support\Facades\RateLimiter;
+use Spatie\Multitenancy\Contracts\IsTenant;
 use Veloquent\Core\Domain\Hooks\HookRunner;
 use Veloquent\Core\Domain\Hooks\HookRegistry;
 use Veloquent\Core\Support\Guards\TokenGuard;
 use Veloquent\Core\Domain\Records\Models\Record;
 use Veloquent\Core\Providers\LogsServiceProvider;
+use Veloquent\Core\Console\Commands\InstallCommand;
+use Veloquent\Core\Console\Commands\ListTenantsCommand;
+use Veloquent\Core\Console\Commands\PurgeTenantCommand;
+use Veloquent\Core\Console\Commands\CreateTenantCommand;
+use Veloquent\Core\Console\Commands\DeleteTenantCommand;
 use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Support\Http\Middleware\EnsureTenant;
+use Veloquent\Core\Console\Commands\ExtractTenantCommand;
 use Veloquent\Core\Domain\Auth\Services\TokenAuthService;
+use Veloquent\Core\Support\Http\Middleware\SuperuserOnly;
+use Veloquent\Core\Support\Http\Middleware\TokenAuthMiddleware;
 use Veloquent\Core\Domain\Realtime\Providers\RealtimeServiceProvider;
 
 class VeloquentServiceProvider extends ServiceProvider
@@ -28,7 +39,7 @@ class VeloquentServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(__DIR__ . '/../config/velo.php', 'velo');
         $this->mergeConfigFrom(__DIR__ . '/../config/multitenancy.php', 'multitenancy');
         
-        $this->app->bind(\Spatie\Multitenancy\Contracts\IsTenant::class, function ($app) {
+        $this->app->bind(IsTenant::class, function ($app) {
             return $app->make(config('multitenancy.tenant_model'));
         });
 
@@ -70,12 +81,12 @@ class VeloquentServiceProvider extends ServiceProvider
 
         if ($this->app->runningInConsole()) {
             $this->commands([
-                \Veloquent\Core\Console\Commands\CreateTenantCommand::class,
-                \Veloquent\Core\Console\Commands\DeleteTenantCommand::class,
-                \Veloquent\Core\Console\Commands\ListTenantsCommand::class,
-                \Veloquent\Core\Console\Commands\PurgeTenantCommand::class,
-                \Veloquent\Core\Console\Commands\InstallCommand::class,
-                \Veloquent\Core\Console\Commands\ExtractTenantCommand::class,
+                CreateTenantCommand::class,
+                DeleteTenantCommand::class,
+                ListTenantsCommand::class,
+                PurgeTenantCommand::class,
+                InstallCommand::class,
+                ExtractTenantCommand::class,
             ]);
 
             $this->publishes([
@@ -96,9 +107,9 @@ class VeloquentServiceProvider extends ServiceProvider
     protected function registerMiddleware(): void
     {
         $router = $this->app['router'];
-        $router->aliasMiddleware('superuser', \Veloquent\Core\Support\Http\Middleware\SuperuserOnly::class);
-        $router->aliasMiddleware('token.auth', \Veloquent\Core\Support\Http\Middleware\TokenAuthMiddleware::class);
-        $router->aliasMiddleware('needs.tenant', \Veloquent\Core\Support\Http\Middleware\EnsureTenant::class);
+        $router->aliasMiddleware('superuser', SuperuserOnly::class);
+        $router->aliasMiddleware('token.auth', TokenAuthMiddleware::class);
+        $router->aliasMiddleware('needs.tenant', EnsureTenant::class);
     }
 
     protected function registerAuth(): void
@@ -155,7 +166,7 @@ class VeloquentServiceProvider extends ServiceProvider
     protected function registerRouteBindings(): void
     {
         Route::bind('collection', function ($value) {
-            if (! \Veloquent\Core\Support\Models\Tenant::current()) {
+            if (! Tenant::current()) {
                 abort(404, 'Tenant not found');
             }
 

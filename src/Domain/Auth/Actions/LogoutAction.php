@@ -5,7 +5,7 @@ namespace Veloquent\Core\Domain\Auth\Actions;
 use Illuminate\Http\Request;
 use Spatie\Multitenancy\Contracts\IsTenant;
 use Veloquent\Core\Domain\Hooks\HookRunner;
-use Veloquent\Core\Domain\Hooks\HookPayload;
+use Veloquent\Core\Domain\Hooks\ValueObjects\HookPayload;
 use Veloquent\Core\Domain\Records\Models\Record;
 use Veloquent\Core\Domain\Auth\Services\TokenAuthService;
 use Veloquent\Core\Domain\Realtime\Contracts\RealtimeBusDriver;

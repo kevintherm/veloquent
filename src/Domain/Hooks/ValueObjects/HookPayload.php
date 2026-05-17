@@ -1,6 +1,6 @@
 <?php
 
-namespace Veloquent\Core\Domain\Hooks;
+namespace Veloquent\Core\Domain\Hooks\ValueObjects;
 
 use Illuminate\Http\Request;
 use Veloquent\Core\Domain\Collections\Models\Collection;

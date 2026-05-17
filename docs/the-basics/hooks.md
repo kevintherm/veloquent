@@ -8,7 +8,7 @@ Hooks are typically registered in the `hooks/hooks.php`. This file is automatica
 
 ```php
 use Veloquent\Core\Domain\Hooks\Facades\Hooks;
-use Veloquent\Core\Domain\Hooks\HookPayload;
+use Veloquent\Core\Domain\Hooks\ValueObjects\HookPayload;
 
 Hooks::before('record.create', function (HookPayload $payload, Closure $next) {
     // Modify data before it hits the database
@@ -43,7 +43,7 @@ For complex logic, you can use classes that implement the `HookPipe` contract:
 namespace App\Hooks;
 
 use Veloquent\Core\Domain\Hooks\Contracts\HookPipe;
-use Veloquent\Core\Domain\Hooks\HookPayload;
+use Veloquent\Core\Domain\Hooks\ValueObjects\HookPayload;
 use Closure;
 
 class SanitizePost implements HookPipe
