@@ -36,7 +36,6 @@ it('can get settings', function () {
             'general' => [
                 'app_name',
                 'app_url',
-                'timezone',
                 'locale',
                 'contact_email',
                 'lock_schema_change',
@@ -78,7 +77,6 @@ it('can update settings', function () {
         'general' => [
             'app_name' => 'Custom App Name',
             'app_url' => 'https://custom.example.com',
-            'timezone' => 'America/New_York',
             'locale' => 'en',
             'contact_email' => 'admin@test.com',
             'lock_schema_change' => true,
