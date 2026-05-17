@@ -1,18 +1,18 @@
 <script setup>
 import axios from "axios";
-import {computed, onMounted, ref} from "vue";
-import {toast} from "vue-sonner";
+import { computed, onMounted, ref } from "vue";
+import { toast } from "vue-sonner";
 import {
-    Button,
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-    Input,
-    Label,
-    Separator,
-    Checkbox
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+  Separator,
+  Checkbox
 } from "@/components/ui";
 
 const optionsLoading = ref(false);
@@ -52,7 +52,7 @@ const fetchOptions = async () => {
 };
 
 const isCollectionSelected = (collectionName) => {
-    return selectedCollections.value.includes(collectionName);
+  return selectedCollections.value.includes(collectionName);
 };
 
 const toggleSelection = (list, value) => {
@@ -147,12 +147,23 @@ const handleImport = async () => {
     });
 
     importResult.value = response.data?.data || null;
-    toast.success("Import completed");
+    toast.success("Import completed successfully!", {
+      description: "Please refresh the page to apply all changes to the admin panel.",
+      action: {
+        label: "Refresh",
+        onClick: () => window.location.reload(),
+      },
+      duration: 15000,
+    });
   } catch (error) {
     toast.error(error.response?.data?.message || "Import failed");
   } finally {
     importing.value = false;
   }
+};
+
+const handlePageRefresh = () => {
+  window.location.reload();
 };
 
 onMounted(() => {
@@ -179,10 +190,13 @@ onMounted(() => {
             </div>
           </div>
           <div class="grid gap-3 p-4 rounded-lg border bg-muted/20 md:grid-cols-2 lg:grid-cols-3">
-            <label v-for="collection in availableCollections" :key="collection.id" class="flex items-center gap-2 text-sm cursor-pointer hover:text-primary transition-colors">
-              <Checkbox :checked="isCollectionSelected(collection.name)" @update:checked="toggleSelection(selectedCollections, collection.name)" />
+            <label v-for="collection in availableCollections" :key="collection.id"
+              class="flex items-center gap-2 text-sm cursor-pointer hover:text-primary transition-colors">
+              <Checkbox :checked="isCollectionSelected(collection.name)"
+                @update:checked="toggleSelection(selectedCollections, collection.name)" />
               <span class="truncate font-medium">{{ collection.name }}</span>
-              <span v-if="collection.is_system" class="text-[10px] uppercase tracking-wider font-bold text-muted-foreground bg-muted px-1 rounded">system</span>
+              <span v-if="collection.is_system"
+                class="text-[10px] uppercase tracking-wider font-bold text-muted-foreground bg-muted px-1 rounded">system</span>
             </label>
           </div>
         </div>
@@ -196,8 +210,10 @@ onMounted(() => {
             </div>
           </div>
           <div class="grid gap-3 p-4 rounded-lg border bg-muted/20 md:grid-cols-2 lg:grid-cols-3">
-            <label v-for="table in availableSystemTables" :key="table" class="flex items-center gap-2 text-sm cursor-pointer hover:text-primary transition-colors">
-              <Checkbox :checked="selectedSystemTables.includes(table)" @update:checked="toggleSelection(selectedSystemTables, table)" />
+            <label v-for="table in availableSystemTables" :key="table"
+              class="flex items-center gap-2 text-sm cursor-pointer hover:text-primary transition-colors">
+              <Checkbox :checked="selectedSystemTables.includes(table)"
+                @update:checked="toggleSelection(selectedSystemTables, table)" />
               <span class="truncate font-medium">{{ table }}</span>
             </label>
           </div>
@@ -222,13 +238,9 @@ onMounted(() => {
 
         <div class="space-y-2 pt-4">
           <Label>Export Result Preview</Label>
-          <textarea
-            v-model="exportedJson"
-            rows="10"
-            readonly
+          <textarea v-model="exportedJson" rows="10" readonly
             class="flex w-full rounded-md border border-input bg-muted/30 px-3 py-2 text-xs font-mono focus:ring-0"
-            placeholder="Exported JSON will appear here"
-          ></textarea>
+            placeholder="Exported JSON will appear here"></textarea>
         </div>
       </CardContent>
     </Card>
@@ -244,10 +256,8 @@ onMounted(() => {
         <div class="grid gap-6 md:grid-cols-2">
           <div class="space-y-2">
             <Label>Conflict Mode</Label>
-            <select
-              v-model="importConflict"
-              class="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            >
+            <select v-model="importConflict"
+              class="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
               <option value="skip">Skip existing (metadata only)</option>
               <option value="overwrite">Overwrite existing (metadata + merge fields)</option>
             </select>
@@ -263,12 +273,9 @@ onMounted(() => {
 
         <div class="space-y-2">
           <Label>Import Payload (JSON)</Label>
-          <textarea
-            v-model="importJson"
-            rows="10"
+          <textarea v-model="importJson" rows="10"
             class="flex w-full rounded-md border border-input bg-background px-3 py-2 text-xs font-mono focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            placeholder="Paste exported JSON here or upload a file above"
-          ></textarea>
+            placeholder="Paste exported JSON here or upload a file above"></textarea>
         </div>
 
         <Button class="w-full md:w-auto" :disabled="importing || !importJson" @click="handleImport">
@@ -277,15 +284,16 @@ onMounted(() => {
 
         <Separator v-if="importResult" />
 
-        <div v-if="importResult" class="space-y-3">
-          <Label class="text-base font-semibold">Import Result</Label>
-          <div class="rounded-lg border bg-muted/30 p-4">
-            <pre class="max-h-96 overflow-auto text-[11px] font-mono leading-relaxed">{{ JSON.stringify(importResult, null, 2) }}</pre>
+        <div v-if="importResult" class="space-y-4">
+          <div class="space-y-3">
+            <Label class="text-base font-semibold">Import Result</Label>
+            <div class="rounded-lg border bg-muted/30 p-4">
+              <pre
+                class="max-h-96 overflow-auto text-[11px] font-mono leading-relaxed">{{ JSON.stringify(importResult, null, 2) }}</pre>
+            </div>
           </div>
         </div>
       </CardContent>
     </Card>
   </div>
 </template>
-
-

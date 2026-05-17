@@ -7,6 +7,33 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
+it('excludes system collections from options list', function () {
+    $service = app(SchemaTransferService::class);
+    $createAction = app(CreateCollectionAction::class);
+
+    // 1. Create a user collection
+    $createAction->execute([
+        'name' => 'posts',
+        'type' => 'base',
+        'fields' => [],
+    ]);
+
+    // 2. Create a system collection
+    $createAction->execute([
+        'name' => 'system_logs',
+        'type' => 'base',
+        'fields' => [],
+        'is_system' => true,
+    ]);
+
+    $options = $service->options();
+
+    $collections = collect($options['collections']);
+    
+    expect($collections->firstWhere('name', 'posts'))->not->toBeNull();
+    expect($collections->firstWhere('name', 'system_logs'))->toBeNull();
+});
+
 it('exports collection metadata including relation fields', function () {
     $service = app(SchemaTransferService::class);
     $createAction = app(CreateCollectionAction::class);
@@ -260,3 +287,128 @@ it('updates target_collection_id during import when target collection is also im
     $relationField = collect($newComments->fields)->firstWhere('name', 'post');
     expect($relationField['target_collection_id'])->toBe($newPosts->id);
 });
+
+it('updates target_collection_id for relation_many fields during import when target collection is also imported', function () {
+    $service = app(SchemaTransferService::class);
+    $createAction = app(CreateCollectionAction::class);
+
+    // 1. Create source environment state
+    $posts = $createAction->execute([
+        'name' => 'posts',
+        'type' => 'base',
+        'fields' => [],
+    ]);
+
+    $comments = $createAction->execute([
+        'name' => 'comments',
+        'type' => 'base',
+        'fields' => [
+            [
+                'name' => 'post_list',
+                'type' => 'relation_many',
+                'target_collection_id' => $posts->id,
+            ],
+        ],
+    ]);
+
+    // 2. Export
+    $export = $service->export(['posts', 'comments'], [], false);
+    
+    // Clear database to simulate fresh import
+    $comments->delete();
+    $posts->delete();
+    
+    // 3. Import into "new" environment
+    // In the new environment, the IDs will be different
+    $service->import($export);
+    
+    $newPosts = Collection::query()->where('name', 'posts')->first();
+    $newComments = Collection::query()->where('name', 'comments')->first();
+    
+    expect($newPosts->id)->not->toBe($posts->id);
+    
+    $relationField = collect($newComments->fields)->firstWhere('name', 'post_list');
+    expect($relationField['target_collection_id'])->toBe($newPosts->id);
+});
+
+it('exports and imports relation_many fields and their pivot table records successfully', function () {
+    $service = app(SchemaTransferService::class);
+    $createAction = app(CreateCollectionAction::class);
+
+    // 1. Create collections
+    $tags = $createAction->execute([
+        'name' => 'tags',
+        'type' => 'base',
+        'fields' => [
+            ['name' => 'title', 'type' => 'text']
+        ],
+        'api_rules' => [
+            'list' => 'id = id',
+            'create' => 'id = id',
+            'view' => 'id = id',
+            'update' => 'id = id',
+            'delete' => 'id = id',
+        ],
+    ]);
+
+    $posts = $createAction->execute([
+        'name' => 'posts',
+        'type' => 'base',
+        'fields' => [
+            [
+                'name' => 'tag_list',
+                'type' => 'relation_many',
+                'target_collection_id' => $tags->id,
+            ],
+        ],
+        'api_rules' => [
+            'list' => 'id = id',
+            'create' => 'id = id',
+            'view' => 'id = id',
+            'update' => 'id = id',
+            'delete' => 'id = id',
+        ],
+    ]);
+
+    // 2. Create records
+    $tagRecord1 = \Veloquent\Core\Domain\Records\Models\Record::of($tags)->create(['title' => 'Laravel']);
+    $tagRecord2 = \Veloquent\Core\Domain\Records\Models\Record::of($tags)->create(['title' => 'PHP']);
+
+    $postRecord = app(\Veloquent\Core\Domain\Records\Actions\CreateRecordAction::class)->execute($posts, [
+        'tag_list' => [$tagRecord1->id, $tagRecord2->id]
+    ]);
+
+    $pivotTable = \Veloquent\Core\Domain\SchemaManagement\Support\PivotTableName::for('posts', 'tags', 'tag_list');
+    expect(Illuminate\Support\Facades\Schema::hasTable($pivotTable))->toBeTrue();
+    expect(Illuminate\Support\Facades\DB::table($pivotTable)->count())->toBe(2);
+
+    // 3. Export
+    $export = $service->export(['posts', 'tags'], [], true);
+    
+    // Clear database to simulate fresh import
+    $postRecord->delete();
+    $tagRecord1->delete();
+    $tagRecord2->delete();
+    $posts->delete();
+    $tags->delete();
+    
+    expect(Illuminate\Support\Facades\Schema::hasTable($pivotTable))->toBeFalse();
+
+    // 4. Import
+    $service->import($export);
+    
+    $newTags = Collection::query()->where('name', 'tags')->first();
+    $newPosts = Collection::query()->where('name', 'posts')->first();
+    
+    expect($newTags->id)->not->toBe($tags->id);
+    expect($newPosts->id)->not->toBe($posts->id);
+    
+    $relationField = collect($newPosts->fields)->firstWhere('name', 'tag_list');
+    expect($relationField['target_collection_id'])->toBe($newTags->id);
+
+    $newPivotTable = \Veloquent\Core\Domain\SchemaManagement\Support\PivotTableName::for('posts', 'tags', 'tag_list');
+    expect(Illuminate\Support\Facades\Schema::hasTable($newPivotTable))->toBeTrue();
+    expect(Illuminate\Support\Facades\DB::table($newPivotTable)->count())->toBe(2);
+});
+
+

@@ -12,11 +12,21 @@ class SchemaCache
      */
     public static function hasTable(string $table): bool
     {
-        return Cache::remember(
-            "velo:table_exists:{$table}",
-            86400, // 24 hours
-            fn () => Schema::hasTable($table)
-        );
+        $cacheKey = "velo:table_exists:{$table}";
+        
+        $cached = Cache::get($cacheKey);
+        
+        if ($cached !== null) {
+            return (bool) $cached;
+        }
+        
+        $exists = Schema::hasTable($table);
+        
+        if ($exists) {
+            Cache::put($cacheKey, true, 86400); // 24 hours
+        }
+        
+        return $exists;
     }
 
     /**

@@ -11,6 +11,7 @@ use Veloquent\Core\Domain\Records\Models\Record;
 use Illuminate\Support\Collection as SupportCollection;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Collections\Enums\CollectionType;
+use Veloquent\Core\Domain\SchemaManagement\Support\PivotTableName;
 use Veloquent\Core\Domain\Collections\Actions\CreateCollectionAction;
 use Veloquent\Core\Domain\Collections\Actions\UpdateCollectionAction;
 
@@ -52,6 +53,7 @@ class SchemaTransferService
     public function options(): array
     {
         $collections = Collection::query()
+            ->where('is_system', false)
             ->orderBy('name')
             ->get(['id', 'name', 'table_name', 'is_system'])
             ->map(fn (Collection $collection): array => [
@@ -82,6 +84,9 @@ class SchemaTransferService
             ->orderBy('name')
             ->whereIn('name', $collectionNames);
 
+        /**
+         * @var Collection[] $collections
+         */
         $collections = $collectionsQuery->get();
 
         $payload = [
@@ -104,6 +109,26 @@ class SchemaTransferService
             $tableName = $collection->getPhysicalTableName();
             $this->assertTableExists($tableName);
             $records[$tableName] = $this->dumpTableRecords($tableName);
+
+            $fields = $collection->fields ?? [];
+            foreach ($fields as $field) {
+                if (($field['type'] ?? '') === 'relation_many') {
+                    $targetId = $field['target_collection_id'] ?? null;
+                    if ($targetId) {
+                        $targetCollection = Collection::query()->find($targetId);
+                        if ($targetCollection) {
+                            $pivotTable = PivotTableName::for(
+                                $collection->name,
+                                $targetCollection->name,
+                                $field['name']
+                            );
+                            if (Schema::hasTable($pivotTable) && ! isset($records[$pivotTable])) {
+                                $records[$pivotTable] = $this->dumpTableRecords($pivotTable);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         foreach ($systemTables as $tableName) {
@@ -148,6 +173,8 @@ class SchemaTransferService
             }
         }
 
+        $this->updateRelationFieldsUsingMapping($idMapping);
+
         $records = data_get($payload, 'records', []);
 
         if (! is_array($records)) {
@@ -184,6 +211,24 @@ class SchemaTransferService
             $collection = $collectionsByTable->get($tableName);
 
             if (! $collection instanceof Collection) {
+                if ($this->isPivotTable($tableName)) {
+                    $tableRows = $records[$tableName] ?? [];
+                    $rows = is_array($tableRows) ? $tableRows : [];
+
+                    $result['records'][$tableName] = DB::transaction(function () use ($tableName, $rows, $conflict, &$apiRulesToApply, &$idMapping): array {
+                        return $this->importTableRows(
+                            $tableName,
+                            $rows,
+                            $conflict,
+                            null,
+                            true,
+                            $apiRulesToApply,
+                            $idMapping
+                        );
+                    });
+                    continue;
+                }
+
                 throw new RuntimeException("Table '{$tableName}' is not importable.");
             }
 
@@ -194,7 +239,7 @@ class SchemaTransferService
             $tableRows = $records[$tableName] ?? [];
             $rows = is_array($tableRows) ? $tableRows : [];
 
-            $result['records'][$tableName] = DB::transaction(function () use ($tableName, $rows, $conflict, $collection, &$apiRulesToApply): array {
+            $result['records'][$tableName] = DB::transaction(function () use ($tableName, $rows, $conflict, $collection, &$apiRulesToApply, &$idMapping): array {
                 return $this->importTableRows(
                     $tableName,
                     $rows,
@@ -207,7 +252,6 @@ class SchemaTransferService
             });
         }
 
-        $this->updateRelationFieldsUsingMapping($idMapping);
         $this->applyDeferredApiRules($apiRulesToApply);
 
         return $result;
@@ -306,7 +350,7 @@ class SchemaTransferService
         $isAuthCollection = $type === CollectionType::Auth->value;
 
         $rawFields = is_array($row['fields'] ?? null) ? $row['fields'] : [];
-        $hasRelationFields = collect($rawFields)->contains(fn (mixed $f): bool => is_array($f) && ($f['type'] ?? '') === 'relation');
+        $hasRelationFields = collect($rawFields)->contains(fn (mixed $f): bool => is_array($f) && in_array($f['type'] ?? '', ['relation', 'relation_many'], true));
 
         $filteredFields = collect($rawFields)
             ->filter(fn (mixed $field): bool => is_array($field))
@@ -467,7 +511,7 @@ class SchemaTransferService
             if ($collection instanceof Collection) {
                 $rowResult = $this->importCollectionRecord($collection, $row, $conflict);
             } else {
-                if (! in_array($tableName, $this->allowedSystemTables(), true)) {
+                if (! in_array($tableName, $this->allowedSystemTables(), true) && ! $this->isPivotTable($tableName)) {
                     throw new RuntimeException("Table '{$tableName}' is not importable.");
                 }
 
@@ -557,7 +601,7 @@ class SchemaTransferService
             $changed = false;
 
             foreach ($fields as &$field) {
-                if (($field['type'] ?? '') !== 'relation') {
+                if (! in_array($field['type'] ?? '', ['relation', 'relation_many'], true)) {
                     continue;
                 }
 
@@ -572,6 +616,27 @@ class SchemaTransferService
             if ($changed) {
                 $collection->update(['fields' => $fields]);
             }
+        });
+    }
+
+    /**
+     * Determine if a table is a pivot table for any relation_many field.
+     */
+    private function isPivotTable(string $tableName): bool
+    {
+        $prefix = config('velo.collection_prefix', '_velo_');
+        if (! str_starts_with($tableName, $prefix)) {
+            return false;
+        }
+
+        $collections = Collection::query()->get();
+        return $collections->contains(function (Collection $collection) use ($tableName) {
+            return collect($collection->fields ?? [])
+                ->filter(fn($field) => ($field['type'] ?? '') === 'relation_many' && !empty($field['target_collection_id']))
+                ->contains(function ($field) use ($collection, $tableName) {
+                    $target = Collection::find($field['target_collection_id']);
+                    return $target && PivotTableName::for($collection->name, $target->name, $field['name']) === $tableName;
+                });
         });
     }
 

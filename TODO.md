@@ -1,6 +1,5 @@
 ## TODO
 
-- Add support for schema transfer to export relation many field types 
 - Battle Testing
 - Ship
 
