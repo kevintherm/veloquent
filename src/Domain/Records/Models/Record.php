@@ -16,13 +16,14 @@ use Veloquent\Core\Domain\Records\Resources\RecordResource;
 use Veloquent\Core\Domain\Records\QueryBuilder\RecordBuilder;
 use Illuminate\Database\Eloquent\Attributes\UseEloquentBuilder;
 use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
+use Veloquent\Core\Support\Traits\HasUtcDates;
 
 #[UseResource(RecordResource::class)]
 #[UseEloquentBuilder(RecordBuilder::class)]
 #[ObservedBy([RecordObserver::class])]
 class Record extends Authenticatable
 {
-    use HasUlids;
+    use HasUlids, HasUtcDates;
 
     protected $guarded = [];
 

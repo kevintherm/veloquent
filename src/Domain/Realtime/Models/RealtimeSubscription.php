@@ -5,10 +5,11 @@ namespace Veloquent\Core\Domain\Realtime\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\Multitenancy\Models\Concerns\UsesLandlordConnection;
+use Veloquent\Core\Support\Traits\HasUtcDates;
 
 class RealtimeSubscription extends Model
 {
-    use HasUlids;
+    use HasUlids, HasUtcDates;
     use UsesLandlordConnection;
 
     protected $keyType = 'string';

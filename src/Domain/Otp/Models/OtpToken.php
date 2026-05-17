@@ -5,9 +5,12 @@ namespace Veloquent\Core\Domain\Otp\Models;
 use Veloquent\Core\Domain\Otp\Enums\OtpAction;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Veloquent\Core\Support\Traits\HasUtcDates;
 
 class OtpToken extends Model
 {
+    use HasUtcDates;
+
     protected $fillable = [
         'collection_id',
         'record_id',

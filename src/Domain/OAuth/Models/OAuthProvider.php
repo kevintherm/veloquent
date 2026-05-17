@@ -8,10 +8,11 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Veloquent\Core\Support\Traits\HasUtcDates;
 
 class OAuthProvider extends Model
 {
-    use HasFactory;
+    use HasFactory, HasUtcDates;
 
     protected static function newFactory(): OAuthProviderFactory
     {

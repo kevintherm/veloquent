@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
+import { parseServerDate } from "@/lib/utils";
 import DashboardLayout from "@/layouts/DashboardLayout.vue";
 import axios from "axios";
 import {
@@ -135,9 +136,21 @@ const chartData = computed(() => {
 
     const maxCount = Math.max(...Object.values(stats.value).map((h) => h.count), 1);
 
+    const getLocalHour = (utcHour, dateStr) => {
+        if (!dateStr) return utcHour;
+        try {
+            const [year, month, day] = dateStr.split('-');
+            const d = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, parseInt(day), utcHour, 0, 0));
+            return d.getHours();
+        } catch {
+            return utcHour;
+        }
+    };
+
     return Object.entries(stats.value).map(([hour, h]) => ({
         ...h,
         hour: parseInt(hour),
+        localHour: getLocalHour(parseInt(hour), selectedDate.value),
         height: `${(h.count / maxCount) * 100}%`,
         errorHeight: `${(h.error / maxCount) * 100}%`,
         warningHeight: `${(h.warning / maxCount) * 100}%`,
@@ -165,7 +178,7 @@ const getLevelColor = (level) => {
 
 const formatDate = (dateStr) => {
     try {
-        const d = new Date(dateStr);
+        const d = parseServerDate(dateStr);
         if (isNaN(d.getTime())) return dateStr;
         return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
     } catch {
@@ -250,7 +263,7 @@ const copyToClipboard = async (text) => {
                             </div>
                             <Button v-if="selectedHour !== null" variant="secondary" size="sm"
                                 @click="selectedHour = null" class="text-xs h-8">
-                                Clear {{ String(selectedHour).padStart(2, '0') }}:00 Filter
+                                Clear {{ String(chartData.find((d) => d.hour === selectedHour)?.localHour ?? selectedHour).padStart(2, '0') }}:00 Filter
                             </Button>
                         </div>
                     </CardHeader>
@@ -267,7 +280,7 @@ const copyToClipboard = async (text) => {
                                 <!-- Tooltip -->
                                 <div
                                     class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-background border text-foreground text-xs p-2 rounded shadow-xl z-50 w-max text-center pointer-events-none">
-                                    <p class="font-bold mb-1">{{ String(h.hour).padStart(2, '0') }}:00</p>
+                                    <p class="font-bold mb-1">{{ String(h.localHour).padStart(2, '0') }}:00</p>
                                     <p v-if="h.count === 0" class="text-muted-foreground">No events</p>
                                     <div v-else class="space-y-0.5 text-left">
                                         <p v-if="h.error > 0" class="text-destructive">{{ h.error }} Errors</p>
@@ -296,7 +309,7 @@ const copyToClipboard = async (text) => {
 
                                 <!-- Axis label -->
                                 <span class="text-[0.65rem] text-muted-foreground mt-1 block text-center opacity-50">{{
-                                    h.hour % 4 === 0 ? h.hour : '' }}</span>
+                                    h.hour % 4 === 0 ? h.localHour : '' }}</span>
                             </div>
                         </div>
                     </CardContent>

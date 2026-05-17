@@ -23,7 +23,6 @@ const form = ref({
   general: {
     app_name: "",
     app_url: "",
-    timezone: "UTC",
     locale: "en",
     contact_email: "",
     lock_schema_change: false,
@@ -111,24 +110,6 @@ onMounted(() => {
         </div>
 
         <div class="grid gap-3 md:grid-cols-2">
-          <div class="space-y-2">
-            <Label>Timezone</Label>
-            <select v-model="form.general.timezone"
-              class="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm">
-              <option value="UTC">UTC</option>
-              <option value="America/New_York">Eastern Time (US & Canada)</option>
-              <option value="America/Chicago">Central Time (US & Canada)</option>
-              <option value="America/Denver">Mountain Time (US & Canada)</option>
-              <option value="America/Los_Angeles">Pacific Time (US & Canada)</option>
-              <option value="Europe/London">London</option>
-              <option value="Europe/Paris">Paris</option>
-              <option value="Asia/Tokyo">Tokyo</option>
-              <option value="Asia/Singapore">Singapore</option>
-              <option value="Asia/Jakarta">Jakarta (GMT+7)</option>
-              <option value="Australia/Sydney">Sydney</option>
-            </select>
-            <p v-if="errors['general.timezone']" class="text-xs text-red-500">{{ errors['general.timezone'][0] }}</p>
-          </div>
           <div class="space-y-2">
             <Label>Locale</Label>
             <select v-model="form.general.locale"

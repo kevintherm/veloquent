@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui";
 import { Database, Trash2, RefreshCw, AlertTriangle, CheckCircle2, Wrench, ShieldAlert } from "lucide-vue-next";
+import { parseServerDate } from "@/lib/utils";
 
 const loadingOrphans = ref(false);
 const loadingCorrupt = ref(false);
@@ -85,8 +86,8 @@ const handleCleanAll = async () => {
 const handleRecover = async (job) => {
   const collectionId = job.collection_id;
   const activity = job.operation;
-  
-  const message = activity === 'create' 
+
+  const message = activity === 'create'
     ? "This will DROP the physical table and DELETE the collection metadata. Are you sure?"
     : "This will REBUILD the physical table based on metadata. ANY EXISTING DATA in this table will be lost. Are you sure?";
 
@@ -146,7 +147,8 @@ onMounted(() => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div v-if="loadingCorrupt && corruptCollections.length === 0" class="py-8 text-center text-muted-foreground text-sm">
+          <div v-if="loadingCorrupt && corruptCollections.length === 0"
+            class="py-8 text-center text-muted-foreground text-sm">
             Checking for stuck jobs...
           </div>
 
@@ -159,35 +161,34 @@ onMounted(() => {
             <div class="bg-destructive/5 border border-destructive/20 p-3 rounded-md flex gap-3">
               <AlertTriangle class="w-5 h-5 text-destructive shrink-0 mt-0.5" />
               <p class="text-xs text-destructive">
-                These collections have a schema operation that failed or is stuck. 
+                These collections have a schema operation that failed or is stuck.
                 They are locked and cannot be updated until recovered.
               </p>
             </div>
 
             <div class="space-y-2">
-              <div v-for="job in corruptCollections" :key="job.id" 
+              <div v-for="job in corruptCollections" :key="job.id"
                 class="flex items-center justify-between p-3 border rounded-md hover:bg-muted/30 transition-colors">
                 <div class="space-y-1">
                   <div class="flex items-center gap-2">
                     <span class="text-sm font-semibold">{{ job.collection?.name || 'Unknown Collection' }}</span>
-                    <span class="text-[10px] uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-bold border border-amber-200">
+                    <span
+                      class="text-[10px] uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-bold border border-amber-200">
                       {{ job.operation }}
                     </span>
                   </div>
                   <div class="flex flex-col gap-0.5">
                     <code class="text-[10px] font-mono opacity-60">{{ job.table_name }}</code>
-                    <span class="text-[10px] text-muted-foreground italic">Started {{ job.started_at ? new Date(job.started_at).toLocaleString() : 'recently' }}</span>
+                    <span class="text-[10px] text-muted-foreground italic">Started {{ job.started_at ?
+                      parseServerDate(job.started_at).toLocaleString() : 'recently' }}</span>
                   </div>
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  class="h-8 gap-2 hover:bg-destructive hover:text-destructive-foreground"
-                  @click="handleRecover(job)"
-                  :disabled="recoveringIds.has(job.collection_id)"
-                >
+                <Button variant="outline" size="sm"
+                  class="h-8 gap-2 hover:bg-destructive hover:text-destructive-foreground" @click="handleRecover(job)"
+                  :disabled="recoveringIds.has(job.collection_id)">
                   <Wrench v-if="!recoveringIds.has(job.collection_id)" class="w-3.5 h-3.5" />
-                  <span v-else class="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
+                  <span v-else
+                    class="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
                   Recover
                 </Button>
               </div>
@@ -221,7 +222,7 @@ onMounted(() => {
             <div class="bg-amber-50 border border-amber-200 p-3 rounded-md flex gap-3">
               <AlertTriangle class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
               <p class="text-xs text-amber-800">
-                These tables likely result from failed creations. 
+                These tables likely result from failed creations.
                 They consume storage and should be cleaned up.
               </p>
             </div>
@@ -238,7 +239,7 @@ onMounted(() => {
             </div>
 
             <Separator />
-            
+
             <div class="flex justify-end">
               <Button variant="destructive" size="sm" @click="handleCleanAll" :disabled="cleaning">
                 <Trash2 class="w-4 h-4 mr-2" />
@@ -251,4 +252,3 @@ onMounted(() => {
     </div>
   </div>
 </template>
-

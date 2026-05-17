@@ -20,3 +20,20 @@ export function stripHtml(html) {
 
   return text.replace(/\s+/g, ' ').trim();
 }
+
+export function parseServerDate(value) {
+  if (!value) return null;
+
+  if (value instanceof Date) {
+    return value;
+  }
+
+  let dateValue = String(value);
+
+  if (dateValue.includes(' ') && !dateValue.includes('T') && !dateValue.includes('Z')) {
+    dateValue = dateValue.replace(' ', 'T') + 'Z';
+  }
+
+  const parsed = new Date(dateValue);
+  return Number.isNaN(parsed.getTime()) ? new Date(value) : parsed;
+}

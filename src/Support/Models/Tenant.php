@@ -6,10 +6,13 @@ use Veloquent\Core\Observers\TenantObserver;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Spatie\Multitenancy\Models\Tenant as SpatieTenant;
+use Veloquent\Core\Support\Traits\HasUtcDates;
 
 #[ObservedBy(TenantObserver::class)]
 class Tenant extends SpatieTenant
 {
+    use HasUtcDates;
+
     public static function findByIdCached(string $id): ?self
     {
         if (! config('velo.tenancy_enabled', true)) {

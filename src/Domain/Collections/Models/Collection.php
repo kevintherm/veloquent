@@ -15,12 +15,13 @@ use Veloquent\Core\Domain\Collections\Casts\IndexCollectionCast;
 use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
 use Veloquent\Core\Domain\Collections\Observers\CollectionObserver;
 use Veloquent\Core\Domain\Collections\QueryBuilder\CollectionBuilder;
+use Veloquent\Core\Support\Traits\HasUtcDates;
 
 #[ObservedBy(CollectionObserver::class)]
 #[UseEloquentBuilder(CollectionBuilder::class)]
 class Collection extends Model
 {
-    use HasFactory, HasUlids;
+    use HasFactory, HasUlids, HasUtcDates;
 
     protected static function newFactory(): CollectionFactory
     {

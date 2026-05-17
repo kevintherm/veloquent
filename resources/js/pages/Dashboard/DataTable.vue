@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/pagination";
 import { computed, ref, onUnmounted } from "vue";
 import { getAuthToken } from "@/lib/tokenAuth";
-import { stripHtml } from "@/lib/utils";
+import { stripHtml, parseServerDate } from "@/lib/utils";
 
 const props = defineProps({
     records: {
@@ -111,7 +111,7 @@ const formatDatetimeParts = (value) => {
         };
     }
 
-    const parsedDate = value instanceof Date ? value : new Date(value);
+    const parsedDate = parseServerDate(value);
 
     if (Number.isNaN(parsedDate.getTime())) {
         return {

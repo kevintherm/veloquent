@@ -33,7 +33,6 @@ class UpdateSettingsRequest extends FormRequest
             'general' => ['required', 'array'],
             'general.app_name' => ['required', 'string', 'max:255'],
             'general.app_url' => ['required', 'url'],
-            'general.timezone' => ['required', 'string'],
             'general.locale' => ['required', 'in:en'],
             'general.contact_email' => ['required', 'email'],
             'general.lock_schema_change' => ['boolean'],

@@ -10,8 +10,6 @@ class GeneralSettings extends Settings
 
     public string $app_url = 'http://localhost';
 
-    public string $timezone = 'UTC';
-
     public string $locale = 'en';
 
     public string $contact_email = 'admin@example.com';

@@ -15,7 +15,6 @@ class ApplyTenantSettingsTask implements SwitchTenantTask
     {
         $this->originalConfig = [
             'app.name' => config('app.name'),
-            'app.timezone' => config('app.timezone'),
             'app.locale' => config('app.locale'),
             'mail.default' => config('mail.default'),
             'mail.mailers.smtp.host' => config('mail.mailers.smtp.host'),
@@ -32,7 +31,6 @@ class ApplyTenantSettingsTask implements SwitchTenantTask
 
         config([
             'app.name' => $generalSettings->app_name,
-            'app.timezone' => $generalSettings->timezone,
             'app.locale' => $generalSettings->locale,
             'mail.default' => $emailSettings->mail_driver,
             'mail.mailers.smtp.host' => $emailSettings->mail_host,

@@ -26,6 +26,7 @@ import { Copy, Plus, Search, Trash2, X, MoreVertical, Key } from "lucide-vue-nex
 import { resolveCollectionFieldTypeIcon } from "@/lib/collectionFieldTypeIcons";
 import { openRecordForm } from "@/lib/recordFormSheet";
 import { useDashboardState } from "@/lib/dashboardState";
+import { parseServerDate } from "@/lib/utils";
 import TiptapEditor from "./TiptapEditor.vue";
 import Select from "./ui/select/Select.vue";
 import SelectTrigger from "./ui/select/SelectTrigger.vue";
@@ -129,7 +130,7 @@ const formatDateLocal = (value) => {
     return "";
   }
 
-  const parsedDate = value instanceof Date ? value : new Date(value);
+  const parsedDate = parseServerDate(value);
 
   if (Number.isNaN(parsedDate.getTime())) {
     return "";
@@ -147,7 +148,7 @@ const formatDatetimeLocal = (value) => {
     return "";
   }
 
-  const parsedDate = value instanceof Date ? value : new Date(value);
+  const parsedDate = parseServerDate(value);
 
   if (Number.isNaN(parsedDate.getTime())) {
     return "";
@@ -781,7 +782,7 @@ const coerceFieldValue = (field, rawValue) => {
   }
 
   if (field.type === "datetime" || field.type === "timestamp" || field.type === "date") {
-    const dateValue = new Date(rawValue);
+    const dateValue = parseServerDate(rawValue);
 
     if (Number.isNaN(dateValue.getTime())) {
       return null;

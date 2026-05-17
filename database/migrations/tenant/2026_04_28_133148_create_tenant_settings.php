@@ -12,7 +12,6 @@ return new class extends SettingsMigration
         // General
         $this->migrator->add('general.app_name', $tenantName);
         $this->migrator->add('general.app_url', 'http://localhost');
-        $this->migrator->add('general.timezone', config('app.timezone', 'UTC'));
         $this->migrator->add('general.locale', config('app.locale', 'en'));
         $this->migrator->add('general.contact_email', 'admin@example.com');
         $this->migrator->add('general.lock_schema_change', false);

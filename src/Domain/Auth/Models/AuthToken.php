@@ -5,10 +5,11 @@ namespace Veloquent\Core\Domain\Auth\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
+use Veloquent\Core\Support\Traits\HasUtcDates;
 
 class AuthToken extends Model
 {
-    use HasUlids;
+    use HasUlids, HasUtcDates;
 
     /**
      * @var list<string>
