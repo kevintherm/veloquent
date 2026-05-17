@@ -57,6 +57,7 @@ class VeloquentServiceProvider extends ServiceProvider
         config(['auth.defaults.guard' => $veloAuth['defaults']['guard'] ?? config('auth.defaults.guard')]);
 
         config(['settings.cache.enabled' => env('SETTINGS_CACHE_ENABLED', true)]);
+        config(['settings.cache.encrypted' => env('SETTINGS_CACHE_ENCRYPTED', false)]);
 
         $this->app->singleton(SettingsContainer::class, function () {
             $container = new SettingsContainer();

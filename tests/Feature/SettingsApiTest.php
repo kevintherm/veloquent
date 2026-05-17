@@ -117,3 +117,41 @@ it('denies non-superusers from managing settings', function () {
     $response = patchJson('/api/settings', []);
     $response->assertStatus(401);
 });
+
+it('supports both encrypted and unencrypted settings caching', function () {
+    // 1. Verify encrypted cache (default)
+    config(['settings.cache.enabled' => true]);
+    config(['settings.cache.encrypted' => true]);
+    GeneralSettings::clearCache();
+    
+    $settings = app(GeneralSettings::class);
+    $settings->app_name = 'Encrypted App';
+    $settings->save();
+    
+    // Clear instance and reload to hit DB and warm cache
+    app()->forgetInstance(GeneralSettings::class);
+    $loaded = app(GeneralSettings::class);
+    $loaded->app_name; // trigger load
+    
+    // Check cache is encrypted string
+    $cacheKey = 'settings.general';
+    expect(Illuminate\Support\Facades\Cache::get($cacheKey))->toBeString();
+    
+    // 2. Verify unencrypted cache
+    config(['settings.cache.encrypted' => false]);
+    GeneralSettings::clearCache();
+    
+    // Clear instance and save again under unencrypted config
+    app()->forgetInstance(GeneralSettings::class);
+    $settingsUnencrypted = app(GeneralSettings::class);
+    $settingsUnencrypted->app_name = 'Unencrypted App';
+    $settingsUnencrypted->save();
+    
+    // Clear instance and reload to hit DB and warm cache
+    app()->forgetInstance(GeneralSettings::class);
+    $loadedUnencrypted = app(GeneralSettings::class);
+    $loadedUnencrypted->app_name; // trigger load
+    
+    // Check cache is raw array
+    expect(Illuminate\Support\Facades\Cache::get($cacheKey))->toBeArray();
+});

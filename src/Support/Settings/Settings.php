@@ -90,18 +90,25 @@ abstract class Settings
         $values = [];
         $loadedFromCache = false;
 
-        // 1. Try to load from cache (encrypted)
+        // 1. Try to load from cache
         if (config('settings.cache.enabled', true)) {
             $cached = Cache::get($cacheKey);
             if ($cached !== null) {
-                try {
-                    $decrypted = decrypt($cached);
-                    if (is_array($decrypted)) {
-                        $values = $decrypted;
+                if (config('settings.cache.encrypted', true)) {
+                    try {
+                        $decrypted = decrypt($cached);
+                        if (is_array($decrypted)) {
+                            $values = $decrypted;
+                            $loadedFromCache = true;
+                        }
+                    } catch (\Exception $e) {
+                        // 
+                    }
+                } else {
+                    if (is_array($cached)) {
+                        $values = $cached;
                         $loadedFromCache = true;
                     }
-                } catch (\Exception $e) {
-                    // Ignore decryption/cache errors
                 }
             }
         }
@@ -116,11 +123,15 @@ abstract class Settings
                 $values[$record->name] = json_decode($record->payload, true);
             }
 
-            // Cache the retrieved values (encrypted)
+            // Cache the retrieved values
             if (config('settings.cache.enabled', true)) {
                 // Merge database values with defaults to ensure we cache all properties
                 $cacheData = array_merge($this->defaults, $values);
-                Cache::forever($cacheKey, encrypt($cacheData));
+                if (config('settings.cache.encrypted', true)) {
+                    Cache::forever($cacheKey, encrypt($cacheData));
+                } else {
+                    Cache::forever($cacheKey, $cacheData);
+                }
             }
         }
 
