@@ -1,7 +1,7 @@
 <?php
 
 use Veloquent\Core\Support\Models\Tenant;
-use Spatie\LaravelSettings\Migrations\SettingsMigration;
+use Veloquent\Core\Support\Settings\Migrations\SettingsMigration;
 
 return new class extends SettingsMigration
 {

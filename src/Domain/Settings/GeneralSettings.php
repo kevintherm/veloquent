@@ -2,7 +2,7 @@
 
 namespace Veloquent\Core\Domain\Settings;
 
-use Spatie\LaravelSettings\Settings;
+use Veloquent\Core\Support\Settings\Settings;
 
 class GeneralSettings extends Settings
 {

@@ -3,7 +3,7 @@
 namespace Veloquent\Core\Domain\Settings\Casts;
 
 use Illuminate\Support\Facades\Crypt;
-use Spatie\LaravelSettings\SettingsCasts\SettingsCast;
+use Veloquent\Core\Support\Settings\Casts\SettingsCast;
 
 class EncryptedSettingsCast implements SettingsCast
 {

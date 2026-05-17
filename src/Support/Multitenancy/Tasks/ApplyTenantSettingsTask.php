@@ -4,7 +4,7 @@ namespace Veloquent\Core\Support\Multitenancy\Tasks;
 
 use Veloquent\Core\Domain\Settings\EmailSettings;
 use Veloquent\Core\Domain\Settings\GeneralSettings;
-use Spatie\LaravelSettings\SettingsContainer;
+use Veloquent\Core\Support\Settings\SettingsContainer;
 use Spatie\Multitenancy\Contracts\IsTenant;
 use Spatie\Multitenancy\Tasks\SwitchTenantTask;
 

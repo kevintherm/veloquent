@@ -3,7 +3,7 @@
 namespace Veloquent\Core\Domain\Settings;
 
 use Veloquent\Core\Domain\Settings\Casts\EncryptedSettingsCast;
-use Spatie\LaravelSettings\Settings;
+use Veloquent\Core\Support\Settings\Settings;
 
 class EmailSettings extends Settings
 {

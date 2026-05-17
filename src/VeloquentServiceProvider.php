@@ -16,8 +16,12 @@ use Veloquent\Core\Domain\Hooks\HookRunner;
 use Veloquent\Core\Domain\Hooks\HookRegistry;
 use Veloquent\Core\Support\Guards\TokenGuard;
 use Veloquent\Core\Domain\Records\Models\Record;
+use Veloquent\Core\Domain\Settings\EmailSettings;
 use Veloquent\Core\Providers\LogsServiceProvider;
 use Veloquent\Core\Console\Commands\InstallCommand;
+use Veloquent\Core\Domain\Settings\GeneralSettings;
+use Veloquent\Core\Domain\Settings\StorageSettings;
+use Veloquent\Core\Support\Settings\SettingsContainer;
 use Veloquent\Core\Console\Commands\ListTenantsCommand;
 use Veloquent\Core\Console\Commands\PurgeTenantCommand;
 use Veloquent\Core\Console\Commands\CreateTenantCommand;
@@ -53,6 +57,18 @@ class VeloquentServiceProvider extends ServiceProvider
         config(['auth.defaults.guard' => $veloAuth['defaults']['guard'] ?? config('auth.defaults.guard')]);
 
         config(['settings.cache.enabled' => env('SETTINGS_CACHE_ENABLED', true)]);
+
+        $this->app->singleton(SettingsContainer::class, function () {
+            $container = new SettingsContainer();
+            $container->register(GeneralSettings::class);
+            $container->register(StorageSettings::class);
+            $container->register(EmailSettings::class);
+            return $container;
+        });
+
+        $this->app->singleton(GeneralSettings::class, fn () => GeneralSettings::load());
+        $this->app->singleton(StorageSettings::class, fn () => StorageSettings::load());
+        $this->app->singleton(EmailSettings::class, fn () => EmailSettings::load());
 
         $this->app->register(LogsServiceProvider::class);
         $this->app->register(RealtimeServiceProvider::class);

@@ -6,7 +6,6 @@ use Veloquent\Core\Support\Models\Tenant;
 use Orchestra\Testbench\TestCase as OrchestraTestCase;
 use Veloquent\Core\VeloquentServiceProvider;
 use Spatie\Multitenancy\MultitenancyServiceProvider;
-use Spatie\LaravelSettings\LaravelSettingsServiceProvider;
 use Laravel\Sanctum\SanctumServiceProvider;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
@@ -39,11 +38,6 @@ abstract class TestCase extends OrchestraTestCase
     {
         $this->loadMigrationsFrom(realpath(__DIR__ . '/../database/migrations/landlord'));
         $this->loadMigrationsFrom(realpath(__DIR__ . '/../database/migrations/tenant'));
-
-        $settingsMigrationPath = realpath(__DIR__ . '/../vendor/spatie/laravel-settings/database/migrations');
-        if ($settingsMigrationPath) {
-            $this->loadMigrationsFrom($settingsMigrationPath);
-        }
     }
 
     protected function getPackageProviders($app)
@@ -51,7 +45,6 @@ abstract class TestCase extends OrchestraTestCase
         return [
             VeloquentServiceProvider::class,
             MultitenancyServiceProvider::class,
-            LaravelSettingsServiceProvider::class,
             SanctumServiceProvider::class,
         ];
     }
