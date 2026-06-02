@@ -65,13 +65,44 @@ it('can get settings', function () {
 it('can validate settings payload', function () {
     actingAs($this->user, 'api');
 
+    // Sending empty payload is fine now because everything is independent and optional
     $response = patchJson('/api/settings', []);
-    $response->assertStatus(422);
-    $response->assertJsonValidationErrors(['general', 'storage', 'email']);
+    $response->assertStatus(200);
+
+    // Invalid parameters when a section is provided should trigger validation errors
+    $invalidResponse = patchJson('/api/settings', [
+        'general' => ['app_name' => ''],
+        'storage' => ['storage_driver' => 'invalid-driver'],
+        'email' => ['mail_driver' => 'invalid-driver'],
+        'ai' => ['ai_provider' => 'invalid-provider'],
+    ]);
+    $invalidResponse->assertStatus(422);
+    $invalidResponse->assertJsonValidationErrors([
+        'general.app_name',
+        'storage.storage_driver',
+        'email.mail_driver',
+        'ai.ai_provider',
+    ]);
 });
 
 it('can update settings', function () {
     actingAs($this->user, 'api');
+
+    $mockProvider = Mockery::mock(\Laravel\Ai\Providers\OpenAiProvider::class);
+    $mockProvider->shouldReceive('prompt')
+        ->once()
+        ->with(Mockery::type(\Laravel\Ai\Prompts\AgentPrompt::class))
+        ->andReturn(new \Laravel\Ai\Responses\AgentResponse(
+            'invocation-id',
+            'OK',
+            new \Laravel\Ai\Responses\Data\Usage,
+            new \Laravel\Ai\Responses\Data\Meta
+        ));
+
+    \Laravel\Ai\Ai::shouldReceive('textProviderFor')
+        ->once()
+        ->with(Mockery::type(\Veloquent\Core\Domain\Ai\Agents\VeloquentAgent::class), 'openai')
+        ->andReturn($mockProvider);
 
     $response = patchJson('/api/settings', [
         'general' => [
@@ -98,6 +129,11 @@ it('can update settings', function () {
             'mail_password' => 'secret-mail-pass',
             'mail_from_address' => 'hello@test.com',
             'mail_from_name' => 'Support',
+        ],
+        'ai' => [
+            'ai_provider' => 'openai',
+            'ai_model' => 'gpt-4o-mini',
+            'ai_api_key' => 'secret-api-key',
         ],
     ]);
 

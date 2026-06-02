@@ -2,13 +2,13 @@
 
 namespace Veloquent\Core\Tests;
 
+use Laravel\Ai\AiServiceProvider;
 use Veloquent\Core\Support\Models\Tenant;
-use Orchestra\Testbench\TestCase as OrchestraTestCase;
-use Veloquent\Core\VeloquentServiceProvider;
-use Spatie\Multitenancy\MultitenancyServiceProvider;
 use Laravel\Sanctum\SanctumServiceProvider;
+use Veloquent\Core\VeloquentServiceProvider;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\File;
+use Spatie\Multitenancy\MultitenancyServiceProvider;
+use Orchestra\Testbench\TestCase as OrchestraTestCase;
 
 abstract class TestCase extends OrchestraTestCase
 {
@@ -46,6 +46,7 @@ abstract class TestCase extends OrchestraTestCase
             VeloquentServiceProvider::class,
             MultitenancyServiceProvider::class,
             SanctumServiceProvider::class,
+            AiServiceProvider::class,
         ];
     }
 

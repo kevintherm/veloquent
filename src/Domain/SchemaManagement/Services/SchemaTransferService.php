@@ -40,6 +40,7 @@ class SchemaTransferService
         'otp_tokens',
         'oauth_providers',
         'oauth_accounts',
+        'agents'
     ];
 
     public function __construct(

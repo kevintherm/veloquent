@@ -11,7 +11,8 @@ import ApiTest from "@/pages/Settings/ApiTest.vue";
 import SchemaMaintenance from "@/pages/Settings/SchemaMaintenance.vue";
 import SchemaTransfer from "@/pages/Settings/SchemaTransfer.vue";
 import SettingsForm from "@/components/SettingsForm.vue";
-import { Database, FlaskConical, FileJson, Settings as SettingsIcon } from "lucide-vue-next";
+import AiSettingsForm from "@/components/AiSettingsForm.vue";
+import { Database, FlaskConical, FileJson, Settings as SettingsIcon, Bot } from "lucide-vue-next";
 </script>
 
 <template>
@@ -27,6 +28,10 @@ import { Database, FlaskConical, FileJson, Settings as SettingsIcon } from "luci
           <TabsTrigger value="system" class="gap-2">
             <SettingsIcon class="h-4 w-4" />
             System
+          </TabsTrigger>
+          <TabsTrigger value="ai" class="gap-2">
+            <Bot class="h-4 w-4" />
+            AI Config
           </TabsTrigger>
           <TabsTrigger value="tests" class="gap-2">
             <FlaskConical class="h-4 w-4" />
@@ -53,6 +58,10 @@ import { Database, FlaskConical, FileJson, Settings as SettingsIcon } from "luci
 
         <TabsContent value="system" class="space-y-4">
           <SettingsForm />
+        </TabsContent>
+
+        <TabsContent value="ai" class="space-y-4">
+          <AiSettingsForm />
         </TabsContent>
 
         <TabsContent value="schema-transfer" class="space-y-4">

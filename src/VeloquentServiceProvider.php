@@ -15,6 +15,7 @@ use Spatie\Multitenancy\Contracts\IsTenant;
 use Veloquent\Core\Domain\Hooks\HookRunner;
 use Veloquent\Core\Domain\Hooks\HookRegistry;
 use Veloquent\Core\Support\Guards\TokenGuard;
+use Veloquent\Core\Domain\Settings\AiSettings;
 use Veloquent\Core\Domain\Records\Models\Record;
 use Veloquent\Core\Domain\Settings\EmailSettings;
 use Veloquent\Core\Providers\LogsServiceProvider;
@@ -64,12 +65,14 @@ class VeloquentServiceProvider extends ServiceProvider
             $container->register(GeneralSettings::class);
             $container->register(StorageSettings::class);
             $container->register(EmailSettings::class);
+            $container->register(AiSettings::class);
             return $container;
         });
 
         $this->app->singleton(GeneralSettings::class, fn () => GeneralSettings::load());
         $this->app->singleton(StorageSettings::class, fn () => StorageSettings::load());
         $this->app->singleton(EmailSettings::class, fn () => EmailSettings::load());
+        $this->app->singleton(AiSettings::class, fn () => AiSettings::load());
 
         $this->app->register(LogsServiceProvider::class);
         $this->app->register(RealtimeServiceProvider::class);

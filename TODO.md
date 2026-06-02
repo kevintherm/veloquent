@@ -1,7 +1,6 @@
 ## TODO
 
 - Battle Testing
-- Ship
 
 ## Roadmap
 

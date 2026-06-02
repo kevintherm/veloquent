@@ -11,12 +11,14 @@ class TenantSettingsService
     public function __construct(
         GeneralSettings $generalSettings,
         StorageSettings $storageSettings,
-        EmailSettings $emailSettings
+        EmailSettings $emailSettings,
+        AiSettings $aiSettings
     ) {
         $this->settings = [
             'general' => $generalSettings,
             'storage' => $storageSettings,
             'email' => $emailSettings,
+            'ai' => $aiSettings,
         ];
     }
 
@@ -45,6 +47,12 @@ class TenantSettingsService
     {
         foreach ($data as $key => $value) {
             if (property_exists($settings, $key)) {
+                if ($value === null) {
+                    $reflection = new \ReflectionProperty($settings, $key);
+                    if ($reflection->hasType() && !$reflection->getType()->allowsNull()) {
+                        $value = '';
+                    }
+                }
                 $settings->{$key} = $value;
             }
         }

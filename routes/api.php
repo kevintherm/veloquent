@@ -2,15 +2,16 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Broadcasting\BroadcastController;
-use Veloquent\Core\Support\Http\Controllers\OAuthController;
-use Veloquent\Core\Support\Http\Controllers\LogViewerController;
-use Veloquent\Core\Support\Http\Controllers\OnboardingController;
+use Veloquent\Core\Support\Http\Controllers\AiController;
 use Veloquent\Core\Domain\Auth\Controllers\AuthController;
-use Veloquent\Core\Support\Http\Controllers\OAuthProviderController;
+use Veloquent\Core\Support\Http\Controllers\OAuthController;
 use Veloquent\Core\Domain\Records\Controllers\RecordController;
 use Veloquent\Core\Support\Http\Controllers\SettingsController;
+use Veloquent\Core\Support\Http\Controllers\LogViewerController;
+use Veloquent\Core\Support\Http\Controllers\OnboardingController;
 use Veloquent\Core\Domain\Realtime\Controllers\SubscribeController;
 use Veloquent\Core\Domain\Records\Controllers\RecordFileController;
+use Veloquent\Core\Support\Http\Controllers\OAuthProviderController;
 use Veloquent\Core\Domain\Emails\Controllers\EmailTemplateController;
 use Veloquent\Core\Domain\Records\Controllers\RelationSyncController;
 use Veloquent\Core\Domain\Collections\Controllers\CollectionController;
@@ -102,6 +103,13 @@ Route::prefix('oauth2')->group(function () {
     Route::get('/callback', [OAuthController::class, 'callback'])->name('oauth.callback');
     Route::post('/exchange', [OAuthController::class, 'exchange'])->name('oauth.exchange');
 });
+
+/*
+|--------------------------------------------------------------------------
+| AI Integrations
+|--------------------------------------------------------------------------
+*/
+Route::post('/ai/chat', [AiController::class, 'chat'])->name('ai.chat');
 
 /*
 |--------------------------------------------------------------------------
