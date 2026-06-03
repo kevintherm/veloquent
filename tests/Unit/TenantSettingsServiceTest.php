@@ -3,6 +3,7 @@
 use Veloquent\Core\Domain\Settings\EmailSettings;
 use Veloquent\Core\Domain\Settings\GeneralSettings;
 use Veloquent\Core\Domain\Settings\StorageSettings;
+use Veloquent\Core\Domain\Settings\AiSettings;
 use Veloquent\Core\Domain\Settings\TenantSettingsService;
 use Illuminate\Support\Facades\Cache;
 use Mockery\MockInterface;
@@ -39,8 +40,11 @@ it('clears cache on update', function () {
     $email = $this->mock(EmailSettings::class, function (MockInterface $mock) {
         $mock->shouldReceive('save')->never();
     });
+    $ai = $this->mock(AiSettings::class, function (MockInterface $mock) {
+        $mock->shouldReceive('save')->never();
+    });
 
-    $service = new TenantSettingsService($general, $storage, $email);
+    $service = new TenantSettingsService($general, $storage, $email, $ai);
 
     Cache::shouldReceive('forget')
         ->once()
