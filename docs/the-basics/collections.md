@@ -4,9 +4,10 @@ Collections are the core building blocks of your Veloquentapplication. They repr
 
 ## Collection Types
 
-Veloquentsupports two main types of collections:
+Veloquent supports three main types of collections:
 - **Base Collections**: Standard tables for storing any kind of data.
 - **Auth Collections**: Specialized collections for user authentication. These collections include built-in fields for managing users and support standard and OAuth login flows.
+- **Agents Collections**: Specialized collections for AI and chatbot configurations. These collections automatically manage configuration fields such as system prompts, models, temperature, tone, etc., and support dedicated chat security rules. See [AI & Agents](ai-agents.md) for more details.
 
 ## Fields
 

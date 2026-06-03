@@ -32,4 +32,4 @@ To get started with Veloquent, the quickest path is following the [Quickstart Gu
 
 ## Next Steps
 
-If you're ready to go deeper, you can check out the [Collections](../the-basics/collections.md) systems, how [Schema Management](../the-basics/schema-management.md) works, and start [Working with Records](../the-basics/records.md).
+If you're ready to go deeper, you can check out the [Collections](../the-basics/collections.md) systems, how [Schema Management](../the-basics/schema-management.md) works, [Working with Records](../the-basics/records.md), and [AI & Agents](../the-basics/ai-agents.md).
