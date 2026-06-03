@@ -36,8 +36,7 @@ it('builds update rule context with record, request and merged data', function (
 
     $context = (new UpdateRuleContextBuilder(new RuleContextBuilder, new ResolvesRuleContextRelations))->build(
         $collection,
-        $record,
-        ['title' => 'New Title'],
+        ['record' => $record, 'data' => ['title' => 'New Title']],
         $user,
         $request
     );

@@ -54,8 +54,13 @@ class Superuser extends Authenticatable
         ];
     }
 
-    public function getIsSuperuserAttribute(): bool
+    public function isSuperuser(): bool
     {
         return true;
+    }
+
+    public function getIsSuperuserAttribute(): bool
+    {
+        return $this->isSuperuser();
     }
 }

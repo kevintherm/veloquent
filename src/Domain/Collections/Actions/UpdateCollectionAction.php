@@ -51,7 +51,7 @@ class UpdateCollectionAction
                 $fieldsForRules,
                 $existingFields,
                 $indexesForValidation,
-                $collection->type === CollectionType::Auth,
+                $collection->type->value,
             );
 
             $this->collectionValidator->validateUpdate(
@@ -79,7 +79,7 @@ class UpdateCollectionAction
             $data['api_rules'] = $this->apiRulesValidator->validate(
                 $data['api_rules'],
                 $fieldsForRules,
-                $collection->type === CollectionType::Auth
+                $collection->type
             );
         }
 

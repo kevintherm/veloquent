@@ -4,6 +4,7 @@ namespace Veloquent\Core\Domain\Collections\Validators;
 
 use Illuminate\Validation\ValidationException;
 use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\Collections\Enums\CollectionType;
 use Veloquent\Core\Domain\QueryCompiler\Services\QueryFilter;
 use Veloquent\Core\Domain\QueryCompiler\Services\AllowedFieldsResolver;
 
@@ -13,13 +14,16 @@ class ApiRulesValidator
         private readonly AllowedFieldsResolver $allowedFieldsResolver,
     ) {}
 
-    public function validate(array $apiRules, array $fields, bool $isAuthCollection): array
+    public function validate(array $apiRules, array $fields, CollectionType|string $collectionType): array
     {
         $requiredApiKeys = ['list', 'create', 'view', 'update', 'delete'];
 
-        if ($isAuthCollection) {
-            $requiredApiKeys[] = 'manage';
-        }
+        $typeEnum = $collectionType instanceof CollectionType
+            ? $collectionType
+            : CollectionType::from((string) $collectionType);
+
+        $requiredApiKeys = array_merge($requiredApiKeys, $typeEnum->additionalRules());
+        $allExpectedKeys = $requiredApiKeys;
 
         $missingKeys = array_diff($requiredApiKeys, array_keys($apiRules));
 
@@ -31,11 +35,13 @@ class ApiRulesValidator
 
         $allowedFields = $this->allowedFieldsResolver->resolveFromFieldDefinitions($fields);
 
-        foreach ($requiredApiKeys as $rule) {
-            QueryFilter::for(Collection::query(), $allowedFields)->lint($apiRules[$rule]);
+        foreach ($apiRules as $key => $ruleValue) {
+            if (in_array($key, $allExpectedKeys) && $ruleValue !== null) {
+                QueryFilter::for(Collection::query(), $allowedFields)->lint($ruleValue);
+            }
         }
 
-        $validated = array_intersect_key($apiRules, array_flip($requiredApiKeys));
+        $validated = array_intersect_key($apiRules, array_flip($allExpectedKeys));
 
         return $validated;
     }

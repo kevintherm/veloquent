@@ -20,6 +20,52 @@ beforeEach(function () {
     $this->user = Superuser::factory()->create();
     Mail::fake();
     withoutMiddleware(TokenAuthMiddleware::class);
+    actingAs($this->user, 'api');
+
+    $this->collection = \Veloquent\Core\Domain\Collections\Models\Collection::withoutEvents(function () {
+        return \Veloquent\Core\Domain\Collections\Models\Collection::create([
+            'type' => 'agents',
+            'is_system' => false,
+            'name' => 'agents',
+            'table_name' => '_velo_agents',
+            'description' => 'User collection for chatbot agents',
+            'fields' => [
+                ['name' => 'name', 'type' => 'text', 'nullable' => false, 'unique' => true],
+                ['name' => 'model', 'type' => 'text', 'nullable' => true, 'unique' => false],
+                ['name' => 'system_prompt', 'type' => 'longtext', 'nullable' => true, 'unique' => false],
+                ['name' => 'tone', 'type' => 'text', 'nullable' => true, 'unique' => false],
+                ['name' => 'length', 'type' => 'text', 'nullable' => true, 'unique' => false],
+                ['name' => 'temperature', 'type' => 'number', 'nullable' => true, 'unique' => false, 'allow_decimals' => true],
+                ['name' => 'output_type', 'type' => 'select', 'nullable' => true, 'unique' => false, 'default' => 'text', 'options' => ['text', 'json']],
+                ['name' => 'schema', 'type' => 'json', 'nullable' => true, 'unique' => false],
+            ],
+            'api_rules' => [
+                'list' => '@request.auth.id != null',
+                'view' => '@request.auth.id != null',
+                'create' => '@request.auth.is_superuser = true',
+                'update' => '@request.auth.is_superuser = true',
+                'delete' => '@request.auth.is_superuser = true',
+                'manage' => null,
+                'chat' => '@request.auth.id != null',
+            ],
+        ]);
+    });
+
+    $this->tableName = $this->collection->getPhysicalTableName();
+
+    Schema::dropIfExists($this->tableName);
+    Schema::create($this->tableName, function ($table) {
+        $table->uuid('id')->primary();
+        $table->string('name');
+        $table->string('model')->nullable();
+        $table->text('system_prompt')->nullable();
+        $table->string('tone')->nullable();
+        $table->string('length')->nullable();
+        $table->decimal('temperature', 3, 2)->nullable();
+        $table->string('output_type')->nullable();
+        $table->json('schema')->nullable();
+        $table->timestamps();
+    });
 });
 
 it('can get AI settings with masked API key', function () {
@@ -262,21 +308,7 @@ it('can chat with configured agent', function () {
     $settings->ai_api_key = 'sk-proj-test';
     $settings->save();
 
-    // 2. Create the agents table physically and insert a record
-    Schema::dropIfExists('agents');
-    Schema::create('agents', function ($table) {
-        $table->uuid('id')->primary();
-        $table->string('name');
-        $table->string('model')->nullable();
-        $table->text('system_prompt')->nullable();
-        $table->string('tone')->nullable();
-        $table->string('length')->nullable();
-        $table->decimal('temperature', 3, 2)->nullable();
-        $table->string('output_type')->nullable();
-        $table->timestamps();
-    });
-
-    DB::table('agents')->insert([
+    DB::table($this->tableName)->insert([
         'id' => '01h7c989r148s89m257a3b4cde',
         'name' => 'support-bot',
         'model' => 'gpt-4o',
@@ -314,7 +346,7 @@ it('can chat with configured agent', function () {
         ->with(Mockery::type(\Veloquent\Core\Domain\Ai\Agents\VeloquentAgent::class), 'openai')
         ->andReturn($mockProvider);
 
-    $response = postJson('/api/ai/chat', [
+    $response = postJson("/api/collections/{$this->collection->id}/ai/chat", [
         'agent' => 'support-bot',
         'prompt' => 'Can you help me?',
     ]);
@@ -330,20 +362,7 @@ it('can chat with agent utilizing past conversation history', function () {
     $settings->ai_api_key = 'sk-proj-test';
     $settings->save();
 
-    Schema::dropIfExists('agents');
-    Schema::create('agents', function ($table) {
-        $table->uuid('id')->primary();
-        $table->string('name');
-        $table->string('model')->nullable();
-        $table->text('system_prompt')->nullable();
-        $table->string('tone')->nullable();
-        $table->string('length')->nullable();
-        $table->decimal('temperature', 3, 2)->nullable();
-        $table->string('output_type')->nullable();
-        $table->timestamps();
-    });
-
-    DB::table('agents')->insert([
+    DB::table($this->tableName)->insert([
         'id' => '01h7c989r148s89m257a3b4cdf',
         'name' => 'sales-bot',
         'model' => 'gpt-4o-mini',
@@ -385,7 +404,7 @@ it('can chat with agent utilizing past conversation history', function () {
         ->with(Mockery::type(\Veloquent\Core\Domain\Ai\Agents\VeloquentAgent::class), 'openai')
         ->andReturn($mockProvider);
 
-    $response = postJson('/api/ai/chat', [
+    $response = postJson("/api/collections/{$this->collection->id}/ai/chat", [
         'agent' => 'sales-bot',
         'prompt' => 'Is there any discount?',
         'messages' => [
@@ -405,40 +424,7 @@ it('can chat with agent and enforce structured JSON output', function () {
     $settings->ai_api_key = 'sk-proj-test';
     $settings->save();
 
-    Schema::dropIfExists('agents');
-    Schema::create('agents', function ($table) {
-        $table->uuid('id')->primary();
-        $table->string('name');
-        $table->string('model')->nullable();
-        $table->text('system_prompt')->nullable();
-        $table->string('tone')->nullable();
-        $table->string('length')->nullable();
-        $table->decimal('temperature', 3, 2)->nullable();
-        $table->string('output_type')->nullable();
-        $table->timestamps();
-    });
-
-    // Seed agent collection metadata
-    $collection = \Veloquent\Core\Domain\Collections\Models\Collection::where('name', 'agents')->first();
-    if (!$collection) {
-        $collection = \Veloquent\Core\Domain\Collections\Models\Collection::create([
-            'type' => 'base',
-            'is_system' => true,
-            'name' => 'agents',
-            'description' => 'System collection for chatbot agents',
-            'fields' => [
-                ['name' => 'name', 'type' => 'text'],
-                ['name' => 'model', 'type' => 'text'],
-                ['name' => 'system_prompt', 'type' => 'longtext'],
-                ['name' => 'tone', 'type' => 'text'],
-                ['name' => 'length', 'type' => 'text'],
-                ['name' => 'temperature', 'type' => 'number', 'allow_decimals' => true],
-                ['name' => 'output_type', 'type' => 'text'],
-            ],
-        ]);
-    }
-
-    DB::table('agents')->insert([
+    DB::table($this->tableName)->insert([
         'id' => '01h7c989r148s89m257a3b4cde',
         'name' => 'json-bot',
         'model' => 'gpt-4o-mini',
@@ -472,7 +458,7 @@ it('can chat with agent and enforce structured JSON output', function () {
         ->with(Mockery::type(\Veloquent\Core\Domain\Ai\Agents\StructuredVeloquentAgent::class), 'openai')
         ->andReturn($mockProvider);
 
-    $response = postJson('/api/ai/chat', [
+    $response = postJson("/api/collections/{$this->collection->id}/ai/chat", [
         'agent' => 'json-bot',
         'prompt' => 'Give me top movies',
         'schema' => [
@@ -494,20 +480,7 @@ it('can stream responses from chatbot agent', function () {
     $settings->ai_api_key = 'sk-proj-test';
     $settings->save();
 
-    Schema::dropIfExists('agents');
-    Schema::create('agents', function ($table) {
-        $table->uuid('id')->primary();
-        $table->string('name');
-        $table->string('model')->nullable();
-        $table->text('system_prompt')->nullable();
-        $table->string('tone')->nullable();
-        $table->string('length')->nullable();
-        $table->decimal('temperature', 3, 2)->nullable();
-        $table->string('output_type')->nullable();
-        $table->timestamps();
-    });
-
-    DB::table('agents')->insert([
+    DB::table($this->tableName)->insert([
         'id' => '01h7c989r148s89m257a3b4cdf',
         'name' => 'streaming-bot',
         'model' => 'gpt-4o-mini',
@@ -540,7 +513,7 @@ it('can stream responses from chatbot agent', function () {
         ->with(Mockery::type(\Veloquent\Core\Domain\Ai\Agents\VeloquentAgent::class), 'openai')
         ->andReturn($mockProvider);
 
-    $response = postJson('/api/ai/chat', [
+    $response = postJson("/api/collections/{$this->collection->id}/ai/chat", [
         'agent' => 'streaming-bot',
         'prompt' => 'Hello',
         'stream' => true,
@@ -557,20 +530,7 @@ it('can chat with agent resolved by its UUID ID', function () {
     $settings->ai_api_key = 'sk-proj-test';
     $settings->save();
 
-    Schema::dropIfExists('agents');
-    Schema::create('agents', function ($table) {
-        $table->uuid('id')->primary();
-        $table->string('name');
-        $table->string('model')->nullable();
-        $table->text('system_prompt')->nullable();
-        $table->string('tone')->nullable();
-        $table->string('length')->nullable();
-        $table->decimal('temperature', 3, 2)->nullable();
-        $table->string('output_type')->nullable();
-        $table->timestamps();
-    });
-
-    DB::table('agents')->insert([
+    DB::table($this->tableName)->insert([
         'id' => '01h7c989r148s89m257a3b4cde',
         'name' => 'id-resolved-bot',
         'model' => 'gpt-4o-mini',
@@ -598,7 +558,7 @@ it('can chat with agent resolved by its UUID ID', function () {
         ->with(Mockery::type(\Veloquent\Core\Domain\Ai\Agents\VeloquentAgent::class), 'openai')
         ->andReturn($mockProvider);
 
-    $response = postJson('/api/ai/chat', [
+    $response = postJson("/api/collections/{$this->collection->id}/ai/chat", [
         'agent' => '01h7c989r148s89m257a3b4cde',
         'prompt' => 'Hello',
     ]);
@@ -614,21 +574,7 @@ it('returns 500 malformed response when JSON decode fails', function () {
     $settings->ai_api_key = 'sk-proj-test';
     $settings->save();
 
-    Schema::dropIfExists('agents');
-    Schema::create('agents', function ($table) {
-        $table->uuid('id')->primary();
-        $table->string('name');
-        $table->string('model')->nullable();
-        $table->text('system_prompt')->nullable();
-        $table->string('tone')->nullable();
-        $table->string('length')->nullable();
-        $table->decimal('temperature', 3, 2)->nullable();
-        $table->string('output_type')->nullable();
-        $table->text('schema')->nullable();
-        $table->timestamps();
-    });
-
-    DB::table('agents')->insert([
+    DB::table($this->tableName)->insert([
         'id' => '01h7c989r148s89m257a3b4cdb',
         'name' => 'malformed-bot',
         'model' => 'gpt-4o-mini',
@@ -659,7 +605,7 @@ it('returns 500 malformed response when JSON decode fails', function () {
         ->with(Mockery::type(\Veloquent\Core\Domain\Ai\Agents\StructuredVeloquentAgent::class), 'openai')
         ->andReturn($mockProvider);
 
-    $response = postJson('/api/ai/chat', [
+    $response = postJson("/api/collections/{$this->collection->id}/ai/chat", [
         'agent' => 'malformed-bot',
         'prompt' => 'Give me JSON',
     ]);
@@ -675,21 +621,7 @@ it('can chat with agent utilizing complex nested schemas', function () {
     $settings->ai_api_key = 'sk-proj-test';
     $settings->save();
 
-    Schema::dropIfExists('agents');
-    Schema::create('agents', function ($table) {
-        $table->uuid('id')->primary();
-        $table->string('name');
-        $table->string('model')->nullable();
-        $table->text('system_prompt')->nullable();
-        $table->string('tone')->nullable();
-        $table->string('length')->nullable();
-        $table->decimal('temperature', 3, 2)->nullable();
-        $table->string('output_type')->nullable();
-        $table->text('schema')->nullable();
-        $table->timestamps();
-    });
-
-    DB::table('agents')->insert([
+    DB::table($this->tableName)->insert([
         'id' => '01h7c989r148s89m257a3b4cda',
         'name' => 'nested-bot',
         'model' => 'gpt-4o-mini',
@@ -730,7 +662,7 @@ it('can chat with agent utilizing complex nested schemas', function () {
         ->with(Mockery::type(\Veloquent\Core\Domain\Ai\Agents\StructuredVeloquentAgent::class), 'openai')
         ->andReturn($mockProvider);
 
-    $response = postJson('/api/ai/chat', [
+    $response = postJson("/api/collections/{$this->collection->id}/ai/chat", [
         'agent' => 'nested-bot',
         'prompt' => 'Give me nested user details',
     ]);
@@ -739,4 +671,212 @@ it('can chat with agent utilizing complex nested schemas', function () {
     $response->assertJsonPath('data.json.user.name', 'Alice');
     $response->assertJsonPath('data.json.user.age', 30);
     $response->assertJsonPath('data.json.tags.0', 'admin');
+});
+
+it('allows authenticated users to chat based on the chat API rule', function () {
+    $settings = app(AiSettings::class);
+    $settings->ai_provider = 'openai';
+    $settings->ai_model = 'gpt-4o-mini';
+    $settings->ai_api_key = 'sk-proj-test';
+    $settings->save();
+
+    \Veloquent\Core\Domain\Collections\Models\Collection::withoutEvents(function () {
+        $this->collection->api_rules = [
+            'list' => '@request.auth.id != null',
+            'view' => '@request.auth.id != null',
+            'create' => '@request.auth.is_superuser = true',
+            'update' => '@request.auth.is_superuser = true',
+            'delete' => '@request.auth.is_superuser = true',
+            'chat' => '@request.auth.id != null',
+        ];
+        $this->collection->save();
+    });
+
+    DB::table($this->tableName)->insert([
+        'id' => '01h7c989r148s89m257a3b4cde',
+        'name' => 'rule-bot',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $usersCollection = \Veloquent\Core\Domain\Collections\Models\Collection::where('name', 'users')->first();
+    $regularUser = \Veloquent\Core\Domain\Records\Models\Record::of($usersCollection);
+    $regularUser->setAttribute('id', 42);
+
+    actingAs($regularUser, 'api');
+
+    $mockProvider = Mockery::mock(\Laravel\Ai\Providers\OpenAiProvider::class);
+    $mockProvider->shouldReceive('prompt')
+        ->once()
+        ->andReturn(new \Laravel\Ai\Responses\AgentResponse(
+            'invocation-id',
+            'Hello Regular User',
+            new \Laravel\Ai\Responses\Data\Usage,
+            new \Laravel\Ai\Responses\Data\Meta
+        ));
+
+    Ai::shouldReceive('textProviderFor')
+        ->once()
+        ->andReturn($mockProvider);
+
+    $response = postJson("/api/collections/{$this->collection->id}/ai/chat", [
+        'agent' => 'rule-bot',
+        'prompt' => 'Hello',
+    ]);
+
+    $response->assertStatus(200);
+    $response->assertJsonPath('data.text', 'Hello Regular User');
+});
+
+it('denies guests from chatting if rule blocks them', function () {
+    $settings = app(AiSettings::class);
+    $settings->ai_provider = 'openai';
+    $settings->ai_model = 'gpt-4o-mini';
+    $settings->ai_api_key = 'sk-proj-test';
+    $settings->save();
+
+    \Veloquent\Core\Domain\Collections\Models\Collection::withoutEvents(function () {
+        $this->collection->api_rules = [
+            'list' => '@request.auth.id != null',
+            'view' => '@request.auth.id != null',
+            'create' => '@request.auth.is_superuser = true',
+            'update' => '@request.auth.is_superuser = true',
+            'delete' => '@request.auth.is_superuser = true',
+            'chat' => '@request.auth.id != null',
+        ];
+        $this->collection->save();
+    });
+
+    DB::table($this->tableName)->insert([
+        'id' => '01h7c989r148s89m257a3b4cdf',
+        'name' => 'rule-bot-2',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    \Illuminate\Support\Facades\Auth::logout();
+
+    $response = postJson("/api/collections/{$this->collection->id}/ai/chat", [
+        'agent' => 'rule-bot-2',
+        'prompt' => 'Hello',
+    ]);
+
+    $response->assertStatus(403);
+});
+
+it('triggers ai.generating and ai.generated hooks during chat', function () {
+    $settings = app(AiSettings::class);
+    $settings->ai_provider = 'openai';
+    $settings->ai_model = 'gpt-4o-mini';
+    $settings->ai_api_key = 'sk-proj-test';
+    $settings->save();
+
+    \Veloquent\Core\Domain\Collections\Models\Collection::withoutEvents(function () {
+        $this->collection->api_rules = [
+            'list' => '@request.auth.id != null',
+            'view' => '@request.auth.id != null',
+            'create' => '@request.auth.is_superuser = true',
+            'update' => '@request.auth.is_superuser = true',
+            'delete' => '@request.auth.is_superuser = true',
+            'chat' => '',
+        ];
+        $this->collection->save();
+    });
+
+    DB::table($this->tableName)->insert([
+        'id' => '01h7c989r148s89m257a3b4cde',
+        'name' => 'hook-bot',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    app(\Veloquent\Core\Domain\Hooks\HookRegistry::class)->register(
+        'ai.generating',
+        fn (\Veloquent\Core\Domain\Hooks\ValueObjects\HookPayload $payload, Closure $next): mixed => $next($payload->withData(array_merge($payload->data, ['prompt' => $payload->data['prompt'] . ' modified by hook'])))
+    );
+
+    app(\Veloquent\Core\Domain\Hooks\HookRegistry::class)->register(
+        'ai.generated',
+        fn (\Veloquent\Core\Domain\Hooks\ValueObjects\HookPayload $payload, Closure $next): mixed => $next($payload->withData(array_merge($payload->data, ['text' => $payload->data['text'] . ' post-processed'])))
+    );
+
+    $mockProvider = Mockery::mock(\Laravel\Ai\Providers\OpenAiProvider::class);
+    $mockProvider->shouldReceive('prompt')
+        ->once()
+        ->with(Mockery::on(function ($prompt) {
+            return $prompt->prompt === 'Original prompt modified by hook';
+        }))
+        ->andReturn(new \Laravel\Ai\Responses\AgentResponse(
+            'invocation-id',
+            'Response',
+            new \Laravel\Ai\Responses\Data\Usage,
+            new \Laravel\Ai\Responses\Data\Meta
+        ));
+
+    Ai::shouldReceive('textProviderFor')
+        ->once()
+        ->andReturn($mockProvider);
+
+    $response = postJson("/api/collections/{$this->collection->id}/ai/chat", [
+        'agent' => 'hook-bot',
+        'prompt' => 'Original prompt',
+    ]);
+
+    $response->assertStatus(200);
+    $response->assertJsonPath('data.text', 'Response post-processed');
+});
+
+it('merges agents collection with system fields when created with empty fields', function () {
+    $response = postJson('/api/collections', [
+        'type' => 'agents',
+        'is_system' => false,
+        'name' => 'test_agents_collection',
+        'table_name' => '_velo_test_agents_collection',
+        'description' => 'Test agents collection',
+        'fields' => [],
+        'api_rules' => [
+            'list' => '@request.auth.id != null',
+            'view' => '@request.auth.id != null',
+            'create' => '@request.auth.is_superuser = true',
+            'update' => '@request.auth.is_superuser = true',
+            'delete' => '@request.auth.is_superuser = true',
+            'chat' => '@request.auth.id != null',
+        ],
+    ]);
+
+    $response->assertStatus(200);
+    
+    // Assert all agents reserved fields are in the collection fields
+    $collection = \Veloquent\Core\Domain\Collections\Models\Collection::where('name', 'test_agents_collection')->first();
+    $fieldNames = collect($collection->fields)->pluck('name')->all();
+
+    foreach (\Veloquent\Core\Domain\SchemaManagement\Services\SchemaChange::getAgentsReservedFields() as $field) {
+        expect($fieldNames)->toContain($field);
+    }
+
+    // Try to update the collection and remove a reserved field -> should fail
+    $updatePayload = [
+        'name' => 'test_agents_collection',
+        'fields' => collect($collection->fields)->reject(fn($f) => $f['name'] === 'system_prompt')->all(),
+    ];
+
+    $updateResponse = patchJson("/api/collections/{$collection->id}", $updatePayload);
+    $updateResponse->assertStatus(422);
+    $updateResponse->assertJsonValidationErrors('fields.2');
+
+    // Try to update the collection and modify a reserved field type -> should fail
+    $modifiedFields = collect($collection->fields)->map(function ($f) {
+        if ($f['name'] === 'system_prompt') {
+            $f['type'] = 'number'; // system_prompt is text
+        }
+        return $f;
+    })->all();
+
+    $updatePayload2 = [
+        'name' => 'test_agents_collection',
+        'fields' => $modifiedFields,
+    ];
+
+    $updateResponse2 = patchJson("/api/collections/{$collection->id}", $updatePayload2);
+    $updateResponse2->assertStatus(422);
 });

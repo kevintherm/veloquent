@@ -17,17 +17,23 @@ class CollectionFieldValidator
     ) {}
 
     /**
-     * @param  array<int, array<string, mixed>>  $fields
+      * @param  array<int, array<string, mixed>>  $fields
      * @param  array<int, Index|array<string, mixed>>  $indexes
      */
-    public function validateForCreate(array $fields, array $indexes, bool $isAuthCollection): void
+    public function validateForCreate(array $fields, array $indexes, bool|string|null $collectionType): void
     {
+        $type = $collectionType;
+        if (is_bool($collectionType)) {
+            $type = $collectionType ? 'auth' : 'base';
+        }
+        $type ??= 'base';
+
         $errors = [];
 
-        $errors = $this->mergeErrors($errors, $this->checkReservedNames($fields, $isAuthCollection));
+        $errors = $this->mergeErrors($errors, $this->checkReservedNames($fields, $type));
         $errors = $this->mergeErrors($errors, $this->checkDuplicateNames($fields));
         $errors = $this->mergeErrors($errors, $this->checkFieldShapes($fields));
-        $errors = $this->mergeErrors($errors, $this->checkIndexes($indexes, $fields, $isAuthCollection));
+        $errors = $this->mergeErrors($errors, $this->checkIndexes($indexes, $fields, $type));
 
         if ($errors !== []) {
             throw ValidationException::withMessages($errors);
@@ -39,15 +45,22 @@ class CollectionFieldValidator
      * @param  array<int, array<string, mixed>>  $storedFields
      * @param  array<int, Index|array<string, mixed>>  $incomingIndexes
      */
-    public function validateForUpdate(array $incomingFields, array $storedFields, array $incomingIndexes, bool $isAuthCollection): void
+    public function validateForUpdate(array $incomingFields, array $storedFields, array $incomingIndexes, bool|string|null $collectionType): void
     {
+        $type = $collectionType;
+        if (is_bool($collectionType)) {
+            $type = $collectionType ? 'auth' : 'base';
+        }
+        $type ??= 'base';
+
         $errors = [];
 
         $errors = $this->mergeErrors($errors, $this->checkDuplicateNames($incomingFields));
         $errors = $this->mergeErrors($errors, $this->checkFieldShapes($incomingFields));
         $errors = $this->mergeErrors($errors, $this->checkTypeChanges($incomingFields, $storedFields));
-        $errors = $this->mergeErrors($errors, $this->checkDroppedAuthFields($incomingFields, $storedFields, $isAuthCollection));
-        $errors = $this->mergeErrors($errors, $this->checkIndexes($incomingIndexes, $incomingFields, $isAuthCollection));
+        $errors = $this->mergeErrors($errors, $this->checkDroppedReservedFields($incomingFields, $storedFields, $type));
+        $errors = $this->mergeErrors($errors, $this->checkReservedFieldModifications($incomingFields, $storedFields, $type));
+        $errors = $this->mergeErrors($errors, $this->checkIndexes($incomingIndexes, $incomingFields, $type));
 
         if ($errors !== []) {
             throw ValidationException::withMessages($errors);
@@ -58,10 +71,10 @@ class CollectionFieldValidator
      * @param  array<int, array<string, mixed>>  $fields
      * @return array<string, array<int, string>>
      */
-    private function checkReservedNames(array $fields, bool $isAuthCollection): array
+    private function checkReservedNames(array $fields, string $collectionType): array
     {
         $errors = [];
-        $reservedNames = SchemaChange::getAllReservedFields($isAuthCollection);
+        $reservedNames = SchemaChange::getAllReservedFields($collectionType);
 
         foreach ($fields as $index => $field) {
             $name = $field['name'] ?? null;
@@ -199,21 +212,86 @@ class CollectionFieldValidator
         return $errors;
     }
 
-    private function checkDroppedAuthFields(array $incomingFields, array $storedFields, bool $isAuthCollection): array
+    private function checkDroppedReservedFields(array $incomingFields, array $storedFields, string $collectionType): array
     {
-        if (!$isAuthCollection) {
+        $reservedFields = [];
+        if ($collectionType === 'auth') {
+            $reservedFields = SchemaChange::getAuthReservedFields();
+        } elseif ($collectionType === 'agents') {
+            $reservedFields = SchemaChange::getAgentsReservedFields();
+        }
+
+        if (empty($reservedFields)) {
             return [];
         }
 
         $errors = [];
         $incomingNames = collect($incomingFields)->pluck('name')->all();
-        $requiredAuthFields = SchemaChange::getAuthReservedFields();
 
         foreach ($storedFields as $index => $field) {
             $name = is_array($field) ? ($field['name'] ?? null) : $field->name;
 
-            if (in_array($name, $requiredAuthFields, true) && !in_array($name, $incomingNames, true)) {
-                $this->addError($errors, "fields.{$index}", "Authentication field '{$name}' cannot be removed.");
+            if (in_array($name, $reservedFields, true) && !in_array($name, $incomingNames, true)) {
+                $this->addError($errors, "fields.{$index}", "Reserved field '{$name}' cannot be removed.");
+            }
+        }
+
+        return $errors;
+    }
+
+    private function checkReservedFieldModifications(array $incomingFields, array $storedFields, string $collectionType): array
+    {
+        $errors = [];
+        $reservedNames = SchemaChange::getAllReservedFields($collectionType);
+        
+        $storedReserved = collect($storedFields)
+            ->map(fn($f) => is_array($f) ? $f : (array) $f)
+            ->filter(fn($f) => in_array($f['name'] ?? '', $reservedNames, true))
+            ->keyBy('name');
+
+        if ($storedReserved->isEmpty()) {
+            return [];
+        }
+
+        $incomingByName = collect($incomingFields)->keyBy('name');
+
+        foreach ($storedReserved as $name => $storedField) {
+            $incomingField = $incomingByName->get($name);
+
+            if ($incomingField) {
+                $reservedDefinitions = SchemaChange::getReservedFieldDefinitions($collectionType);
+                $expected = $reservedDefinitions[$name] ?? null;
+
+                if ($expected) {
+                    $diffKeys = ['type', 'unique', 'nullable', 'default'];
+                    foreach ($diffKeys as $key) {
+                        $storedVal = $expected[$key] ?? null;
+                        $incomingVal = $incomingField[$key] ?? null;
+
+                        if ($incomingVal === null) {
+                            continue;
+                        }
+
+                        $normalize = function ($val) {
+                            if ($val === 'true' || $val === '1' || $val === 1 || $val === true) {
+                                return true;
+                            }
+                            if ($val === 'false' || $val === '0' || $val === 0 || $val === false) {
+                                return false;
+                            }
+                            return $val;
+                        };
+
+                        if ($normalize($storedVal) !== $normalize($incomingVal)) {
+                            $this->addError(
+                                $errors,
+                                "fields",
+                                "Reserved field '{$name}' properties cannot be modified."
+                            );
+                            break;
+                        }
+                    }
+                }
             }
         }
 
@@ -231,7 +309,7 @@ class CollectionFieldValidator
      * @param  array<int, array<string, mixed>>  $fields
      * @return array<string, array<int, string>>
      */
-    private function checkIndexes(array $indexes, array $fields, bool $isAuthCollection): array
+    private function checkIndexes(array $indexes, array $fields, string $collectionType): array
     {
         $errors = [];
 
@@ -240,7 +318,7 @@ class CollectionFieldValidator
             ->mapWithKeys(fn (array $field): array => [$field['name'] => (string) $field['type']])
             ->all();
 
-        foreach (SchemaChange::getReservedFieldDefinitions($isAuthCollection) as $name => $definition) {
+        foreach (SchemaChange::getReservedFieldDefinitions($collectionType) as $name => $definition) {
             $fieldTypesByName[$name] ??= (string) $definition['type'];
         }
 

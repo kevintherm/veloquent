@@ -40,7 +40,6 @@ class SchemaTransferService
         'otp_tokens',
         'oauth_providers',
         'oauth_accounts',
-        'agents'
     ];
 
     public function __construct(
@@ -355,15 +354,7 @@ class SchemaTransferService
 
         $filteredFields = collect($rawFields)
             ->filter(fn (mixed $field): bool => is_array($field))
-            ->reject(function (array $field) use ($isAuthCollection): bool {
-                $fieldName = $field['name'] ?? null;
-
-                if (! is_string($fieldName)) {
-                    return true;
-                }
-
-                return in_array($fieldName, SchemaChange::getAllReservedFields($isAuthCollection), true);
-            })
+            ->reject(fn(array $field) => in_array($field['name'] ?? '', SchemaChange::getAllReservedFields($type), true))
             ->values()
             ->all();
 
@@ -412,9 +403,7 @@ class SchemaTransferService
  
         $reservedFields = collect($existing->fields ?? [])
             ->map(fn ($field) => is_array($field) ? $field : (array) $field)
-            ->filter(function (array $field) use ($isAuthCollection): bool {
-                return in_array($field['name'] ?? '', SchemaChange::getAllReservedFields($isAuthCollection), true);
-            })
+            ->filter(fn(array $field) => in_array($field['name'] ?? '', SchemaChange::getAllReservedFields($type), true))
             ->values()
             ->all();
  

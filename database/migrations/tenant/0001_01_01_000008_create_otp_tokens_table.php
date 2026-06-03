@@ -58,6 +58,13 @@ return new class extends Migration
                     'type' => CollectionFieldType::Datetime,
                 ],
             ],
+            'api_rules' => [
+                'list' => null,
+                'view' => null,
+                'create' => null,
+                'update' => null,
+                'delete' => null
+            ]
         ]);
     }
 

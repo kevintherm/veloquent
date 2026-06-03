@@ -2,9 +2,11 @@
 
 namespace Veloquent\Core\Domain\Collections\ValueObjects;
 
+use ArrayAccess;
+use JsonSerializable;
 use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
 
-class Field implements \ArrayAccess, \JsonSerializable
+class Field implements ArrayAccess, JsonSerializable
 {
     public function __construct(
         public string $name,

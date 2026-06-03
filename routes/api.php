@@ -90,6 +90,18 @@ Route::prefix('collections/{collection}/auth')->name('collections.auth.')->group
 
 /*
 |--------------------------------------------------------------------------
+| AI Management
+|--------------------------------------------------------------------------
+|
+| Oooo AI
+|
+*/
+Route::prefix('collections/{collection}/ai')->name('collections.ai.')->group(function() {
+    Route::post('/chat', [AiController::class, 'chat'])->name('chat');
+});
+
+/*
+|--------------------------------------------------------------------------
 | OAuth2 Integration
 |--------------------------------------------------------------------------
 |

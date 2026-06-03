@@ -90,7 +90,7 @@ class UpdateRecordAction
             return;
         }
  
-        $context = app(UpdateRuleContextBuilder::class)->build($collection, $record, $data, $user, $request ?? request(), $rule);
+        $context = app(UpdateRuleContextBuilder::class)->build($collection, ['record' => $record, 'data' => $data], $user, $request ?? request(), $rule);
         $allowed = QueryFilter::for($record->newQuery(), array_keys($context))->evaluate($rule, $context);
  
         if (! $allowed) {
@@ -142,7 +142,7 @@ class UpdateRecordAction
             return true;
         }
  
-        $context = app(UpdateRuleContextBuilder::class)->build($collection, $record, $data, Auth::user(), $request ?? request(), $rule);
+        $context = app(UpdateRuleContextBuilder::class)->build($collection, ['record' => $record, 'data' => $data], Auth::user(), $request ?? request(), $rule);
         return QueryFilter::for($record->newQuery(), array_keys($context))->evaluate($rule, $context);
     }
  

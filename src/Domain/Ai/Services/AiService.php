@@ -3,12 +3,15 @@
 namespace Veloquent\Core\Domain\Ai\Services;
 
 use Exception;
+use Illuminate\Support\Facades\Auth;
 use Laravel\Ai\Messages\UserMessage;
 use Laravel\Ai\Messages\AssistantMessage;
+use Veloquent\Core\Domain\Hooks\HookRunner;
 use Veloquent\Core\Domain\Settings\AiSettings;
 use Veloquent\Core\Domain\Records\Models\Record;
 use Veloquent\Core\Domain\Ai\Agents\VeloquentAgent;
 use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\Hooks\ValueObjects\HookPayload;
 use Veloquent\Core\Domain\Ai\Agents\StructuredVeloquentAgent;
 use Veloquent\Core\Domain\Ai\Exceptions\AgentNotFoundException;
 use Veloquent\Core\Domain\Ai\Exceptions\AiNotConfiguredException;
@@ -17,27 +20,24 @@ use Veloquent\Core\Domain\Ai\Exceptions\MalformedResponseException;
 class AiService
 {
     /**
-     * Create a new AiService instance with injected settings dependency.
+     * Create a new AiService instance with injected settings and hook runner dependencies.
      */
     public function __construct(
-        protected AiSettings $aiSettings
+        protected AiSettings $aiSettings,
+        protected HookRunner $hookRunner
     ) {}
 
     /**
      * Orchestrate and execute the chatbot interaction.
      *
+     * @param Collection $collection
      * @param array $payload
      * @return mixed
      * @throws Exception
      */
-    public function chat(array $payload): mixed
+    public function chat(Collection $collection, array $payload): mixed
     {
         $agentIdentifier = $payload['agent'];
-
-        $collection = Collection::where('name', 'agents')->first();
-        if (!$collection) {
-            throw new AgentNotFoundException($agentIdentifier);
-        }
 
         $agent = Record::of($collection)
             ->where('name', $agentIdentifier)
@@ -47,6 +47,18 @@ class AiService
         if (!$agent) {
             throw new AgentNotFoundException($agentIdentifier);
         }
+
+        $user = Auth::user();
+
+        $hookPayload = $this->hookRunner->run(new HookPayload(
+            event: 'ai.generating',
+            collection: $collection,
+            record: $agent,
+            data: $payload,
+            actor: $user,
+        ));
+
+        $payloadData = $hookPayload->data;
 
         $provider = $this->aiSettings->ai_provider;
         $apiKey = $this->aiSettings->ai_api_key;
@@ -58,9 +70,9 @@ class AiService
 
         $model = $agent->model ?: $defaultModel;
         $temperature = $agent->temperature !== null ? (float) $agent->temperature : 0.7;
-        $outputType = $payload['output_type'] ?? ($agent->output_type ?: 'text');
+        $outputType = $payloadData['output_type'] ?? ($agent->output_type ?: 'text');
         
-        $schema = $payload['schema'] ?? (is_object($agent->schema) || is_array($agent->schema) ? (array) $agent->schema : json_decode((string) $agent->schema, true));
+        $schema = $payloadData['schema'] ?? (is_object($agent->schema) || is_array($agent->schema) ? (array) $agent->schema : json_decode((string) $agent->schema, true));
 
         $systemPrompt = $agent->system_prompt ?? '';
         if (!empty($agent->tone)) {
@@ -77,10 +89,10 @@ class AiService
             "ai.providers.{$provider}.model" => $model,
         ]);
 
-        $attachments = $payload['attachments'] ?? [];
+        $attachments = $payloadData['attachments'] ?? [];
 
         $chatMessages = [];
-        foreach ($payload['messages'] ?? [] as $msg) {
+        foreach ($payloadData['messages'] ?? [] as $msg) {
             if ($msg['role'] === 'user') {
                 $chatMessages[] = new UserMessage($msg['content']);
             } elseif ($msg['role'] === 'assistant') {
@@ -90,7 +102,7 @@ class AiService
             }
         }
 
-        $useStructuredAgent = ($outputType === 'json' && !empty($schema) && empty($payload['stream']));
+        $useStructuredAgent = ($outputType === 'json' && !empty($schema) && empty($payloadData['stream']));
         $agentClass = $useStructuredAgent ? StructuredVeloquentAgent::class : VeloquentAgent::class;
 
         $agentInstance = new $agentClass(
@@ -100,9 +112,9 @@ class AiService
             schema: $schema
         );
 
-        if (!empty($payload['stream'])) {
+        if (!empty($payloadData['stream'])) {
             return $agentInstance->stream(
-                prompt: $payload['prompt'],
+                prompt: $payloadData['prompt'],
                 attachments: $attachments,
                 provider: $provider,
                 model: $model
@@ -110,7 +122,7 @@ class AiService
         }
 
         $response = $agentInstance->prompt(
-            prompt: $payload['prompt'],
+            prompt: $payloadData['prompt'],
             attachments: $attachments,
             provider: $provider,
             model: $model
@@ -127,9 +139,19 @@ class AiService
             $parsedJson = $decoded;
         }
 
-        return [
+        $responsePayload = [
             'text' => $text,
             'json' => $parsedJson,
         ];
+
+        $generatedPayload = $this->hookRunner->run(new HookPayload(
+            event: 'ai.generated',
+            collection: $collection,
+            record: $agent,
+            data: $responsePayload,
+            actor: $user,
+        ));
+
+        return $generatedPayload->data;
     }
 }

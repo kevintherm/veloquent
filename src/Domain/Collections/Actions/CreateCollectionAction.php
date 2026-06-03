@@ -31,14 +31,14 @@ class CreateCollectionAction
         }
 
         $isAuthCollection = $collectionType === CollectionType::Auth->value;
-        $mergedFields = SchemaChange::mergeWithSystemFields($data['fields'], $isAuthCollection);
+        $mergedFields = SchemaChange::mergeWithSystemFields($data['fields'], $collectionType);
         $indexes = $data['indexes'] ?? [];
 
         if (!$skipValidation) {
             $this->collectionFieldValidator->validateForCreate(
                 $data['fields'] ?? [],
                 $indexes,
-                $isAuthCollection,
+                $collectionType,
             );
 
             $this->collectionValidator->validateCreate(
@@ -51,7 +51,7 @@ class CreateCollectionAction
             $data['api_rules'] = $this->apiRulesValidator->validate(
                 $data['api_rules'],
                 $mergedFields,
-                $isAuthCollection
+                $collectionType
             );
         }
 

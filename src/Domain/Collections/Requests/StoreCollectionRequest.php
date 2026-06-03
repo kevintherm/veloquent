@@ -31,8 +31,9 @@ class StoreCollectionRequest extends FormRequest
             'api_rules.update' => 'nullable|string',
             'api_rules.delete' => 'nullable|string',
             'api_rules.manage' => 'nullable|string',
+            'api_rules.chat' => 'nullable|string',
 
-            'fields' => 'required|array|min:1',
+            'fields' => 'sometimes|array',
             'fields.*' => ['required', 'array'],
             'fields.*.name' => 'required|string|regex:/^[a-zA-Z][a-zA-Z0-9_]*$/',
             'fields.*.type' => ['required', new Enum(CollectionFieldType::class)],
@@ -67,7 +68,7 @@ class StoreCollectionRequest extends FormRequest
 
     public function getFields(): array
     {
-        return collect($this->validated()['fields'])
+        return collect($this->validated()['fields'] ?? [])
             ->values()
             ->map(function (array $field, int $index): array {
                 $type = CollectionFieldType::from($field['type']);

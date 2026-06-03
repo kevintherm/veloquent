@@ -38,6 +38,7 @@ class UpdateCollectionRequest extends FormRequest
             'api_rules.update' => 'nullable|string',
             'api_rules.delete' => 'nullable|string',
             'api_rules.manage' => 'nullable|string',
+            'api_rules.chat' => 'nullable|string',
 
             'fields' => 'sometimes|array|min:1',
             'fields.*' => ['required', 'array'],

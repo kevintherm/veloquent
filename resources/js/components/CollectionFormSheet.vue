@@ -31,7 +31,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui";
-import { Plus, Trash2, Copy, ArrowDown, ArrowUp, Settings2, FileJson, MoreVertical, Wrench, Lock, Unlock, List, Eye, Pencil, CirclePlus, RotateCcw, Mail, Save, ChevronDown } from "lucide-vue-next";
+import { Plus, Trash2, Copy, ArrowDown, ArrowUp, Settings2, FileJson, MoreVertical, Wrench, Lock, Unlock, List, Eye, Pencil, CirclePlus, RotateCcw, Mail, Save, ChevronDown, MessageSquare } from "lucide-vue-next";
 import CodeEditor from "./CodeEditor.vue";
 import { useDashboardState } from "@/lib/dashboardState";
 import { resolveCollectionFieldTypeIcon } from "@/lib/collectionFieldTypeIcons";
@@ -74,6 +74,7 @@ const defaultApiRules = () => ({
   update: null,
   delete: null,
   manage: null,
+  chat: null,
 });
 
 const normalizeApiRules = (apiRules = {}) => ({
@@ -83,6 +84,7 @@ const normalizeApiRules = (apiRules = {}) => ({
   update: apiRules?.update,
   delete: apiRules?.delete,
   manage: apiRules?.manage,
+  chat: apiRules?.chat,
 });
 
 const fieldTypes = [
@@ -115,16 +117,28 @@ const pivotFieldTypes = [
 const collectionTypes = [
   { value: "base", label: "Base Collection" },
   { value: "auth", label: "Auth Collection" },
+  { value: "agents", label: "Agents Collection" },
 ];
 
-const apiRuleDefinitions = [
-  { key: 'list', label: 'List Rule', icon: List, placeholder: "e.g. status = 'published'", description: "Use `field op value` expressions. Example: `status = \"published\" && views > 10`." },
-  { key: 'view', label: 'View Rule', icon: Eye, placeholder: "e.g. status = 'published'", description: "Rule evaluated when viewing a single record." },
-  { key: 'create', label: 'Create Rule', icon: CirclePlus, placeholder: "e.g. status = 'published'", description: "Main record fields represents the values that are going to be inserted to the database." },
-  { key: 'update', label: 'Update Rule', icon: Pencil, placeholder: "e.g. status = 'published' || @request.body.status = 'draft'", description: "Main record fields represents the existing value, to target the values that are going to be inserted to the database use @request.body.*" },
-  { key: 'delete', label: 'Delete Rule', icon: Trash2, placeholder: "e.g. status = 'published'", description: "Rule evaluated when deleting records." },
-  { key: 'manage', label: 'Manage Rule', icon: Settings2, placeholder: "e.g. id = @request.auth.id", description: "Rule evaluated when updating protected auth fields (e.g. email, password)." },
-];
+const apiRuleDefinitions = computed(() => {
+  const definitions = [
+    { key: 'list', label: 'List Rule', icon: List, placeholder: "e.g. status = 'published'", description: "Use `field op value` expressions. Example: `status = \"published\" && views > 10`." },
+    { key: 'view', label: 'View Rule', icon: Eye, placeholder: "e.g. status = 'published'", description: "Rule evaluated when viewing a single record." },
+    { key: 'create', label: 'Create Rule', icon: CirclePlus, placeholder: "e.g. status = 'published'", description: "Main record fields represents the values that are going to be inserted to the database." },
+    { key: 'update', label: 'Update Rule', icon: Pencil, placeholder: "e.g. status = 'published' || @request.body.status = 'draft'", description: "Main record fields represents the existing value, to target the values that are going to be inserted to the database use @request.body.*" },
+    { key: 'delete', label: 'Delete Rule', icon: Trash2, placeholder: "e.g. status = 'published'", description: "Rule evaluated when deleting records." },
+  ];
+
+  if (formState.value?.type === 'auth') {
+    definitions.push({ key: 'manage', label: 'Manage Rule', icon: Settings2, placeholder: "e.g. id = @request.auth.id", description: "Rule evaluated when updating protected auth fields (e.g. email, password)." });
+  }
+
+  if (formState.value?.type === 'agents') {
+    definitions.push({ key: 'chat', label: 'Chat Rule', icon: MessageSquare, placeholder: "e.g. @request.auth.id != null", description: "Rule evaluated when a user chats with an agent." });
+  }
+
+  return definitions;
+});
 
 const availableProviders = [
   { id: 'google', name: 'Google', domain: 'google.com' },
@@ -306,7 +320,7 @@ const normalizeFieldForForm = (field) => {
     normalized.target_collection_id = normalized.target_collection_id ?? normalized.collection ?? null;
     normalized.cascade_on_delete = Boolean(normalized.cascade_on_delete ?? false);
     if (normalized.type === "relation_many") {
-      normalized.pivot_fields = Array.isArray(normalized.pivot_fields) 
+      normalized.pivot_fields = Array.isArray(normalized.pivot_fields)
         ? normalized.pivot_fields.map(pf => typeof pf === 'string' ? { name: pf, type: 'text' } : pf)
         : [];
     }
@@ -805,7 +819,7 @@ const buildPayload = () => {
         delete cleaned.collection;
 
         if (cleaned.type === "relation_many") {
-          cleaned.pivot_fields = Array.isArray(cleaned.pivot_fields) 
+          cleaned.pivot_fields = Array.isArray(cleaned.pivot_fields)
             ? cleaned.pivot_fields.map(pf => typeof pf === 'string' ? { name: pf, type: 'text' } : pf)
             : [];
         } else {
@@ -1157,7 +1171,7 @@ onMounted(async () => {
                 <Input id="collectionDescription" v-model="formState.description" placeholder="Optional description"
                   @input="clearValidationError('description')" />
                 <p v-if="firstErrorFor('description')" class="text-xs text-destructive">{{ firstErrorFor('description')
-                  }}</p>
+                }}</p>
               </div>
 
               <div class="grid gap-2">
@@ -1234,49 +1248,54 @@ onMounted(async () => {
                       placeholder="Optional default value" />
                   </div>
 
-                   <div v-if="['relation', 'relation_many'].includes(newField.type)" class="space-y-2">
-                     <Label class="text-xs font-semibold tracking-wide text-primary/80 uppercase">Related
-                       Collection</Label>
-                     <select v-model="newField.target_collection_id"
-                       class="flex h-9 w-full items-center justify-between rounded-md border border-primary/20 bg-background px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring">
-                       <option :value="null">Select collection</option>
-                       <option v-for="collection in availableCollections" :key="`new-field-target-${collection.id}`"
-                         :value="collection.id">
-                         {{ collection.name }}
-                       </option>
-                     </select>
-                   </div>
+                  <div v-if="['relation', 'relation_many'].includes(newField.type)" class="space-y-2">
+                    <Label class="text-xs font-semibold tracking-wide text-primary/80 uppercase">Related
+                      Collection</Label>
+                    <select v-model="newField.target_collection_id"
+                      class="flex h-9 w-full items-center justify-between rounded-md border border-primary/20 bg-background px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring">
+                      <option :value="null">Select collection</option>
+                      <option v-for="collection in availableCollections" :key="`new-field-target-${collection.id}`"
+                        :value="collection.id">
+                        {{ collection.name }}
+                      </option>
+                    </select>
+                  </div>
 
-                   <div v-if="newField.type === 'relation_many'" class="space-y-2 col-span-1 sm:col-span-2">
-                     <div class="flex items-center justify-between mb-2">
-                       <Label class="text-xs font-semibold tracking-wide text-primary/80 uppercase">Pivot Fields (Extra Columns)</Label>
-                       <Button variant="outline" size="xs" class="px-3" @click="addPivotField(newField)">
-                         <Plus class="h-3 w-3 mr-1" />
-                         Add Pivot Field
-                       </Button>
-                     </div>
-                      <div class="space-y-3">
-                        <div v-for="(pfield, idx) in newField.pivot_fields" :key="idx" class="flex flex-col gap-1.5">
-                          <div class="flex gap-2 items-center">
-                            <div class="flex-[2]">
-                              <Input v-model="newField.pivot_fields[idx].name" placeholder="Column name" class="h-8 text-xs" />
-                            </div>
-                            <div class="flex-1">
-                              <select v-model="newField.pivot_fields[idx].type" 
-                                class="flex h-8 w-full items-center justify-between rounded-md border border-primary/20 bg-background px-2 py-1 text-[11px] shadow-sm focus:outline-none focus:ring-1">
-                                <option v-for="pt in pivotFieldTypes" :key="pt.value" :value="pt.value">{{ pt.label }}</option>
-                              </select>
-                            </div>
-                            <Button variant="ghost" size="icon" class="h-8 w-8 text-destructive" @click="removePivotField(newField, idx)">
-                              <Trash2 class="h-3 w-3" />
-                            </Button>
+                  <div v-if="newField.type === 'relation_many'" class="space-y-2 col-span-1 sm:col-span-2">
+                    <div class="flex items-center justify-between mb-2">
+                      <Label class="text-xs font-semibold tracking-wide text-primary/80 uppercase">Pivot Fields (Extra
+                        Columns)</Label>
+                      <Button variant="outline" size="xs" class="px-3" @click="addPivotField(newField)">
+                        <Plus class="h-3 w-3 mr-1" />
+                        Add Pivot Field
+                      </Button>
+                    </div>
+                    <div class="space-y-3">
+                      <div v-for="(pfield, idx) in newField.pivot_fields" :key="idx" class="flex flex-col gap-1.5">
+                        <div class="flex gap-2 items-center">
+                          <div class="flex-[2]">
+                            <Input v-model="newField.pivot_fields[idx].name" placeholder="Column name"
+                              class="h-8 text-xs" />
                           </div>
+                          <div class="flex-1">
+                            <select v-model="newField.pivot_fields[idx].type"
+                              class="flex h-8 w-full items-center justify-between rounded-md border border-primary/20 bg-background px-2 py-1 text-[11px] shadow-sm focus:outline-none focus:ring-1">
+                              <option v-for="pt in pivotFieldTypes" :key="pt.value" :value="pt.value">{{ pt.label }}
+                              </option>
+                            </select>
+                          </div>
+                          <Button variant="ghost" size="icon" class="h-8 w-8 text-destructive"
+                            @click="removePivotField(newField, idx)">
+                            <Trash2 class="h-3 w-3" />
+                          </Button>
                         </div>
-                        <p v-if="(newField.pivot_fields ?? []).length === 0" class="text-xs text-muted-foreground text-center py-2 bg-muted/20 rounded border border-dashed">
-                          No pivot fields added yet.
-                        </p>
                       </div>
-                   </div>
+                      <p v-if="(newField.pivot_fields ?? []).length === 0"
+                        class="text-xs text-muted-foreground text-center py-2 bg-muted/20 rounded border border-dashed">
+                        No pivot fields added yet.
+                      </p>
+                    </div>
+                  </div>
 
                   <div v-if="newField.type === 'select'" class="space-y-2 col-span-1 sm:col-span-2">
                     <div class="flex items-center justify-between mb-2">
@@ -1289,13 +1308,16 @@ onMounted(async () => {
                     <div class="space-y-2">
                       <div v-for="(option, idx) in newField.options" :key="idx" class="flex gap-2 items-center">
                         <div class="flex-1">
-                          <Input v-model="newField.options[idx]" placeholder="Option value (e.g. published)" class="h-8 text-xs" />
+                          <Input v-model="newField.options[idx]" placeholder="Option value (e.g. published)"
+                            class="h-8 text-xs" />
                         </div>
-                        <Button variant="ghost" size="icon" class="h-8 w-8 text-destructive" @click="removeOption(newField, idx)">
+                        <Button variant="ghost" size="icon" class="h-8 w-8 text-destructive"
+                          @click="removeOption(newField, idx)">
                           <Trash2 class="h-3 w-3" />
                         </Button>
                       </div>
-                      <p v-if="newField.options.length === 0" class="text-xs text-muted-foreground text-center py-2 bg-muted/20 rounded border border-dashed">
+                      <p v-if="newField.options.length === 0"
+                        class="text-xs text-muted-foreground text-center py-2 bg-muted/20 rounded border border-dashed">
                         No options added yet.
                       </p>
                     </div>
@@ -1528,7 +1550,8 @@ onMounted(async () => {
 
                     <div v-if="field.type === 'relation_many'" class="space-y-2 col-span-1 sm:col-span-2">
                       <div class="flex items-center justify-between mb-2">
-                        <Label class="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Pivot Fields (Extra Columns)</Label>
+                        <Label class="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Pivot Fields
+                          (Extra Columns)</Label>
                         <Button variant="outline" size="xs" class="px-3" @click="addPivotField(field)">
                           <Plus class="h-3 w-3 mr-1" />
                           Add Pivot Field
@@ -1538,57 +1561,67 @@ onMounted(async () => {
                         <div v-for="(pfield, idx) in field.pivot_fields" :key="idx" class="flex flex-col gap-1.5">
                           <div class="flex gap-2 items-center">
                             <div class="flex-[2]">
-                              <Input v-model="field.pivot_fields[idx].name" placeholder="Column name" class="h-8 text-xs" 
+                              <Input v-model="field.pivot_fields[idx].name" placeholder="Column name"
+                                class="h-8 text-xs"
                                 @input="clearValidationError(`fields.${index}.pivot_fields.${idx}.name`)" />
                             </div>
                             <div class="flex-1">
                               <select v-model="field.pivot_fields[idx].type" :disabled="!isCreating && !!pfield.id"
                                 class="flex h-8 w-full items-center justify-between rounded-md border border-primary/20 bg-background px-2 py-1 text-[11px] shadow-sm focus:outline-none focus:ring-1 disabled:opacity-50 disabled:cursor-not-allowed">
-                                <option v-for="pt in pivotFieldTypes" :key="pt.value" :value="pt.value">{{ pt.label }}</option>
+                                <option v-for="pt in pivotFieldTypes" :key="pt.value" :value="pt.value">{{ pt.label }}
+                                </option>
                               </select>
                             </div>
-                            <Button variant="ghost" size="icon" class="h-8 w-8 text-destructive" @click="removePivotField(field, idx)">
+                            <Button variant="ghost" size="icon" class="h-8 w-8 text-destructive"
+                              @click="removePivotField(field, idx)">
                               <Trash2 class="h-3 w-3" />
                             </Button>
                           </div>
-                          <div v-if="!isCreating && !!pfield.id" class="text-[10px] text-muted-foreground flex items-center gap-1 px-1">
-                             <Lock class="h-2.5 w-2.5" /> Type locked.
+                          <div v-if="!isCreating && !!pfield.id"
+                            class="text-[10px] text-muted-foreground flex items-center gap-1 px-1">
+                            <Lock class="h-2.5 w-2.5" /> Type locked.
                           </div>
-                          <p v-if="firstErrorFor(`fields.${index}.pivot_fields.${idx}.name`)" class="text-[10px] text-destructive px-1">
+                          <p v-if="firstErrorFor(`fields.${index}.pivot_fields.${idx}.name`)"
+                            class="text-[10px] text-destructive px-1">
                             {{ firstErrorFor(`fields.${index}.pivot_fields.${idx}.name`) }}
                           </p>
-                          <p v-if="firstErrorFor(`fields.${index}.pivot_fields.${idx}.type`)" class="text-[10px] text-destructive px-1">
+                          <p v-if="firstErrorFor(`fields.${index}.pivot_fields.${idx}.type`)"
+                            class="text-[10px] text-destructive px-1">
                             {{ firstErrorFor(`fields.${index}.pivot_fields.${idx}.type`) }}
                           </p>
                         </div>
-                        <p v-if="(field.pivot_fields ?? []).length === 0" class="text-xs text-muted-foreground text-center py-2 bg-muted/20 rounded border border-dashed">
+                        <p v-if="(field.pivot_fields ?? []).length === 0"
+                          class="text-xs text-muted-foreground text-center py-2 bg-muted/20 rounded border border-dashed">
                           No pivot fields added yet.
                         </p>
                       </div>
                     </div>
 
-                      <div v-if="field.type === 'select'" class="space-y-2 col-span-1 sm:col-span-2">
-                        <div class="flex items-center justify-between mb-2">
-                          <Label class="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Options</Label>
-                          <Button variant="outline" size="xs" class="px-3" @click="addOption(field)">
-                            <Plus class="h-3 w-3 mr-1" />
-                            Add Option
+                    <div v-if="field.type === 'select'" class="space-y-2 col-span-1 sm:col-span-2">
+                      <div class="flex items-center justify-between mb-2">
+                        <Label
+                          class="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Options</Label>
+                        <Button variant="outline" size="xs" class="px-3" @click="addOption(field)">
+                          <Plus class="h-3 w-3 mr-1" />
+                          Add Option
+                        </Button>
+                      </div>
+                      <div class="space-y-2">
+                        <div v-for="(option, idx) in field.options" :key="idx" class="flex gap-2 items-center">
+                          <div class="flex-1">
+                            <Input v-model="field.options[idx]" placeholder="Option value" class="h-8 text-xs" />
+                          </div>
+                          <Button variant="ghost" size="icon" class="h-8 w-8 text-destructive"
+                            @click="removeOption(field, idx)">
+                            <Trash2 class="h-3 w-3" />
                           </Button>
                         </div>
-                        <div class="space-y-2">
-                          <div v-for="(option, idx) in field.options" :key="idx" class="flex gap-2 items-center">
-                            <div class="flex-1">
-                              <Input v-model="field.options[idx]" placeholder="Option value" class="h-8 text-xs" />
-                            </div>
-                            <Button variant="ghost" size="icon" class="h-8 w-8 text-destructive" @click="removeOption(field, idx)">
-                              <Trash2 class="h-3 w-3" />
-                            </Button>
-                          </div>
-                          <p v-if="(field.options ?? []).length === 0" class="text-xs text-muted-foreground text-center py-2 bg-muted/20 rounded border border-dashed">
-                            No options added yet.
-                          </p>
-                        </div>
+                        <p v-if="(field.options ?? []).length === 0"
+                          class="text-xs text-muted-foreground text-center py-2 bg-muted/20 rounded border border-dashed">
+                          No options added yet.
+                        </p>
                       </div>
+                    </div>
 
 
                     <div v-if="['text', 'email', 'url'].includes(field.type)"
@@ -1769,7 +1802,6 @@ onMounted(async () => {
           <TabsContent value="api" class="space-y-4 mt-4 flex-1 min-h-0 overflow-y-auto pr-2 pb-6">
             <div class="space-y-6">
               <div v-for="rule in apiRuleDefinitions" :key="rule.key"
-                v-show="formState.type === 'auth' || rule.key !== 'manage'"
                 class="grid gap-3 p-4 border bg-background/50 shadow-sm relative overflow-hidden group transition-all duration-200 hover:border-primary/30">
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-2">

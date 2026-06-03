@@ -3,13 +3,11 @@
 namespace Veloquent\Core\Domain\SchemaManagement\Services;
 
 use Veloquent\Core\Domain\Collections\ValueObjects\Field;
+use Veloquent\Core\Domain\Collections\Enums\CollectionType;
 use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
 
 final class SchemaChange
 {
-    private const BASE_RESERVED_FIELD_NAMES = ['id', 'created_at', 'updated_at'];
-    private const AUTH_RESERVED_FIELD_NAMES = ['email', 'password', 'email_visibility', 'verified'];
-
     public function __construct(
         public array $renames = [],
         public array $adds = [],
@@ -37,40 +35,44 @@ final class SchemaChange
 
     public static function getAuthReservedFields(): array
     {
-        return self::AUTH_RESERVED_FIELD_NAMES;
+        return CollectionType::Auth->reservedFields();
     }
 
-    public static function getAllReservedFields(bool $isAuthCollection = false): array
+    public static function getAgentsReservedFields(): array
     {
-        $fields = self::BASE_RESERVED_FIELD_NAMES;
-        if ($isAuthCollection) {
-            $fields = [...$fields, ...self::AUTH_RESERVED_FIELD_NAMES];
-        }
-        return $fields;
+        return CollectionType::Agents->reservedFields();
+    }
+
+    public static function getAllReservedFields(CollectionType|string|bool|null $collectionType = null): array
+    {
+        return CollectionType::parse($collectionType)->reservedFields();
     }
 
     public static function getSystemFields(): array
     {
-        return [
-            self::normalizeFieldDefinition(['name' => 'id', 'type' => CollectionFieldType::Text->value, 'nullable' => false, 'unique' => true]),
-            self::normalizeFieldDefinition(['name' => 'created_at', 'type' => CollectionFieldType::Datetime->value, 'nullable' => false, 'unique' => false]),
-            self::normalizeFieldDefinition(['name' => 'updated_at', 'type' => CollectionFieldType::Datetime->value, 'nullable' => false, 'unique' => false]),
-        ];
+        return CollectionType::Base->systemFields();
     }
 
     public static function getAuthSystemFields(): array
     {
-        return [
-            self::normalizeFieldDefinition(['name' => 'email', 'type' => CollectionFieldType::Email->value, 'nullable' => false, 'unique' => true]),
-            self::normalizeFieldDefinition(['name' => 'password', 'type' => CollectionFieldType::Text->value, 'nullable' => false, 'unique' => false]),
-            self::normalizeFieldDefinition(['name' => 'email_visibility', 'type' => CollectionFieldType::Boolean->value, 'nullable' => true, 'unique' => false, 'default' => true]),
-            self::normalizeFieldDefinition(['name' => 'verified', 'type' => CollectionFieldType::Boolean->value, 'nullable' => true, 'unique' => false, 'default' => false]),
-        ];
+        return collect(CollectionType::Auth->systemFields())
+            ->reject(fn(array $f) => in_array($f['name'], ['id', 'created_at', 'updated_at'], true))
+            ->values()
+            ->all();
     }
 
-    public static function mergeWithSystemFields(array $userFields, bool $isAuthCollection = false): array
+    public static function getAgentsSystemFields(): array
     {
-        $reservedNames = array_keys(self::getReservedFieldDefinitions($isAuthCollection));
+        return collect(CollectionType::Agents->systemFields())
+            ->reject(fn(array $f) => in_array($f['name'], ['id', 'created_at', 'updated_at'], true))
+            ->values()
+            ->all();
+    }
+
+    public static function mergeWithSystemFields(array $userFields, CollectionType|string|bool|null $collectionType = null): array
+    {
+        $type = CollectionType::parse($collectionType);
+        $reservedNames = array_keys(self::getReservedFieldDefinitions($type));
         
         $normalizedUserFields = collect($userFields)
             ->filter(fn($f) => is_array($f) && isset($f['name']) && !in_array($f['name'], $reservedNames, true))
@@ -78,11 +80,12 @@ final class SchemaChange
             ->values()
             ->all();
 
-        $reservedDefinitions = self::getReservedFieldDefinitions($isAuthCollection);
+        $reservedDefinitions = self::getReservedFieldDefinitions($type);
 
         $merged = [
             $reservedDefinitions['id'],
-            ...($isAuthCollection ? self::getAuthSystemFields() : []),
+            ...($type === CollectionType::Auth ? self::getAuthSystemFields() : []),
+            ...($type === CollectionType::Agents ? self::getAgentsSystemFields() : []),
             ...$normalizedUserFields,
             $reservedDefinitions['created_at'],
             $reservedDefinitions['updated_at'],
@@ -113,18 +116,16 @@ final class SchemaChange
         })->all();
     }
 
-    public static function getReservedFieldDefinitions(bool $isAuthCollection = false): array
+    public static function getReservedFieldDefinitions(CollectionType|string|bool|null $collectionType = null): array
     {
-        $base = collect(self::getSystemFields())->keyBy('name')->all();
-        if (!$isAuthCollection) return $base;
-        return [...$base, ...collect(self::getAuthSystemFields())->keyBy('name')->all()];
+        return collect(CollectionType::parse($collectionType)->systemFields())->keyBy('name')->all();
     }
 
     public static function stripForDDL(array $fields): array
     {
         return collect($fields)
             ->map(fn($f) => self::normalizeInputField($f))
-            ->reject(fn($f) => in_array($f['name'], self::BASE_RESERVED_FIELD_NAMES, true))
+            ->reject(fn($f) => in_array($f['name'], CollectionType::Base->reservedFields(), true))
             ->reject(fn($f) => ($f['type'] ?? '') === CollectionFieldType::RelationMany->value)
             ->map(function ($f) {
                 unset($f['order']);
@@ -139,14 +140,14 @@ final class SchemaChange
         $change = new self;
         $before = collect($before)
             ->map(fn($f) => $f instanceof Field ? $f->toArray() : $f)
-            ->reject(fn($f) => in_array($f['name'] ?? null, self::BASE_RESERVED_FIELD_NAMES, true))
+            ->reject(fn($f) => in_array($f['name'] ?? null, CollectionType::Base->reservedFields(), true))
             ->all();
         $after = collect($after)
             ->map(fn($f) => $f instanceof Field ? $f->toArray() : $f)
-            ->reject(fn($f) => in_array($f['name'] ?? null, self::BASE_RESERVED_FIELD_NAMES, true))
+            ->reject(fn($f) => in_array($f['name'] ?? null, CollectionType::Base->reservedFields(), true))
             ->all();
 
-        $beforeById = collect($before)->filter(fn($f) => isset($f['id']) && is_string($f['id']) && $f['id'] !== '')->keyBy('id');
+        $beforeById = collect($before)->filter(fn(array $f) => isset($f['id']) && is_string($f['id']) && $f['id'] !== '')->keyBy('id');
         $matchedBeforeIds = [];
 
         foreach (array_values($after) as $field) {

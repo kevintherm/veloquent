@@ -16,9 +16,12 @@ class CreateCollectionRecord
         }
 
         $data = $context->rawData;
-        $isAuthCollection = ($data['type'] ?? '') === 'auth';
-        
-        $mergedFields = SchemaChange::mergeWithSystemFields($data['fields'], $isAuthCollection);
+        $collectionType = $data['type'] ?? null;
+        if ($collectionType instanceof \Veloquent\Core\Domain\Collections\Enums\CollectionType) {
+            $collectionType = $collectionType->value;
+        }
+
+        $mergedFields = SchemaChange::mergeWithSystemFields($data['fields'], $collectionType);
         $tableName = TableName::for($data['name'], $data['is_system'] ?? false);
 
         $context->collection = Collection::create([

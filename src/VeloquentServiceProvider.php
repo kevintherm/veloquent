@@ -16,7 +16,6 @@ use Veloquent\Core\Domain\Hooks\HookRunner;
 use Veloquent\Core\Domain\Hooks\HookRegistry;
 use Veloquent\Core\Support\Guards\TokenGuard;
 use Veloquent\Core\Domain\Settings\AiSettings;
-use Veloquent\Core\Domain\Records\Models\Record;
 use Veloquent\Core\Domain\Settings\EmailSettings;
 use Veloquent\Core\Providers\LogsServiceProvider;
 use Veloquent\Core\Console\Commands\InstallCommand;
@@ -25,6 +24,7 @@ use Veloquent\Core\Domain\Settings\StorageSettings;
 use Veloquent\Core\Support\Settings\SettingsContainer;
 use Veloquent\Core\Console\Commands\ListTenantsCommand;
 use Veloquent\Core\Console\Commands\PurgeTenantCommand;
+use Veloquent\Core\Domain\Ai\Hooks\EvaluateChatApiRule;
 use Veloquent\Core\Console\Commands\CreateTenantCommand;
 use Veloquent\Core\Console\Commands\DeleteTenantCommand;
 use Veloquent\Core\Domain\Collections\Models\Collection;
@@ -94,6 +94,11 @@ class VeloquentServiceProvider extends ServiceProvider
         $this->registerRouteBindings();
         $this->registerRateLimiters();
 
+        $this->app->make(HookRegistry::class)->register(
+            'ai.generating',
+            EvaluateChatApiRule::class
+        );
+
         if (file_exists(__DIR__ . '/../routes/channels.php')) {
             require __DIR__ . '/../routes/channels.php';
         }
@@ -146,20 +151,27 @@ class VeloquentServiceProvider extends ServiceProvider
 
     protected function registerGates(): void
     {
-        Gate::define('manage-schema', fn ($user) => $user?->isSuperuser());
+        Gate::define('manage-schema', fn ($user = null) => $user?->isSuperuser());
 
         foreach (['list', 'view'] as $action) {
-            Gate::define("{$action}-collections", fn (?Record $user) => $user?->isSuperuser());
+            Gate::define("{$action}-collections", fn ($user = null) => $user?->isSuperuser());
         }
 
         foreach (['create', 'update', 'delete'] as $action) {
-            Gate::define("{$action}-collections", fn (?Record $user, array|Collection $data) => $user?->isSuperuser() && ($data['is_system'] ?? false) === false);
+            Gate::define("{$action}-collections", function ($user = null, $data = null) use ($action) {
+                if (! $user?->isSuperuser()) {
+                    return false;
+                }
+
+                $isSystem = $data instanceof Collection ? $data->is_system : ($data['is_system'] ?? false);
+                return ! $isSystem;
+            });
         }
 
-        Gate::define('truncate-collections', fn (?Record $user, Collection $collection) => $user?->isSuperuser() && $collection->is_system === false);
+        Gate::define('truncate-collections', fn ($user = null, ?Collection $collection = null) => $user?->isSuperuser() && $collection?->is_system === false);
 
         foreach (['list', 'view', 'create', 'update', 'delete'] as $action) {
-            Gate::define("{$action}-records", fn (?Record $user, Collection $collection) => $user?->isSuperuser() || $collection->is_system === false);
+            Gate::define("{$action}-records", fn ($user = null, ?Collection $collection = null) => $user?->isSuperuser() || $collection?->is_system === false);
         }
     }
 

@@ -111,4 +111,8 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  textarea {
+    @apply font-mono;
+  }
 }

@@ -14,7 +14,7 @@ class HookPayload
         public readonly ?Record $record = null,
         public array $data = [],
         public readonly ?Request $request = null,
-        public readonly ?Record $actor = null,
+        public readonly mixed $actor = null,
     ) {}
 
     public function withData(array $data): self

@@ -7,15 +7,21 @@ use Illuminate\Http\Request;
 use Illuminate\Contracts\Support\Responsable;
 use Symfony\Component\HttpFoundation\Response;
 use Veloquent\Core\Domain\Ai\Services\AiService;
+use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Support\Http\Controllers\ApiController;
+use Veloquent\Core\Domain\Collections\Enums\CollectionType;
 
 class AiController extends ApiController
 {
     /**
      * Handle the chatbot chat or prompt execution.
      */
-    public function chat(Request $request, AiService $aiService)
+    public function chat(Request $request, Collection $collection, AiService $aiService)
     {
+        if ($collection->type !== CollectionType::Agents) {
+            return $this->errorResponse('Collection is not of type agents.', Response::HTTP_BAD_REQUEST);
+        }
+
         $data = $request->validate([
             'agent' => 'required|string',
             'prompt' => 'required|string',
@@ -23,7 +29,7 @@ class AiController extends ApiController
             'messages.*.role' => 'required|string|in:system,user,assistant',
             'messages.*.content' => 'required|string',
             'attachments' => 'nullable|array',
-            'attachments.*' => 'file|max:10240', // Limit to 10MB per attachment
+            'attachments.*' => 'file|max:10240', // 10MB
             'output_type' => 'nullable|string|in:text,json',
             'schema' => 'nullable|array',
             'stream' => 'nullable|boolean',
@@ -33,7 +39,7 @@ class AiController extends ApiController
             $data['attachments'] = Arr::wrap($request->file('attachments'));
         }
 
-        $response = $aiService->chat($data);
+        $response = $aiService->chat($collection, $data);
 
         if ($response instanceof Response) {
             return $response;

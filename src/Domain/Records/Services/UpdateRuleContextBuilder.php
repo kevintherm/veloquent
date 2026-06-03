@@ -2,19 +2,27 @@
 
 namespace Veloquent\Core\Domain\Records\Services;
 
-use Veloquent\Core\Domain\Collections\Models\Collection;
-use Veloquent\Core\Domain\Records\Models\Record;
 use Illuminate\Http\Request;
+use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\Records\Contracts\RuleContextBuilderInterface;
 
-class UpdateRuleContextBuilder
+class UpdateRuleContextBuilder implements RuleContextBuilderInterface
 {
     public function __construct(
         private readonly RuleContextBuilder $baseBuilder,
         private readonly ResolvesRuleContextRelations $relationResolver,
     ) {}
 
-    public function build(Collection $collection, Record $record, array $data, mixed $authenticatedUser, Request $request, ?string $rule = null): array
-    {
+    public function build(
+        Collection $collection,
+        array $payload,
+        mixed $authenticatedUser,
+        ?Request $request = null,
+        ?string $rule = null
+    ): array {
+        $record = $payload['record'];
+        $data = $payload['data'];
+
         $context = $this->baseBuilder->build($request, $authenticatedUser);
 
         $recordData = $record->toArray();

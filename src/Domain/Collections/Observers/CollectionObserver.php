@@ -88,7 +88,14 @@ readonly class CollectionObserver
             'manage' => null,
         ];
 
-        $validKeys = ['list', 'view', 'create', 'update', 'delete', 'manage'];
+        $type = $collection->type;
+        $typeValue = $type instanceof \BackedEnum ? $type->value : $type;
+
+        if ($typeValue === 'agents') {
+            $defaults['chat'] = null;
+        }
+
+        $validKeys = array_keys($defaults);
 
         $collection->api_rules = array_merge($defaults, $collection->api_rules ?? []);
         $invalidKeys = array_diff(array_keys($collection->api_rules ?? []), $validKeys);
