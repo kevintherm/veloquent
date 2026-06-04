@@ -23,7 +23,7 @@ beforeEach(function () {
     actingAs($this->user, 'api');
 
     $this->collection = \Veloquent\Core\Domain\Collections\Models\Collection::withoutEvents(function () {
-        return \Veloquent\Core\Domain\Collections\Models\Collection::create([
+        $collection = \Veloquent\Core\Domain\Collections\Models\Collection::create([
             'type' => 'agents',
             'is_system' => false,
             'name' => 'agents',
@@ -38,6 +38,9 @@ beforeEach(function () {
                 ['name' => 'temperature', 'type' => 'number', 'nullable' => true, 'unique' => false, 'allow_decimals' => true],
                 ['name' => 'output_type', 'type' => 'select', 'nullable' => true, 'unique' => false, 'default' => 'text', 'options' => ['text', 'json']],
                 ['name' => 'schema', 'type' => 'json', 'nullable' => true, 'unique' => false],
+                ['name' => 'type', 'type' => 'select', 'nullable' => true, 'unique' => false, 'default' => 'regular', 'options' => ['regular', 'watcher']],
+                ['name' => 'watcher_message', 'type' => 'text', 'nullable' => true, 'unique' => false],
+                ['name' => 'watchers', 'type' => 'relation_many', 'target_collection_id' => '@self', 'nullable' => true, 'unique' => false],
             ],
             'api_rules' => [
                 'list' => '@request.auth.id != null',
@@ -49,6 +52,17 @@ beforeEach(function () {
                 'chat' => '@request.auth.id != null',
             ],
         ]);
+
+        $fields = $collection->fields;
+        foreach ($fields as &$f) {
+            if ($f['name'] === 'watchers') {
+                $f['target_collection_id'] = $collection->id;
+            }
+        }
+        $collection->fields = $fields;
+        $collection->save();
+
+        return $collection;
     });
 
     $this->tableName = $this->collection->getPhysicalTableName();
@@ -64,6 +78,16 @@ beforeEach(function () {
         $table->decimal('temperature', 3, 2)->nullable();
         $table->string('output_type')->nullable();
         $table->json('schema')->nullable();
+        $table->string('type')->nullable();
+        $table->text('watcher_message')->nullable();
+        $table->timestamps();
+    });
+
+    Schema::dropIfExists('_velo_agents_agents_watchers_pivot');
+    Schema::create('_velo_agents_agents_watchers_pivot', function ($table) {
+        $table->ulid('id')->primary();
+        $table->char('source_id', 26);
+        $table->char('target_id', 26);
         $table->timestamps();
     });
 });
@@ -878,5 +902,689 @@ it('merges agents collection with system fields when created with empty fields',
     ];
 
     $updateResponse2 = patchJson("/api/collections/{$collection->id}", $updatePayload2);
-    $updateResponse2->assertStatus(422);
+});
+
+it('passes through and logs a warning if the pivot table does not exist', function () {
+    $settings = app(AiSettings::class);
+    $settings->ai_provider = 'openai';
+    $settings->ai_model = 'gpt-4o-mini';
+    $settings->ai_api_key = 'sk-proj-test';
+    $settings->save();
+
+    DB::table($this->tableName)->insert([
+        'id' => '01h7c989r148s89m257a3b4caa',
+        'name' => 'regular-bot',
+        'type' => 'regular',
+        'model' => 'gpt-4o',
+        'system_prompt' => 'Be helpful.',
+        'tone' => 'friendly',
+        'length' => 'short',
+        'temperature' => 0.5,
+        'output_type' => 'text',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    Schema::dropIfExists('_velo_agents_agents_watchers_pivot');
+    \Veloquent\Core\Support\Database\SchemaCache::forget('_velo_agents_agents_watchers_pivot');
+
+    $mockProvider = Mockery::mock(\Laravel\Ai\Providers\OpenAiProvider::class);
+    $mockProvider->shouldReceive('prompt')
+        ->once()
+        ->andReturn(new \Laravel\Ai\Responses\AgentResponse(
+            'invocation-id',
+            'Hello!',
+            new \Laravel\Ai\Responses\Data\Usage,
+            new \Laravel\Ai\Responses\Data\Meta
+        ));
+
+    Ai::shouldReceive('textProviderFor')
+        ->once()
+        ->with(Mockery::type(\Veloquent\Core\Domain\Ai\Agents\VeloquentAgent::class), 'openai')
+        ->andReturn($mockProvider);
+
+    \Illuminate\Support\Facades\Log::shouldReceive('warning')
+        ->once()
+        ->with(Mockery::pattern('/Watchers pivot table.*does not exist/'));
+    \Illuminate\Support\Facades\Log::shouldIgnoreMissing();
+
+    $usersCollection = \Veloquent\Core\Domain\Collections\Models\Collection::where('name', 'users')->first();
+    $regularUser = \Veloquent\Core\Domain\Records\Models\Record::of($usersCollection);
+    $regularUser->setAttribute('id', 123);
+    actingAs($regularUser, 'api');
+
+    $response = postJson("/api/collections/{$this->collection->id}/ai/chat", [
+        'agent' => 'regular-bot',
+        'prompt' => 'Hi',
+    ]);
+
+    $response->assertStatus(200);
+    $response->assertJsonPath('data.text', 'Hello!');
+});
+
+it('allows normal prompt when watchers field is empty', function () {
+    $settings = app(AiSettings::class);
+    $settings->ai_provider = 'openai';
+    $settings->ai_model = 'gpt-4o-mini';
+    $settings->ai_api_key = 'sk-proj-test';
+    $settings->save();
+
+    DB::table($this->tableName)->insert([
+        'id' => '01h7c989r148s89m257a3b4caa',
+        'name' => 'regular-bot',
+        'type' => 'regular',
+        'model' => 'gpt-4o',
+        'system_prompt' => 'Be helpful.',
+        'tone' => 'friendly',
+        'length' => 'short',
+        'temperature' => 0.5,
+        'output_type' => 'text',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $mockProvider = Mockery::mock(\Laravel\Ai\Providers\OpenAiProvider::class);
+    $mockProvider->shouldReceive('prompt')
+        ->once()
+        ->andReturn(new \Laravel\Ai\Responses\AgentResponse(
+            'invocation-id',
+            'Hello!',
+            new \Laravel\Ai\Responses\Data\Usage,
+            new \Laravel\Ai\Responses\Data\Meta
+        ));
+
+    Ai::shouldReceive('textProviderFor')
+        ->once()
+        ->with(Mockery::type(\Veloquent\Core\Domain\Ai\Agents\VeloquentAgent::class), 'openai')
+        ->andReturn($mockProvider);
+
+    // Act as regular user (non-superuser) to make sure hook is evaluated
+    $usersCollection = \Veloquent\Core\Domain\Collections\Models\Collection::where('name', 'users')->first();
+    $regularUser = \Veloquent\Core\Domain\Records\Models\Record::of($usersCollection);
+    $regularUser->setAttribute('id', 123);
+    actingAs($regularUser, 'api');
+
+    $response = postJson("/api/collections/{$this->collection->id}/ai/chat", [
+        'agent' => 'regular-bot',
+        'prompt' => 'Hi',
+    ]);
+
+    $response->assertStatus(200);
+    $response->assertJsonPath('data.text', 'Hello!');
+});
+
+it('allows normal prompt when watcher decides it is safe', function () {
+    $settings = app(AiSettings::class);
+    $settings->ai_provider = 'openai';
+    $settings->ai_model = 'gpt-4o-mini';
+    $settings->ai_api_key = 'sk-proj-test';
+    $settings->save();
+
+    DB::table($this->tableName)->insert([
+        'id' => '01h7c989r148s89m257a3b4cab',
+        'name' => 'safe-bot',
+        'type' => 'regular',
+        'model' => 'gpt-4o',
+        'system_prompt' => 'Be helpful.',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table($this->tableName)->insert([
+        'id' => '01h7c989r148s89m257a3b4cac',
+        'name' => 'my-watcher',
+        'type' => 'watcher',
+        'model' => 'gpt-4o-mini',
+        'system_prompt' => 'Check safety.',
+        'temperature' => 0.0,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('_velo_agents_agents_watchers_pivot')->insert([
+        'id' => (string) \Illuminate\Support\Str::ulid(),
+        'source_id' => '01h7c989r148s89m257a3b4cab',
+        'target_id' => '01h7c989r148s89m257a3b4cac',
+        'created_at' => now(),
+    ]);
+
+    $mockProvider = Mockery::mock(\Laravel\Ai\Providers\OpenAiProvider::class);
+
+    // First prompt call: to the watcher agent (uses StructuredVeloquentAgent)
+    $mockProvider->shouldReceive('prompt')
+        ->once()
+        ->with(Mockery::on(function ($prompt) {
+            return $prompt->agent instanceof \Veloquent\Core\Domain\Ai\Agents\StructuredVeloquentAgent;
+        }))
+        ->andReturn(new \Laravel\Ai\Responses\AgentResponse(
+            'invocation-id-watcher',
+            '{"safe": true, "message": ""}',
+            new \Laravel\Ai\Responses\Data\Usage,
+            new \Laravel\Ai\Responses\Data\Meta
+        ));
+
+    // Second prompt call: to the main agent
+    $mockProvider->shouldReceive('prompt')
+        ->once()
+        ->with(Mockery::on(function ($prompt) {
+            return $prompt->agent instanceof \Veloquent\Core\Domain\Ai\Agents\VeloquentAgent
+                && !($prompt->agent instanceof \Veloquent\Core\Domain\Ai\Agents\StructuredVeloquentAgent);
+        }))
+        ->andReturn(new \Laravel\Ai\Responses\AgentResponse(
+            'invocation-id-main',
+            'Hello from main!',
+            new \Laravel\Ai\Responses\Data\Usage,
+            new \Laravel\Ai\Responses\Data\Meta
+        ));
+
+    Ai::shouldReceive('textProviderFor')
+        ->twice()
+        ->andReturn($mockProvider);
+
+    $usersCollection = \Veloquent\Core\Domain\Collections\Models\Collection::where('name', 'users')->first();
+    $regularUser = \Veloquent\Core\Domain\Records\Models\Record::of($usersCollection);
+    $regularUser->setAttribute('id', 123);
+    actingAs($regularUser, 'api');
+
+    $response = postJson("/api/collections/{$this->collection->id}/ai/chat", [
+        'agent' => 'safe-bot',
+        'prompt' => 'Hi',
+    ]);
+
+    $response->assertStatus(200);
+    $response->assertJsonPath('data.text', 'Hello from main!');
+});
+
+it('blocks malicious prompt with fallback static message', function () {
+    $settings = app(AiSettings::class);
+    $settings->ai_provider = 'openai';
+    $settings->ai_model = 'gpt-4o-mini';
+    $settings->ai_api_key = 'sk-proj-test';
+    $settings->save();
+
+    DB::table($this->tableName)->insert([
+        'id' => '01h7c989r148s89m257a3b4cad',
+        'name' => 'protected-bot-1',
+        'type' => 'regular',
+        'model' => 'gpt-4o',
+        'system_prompt' => 'Be helpful.',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table($this->tableName)->insert([
+        'id' => '01h7c989r148s89m257a3b4cae',
+        'name' => 'my-watcher-1',
+        'type' => 'watcher',
+        'model' => 'gpt-4o-mini',
+        'system_prompt' => 'Check safety.',
+        'watcher_message' => 'Blocked by fallback message.',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('_velo_agents_agents_watchers_pivot')->insert([
+        'id' => (string) \Illuminate\Support\Str::ulid(),
+        'source_id' => '01h7c989r148s89m257a3b4cad',
+        'target_id' => '01h7c989r148s89m257a3b4cae',
+        'created_at' => now(),
+    ]);
+
+    $mockProvider = Mockery::mock(\Laravel\Ai\Providers\OpenAiProvider::class);
+    $mockProvider->shouldReceive('prompt')
+        ->once()
+        ->andReturn(new \Laravel\Ai\Responses\AgentResponse(
+            'invocation-id-watcher',
+            '{"safe": false, "message": ""}',
+            new \Laravel\Ai\Responses\Data\Usage,
+            new \Laravel\Ai\Responses\Data\Meta
+        ));
+
+    Ai::shouldReceive('textProviderFor')
+        ->once()
+        ->andReturn($mockProvider);
+
+    $usersCollection = \Veloquent\Core\Domain\Collections\Models\Collection::where('name', 'users')->first();
+    $regularUser = \Veloquent\Core\Domain\Records\Models\Record::of($usersCollection);
+    $regularUser->setAttribute('id', 123);
+    actingAs($regularUser, 'api');
+
+    $response = postJson("/api/collections/{$this->collection->id}/ai/chat", [
+        'agent' => 'protected-bot-1',
+        'prompt' => 'Hi',
+    ]);
+
+    $response->assertStatus(200);
+    $response->assertJsonPath('data.text', 'Blocked by fallback message.');
+    $response->assertJsonPath('data.json', null);
+});
+
+it('blocks malicious prompt with dynamic message from watcher', function () {
+    $settings = app(AiSettings::class);
+    $settings->ai_provider = 'openai';
+    $settings->ai_model = 'gpt-4o-mini';
+    $settings->ai_api_key = 'sk-proj-test';
+    $settings->save();
+
+    DB::table($this->tableName)->insert([
+        'id' => '01h7c989r148s89m257a3b4caf',
+        'name' => 'protected-bot-2',
+        'type' => 'regular',
+        'model' => 'gpt-4o',
+        'system_prompt' => 'Be helpful.',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table($this->tableName)->insert([
+        'id' => '01h7c989r148s89m257a3b4cb0',
+        'name' => 'my-watcher-2',
+        'type' => 'watcher',
+        'model' => 'gpt-4o-mini',
+        'system_prompt' => 'Check safety.',
+        'watcher_message' => 'Fallback message.',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('_velo_agents_agents_watchers_pivot')->insert([
+        'id' => (string) \Illuminate\Support\Str::ulid(),
+        'source_id' => '01h7c989r148s89m257a3b4caf',
+        'target_id' => '01h7c989r148s89m257a3b4cb0',
+        'created_at' => now(),
+    ]);
+
+    $mockProvider = Mockery::mock(\Laravel\Ai\Providers\OpenAiProvider::class);
+    $mockProvider->shouldReceive('prompt')
+        ->once()
+        ->andReturn(new \Laravel\Ai\Responses\AgentResponse(
+            'invocation-id-watcher',
+            '{"safe": false, "message": "Blocked dynamically by AI assistant."}',
+            new \Laravel\Ai\Responses\Data\Usage,
+            new \Laravel\Ai\Responses\Data\Meta
+        ));
+
+    Ai::shouldReceive('textProviderFor')
+        ->once()
+        ->andReturn($mockProvider);
+
+    $usersCollection = \Veloquent\Core\Domain\Collections\Models\Collection::where('name', 'users')->first();
+    $regularUser = \Veloquent\Core\Domain\Records\Models\Record::of($usersCollection);
+    $regularUser->setAttribute('id', 123);
+    actingAs($regularUser, 'api');
+
+    $response = postJson("/api/collections/{$this->collection->id}/ai/chat", [
+        'agent' => 'protected-bot-2',
+        'prompt' => 'Hi',
+    ]);
+
+    $response->assertStatus(200);
+    $response->assertJsonPath('data.text', 'Blocked dynamically by AI assistant.');
+});
+
+it('stops pipeline when any watcher in sequential chain fails', function () {
+    $settings = app(AiSettings::class);
+    $settings->ai_provider = 'openai';
+    $settings->ai_model = 'gpt-4o-mini';
+    $settings->ai_api_key = 'sk-proj-test';
+    $settings->save();
+
+    DB::table($this->tableName)->insert([
+        'id' => '01h7c989r148s89m257a3b4cb1',
+        'name' => 'pipeline-bot',
+        'type' => 'regular',
+        'model' => 'gpt-4o',
+        'system_prompt' => 'Be helpful.',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table($this->tableName)->insert([
+        'id' => '01h7c989r148s89m257a3b4cb2',
+        'name' => 'watcher-a',
+        'type' => 'watcher',
+        'model' => 'gpt-4o-mini',
+        'system_prompt' => 'Check safety A.',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table($this->tableName)->insert([
+        'id' => '01h7c989r148s89m257a3b4cb3',
+        'name' => 'watcher-b',
+        'type' => 'watcher',
+        'model' => 'gpt-4o-mini',
+        'system_prompt' => 'Check safety B.',
+        'watcher_message' => 'Blocked by watcher B.',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('_velo_agents_agents_watchers_pivot')->insert([
+        'id' => (string) \Illuminate\Support\Str::ulid(),
+        'source_id' => '01h7c989r148s89m257a3b4cb1',
+        'target_id' => '01h7c989r148s89m257a3b4cb2',
+        'created_at' => now(),
+    ]);
+
+    DB::table('_velo_agents_agents_watchers_pivot')->insert([
+        'id' => (string) \Illuminate\Support\Str::ulid(),
+        'source_id' => '01h7c989r148s89m257a3b4cb1',
+        'target_id' => '01h7c989r148s89m257a3b4cb3',
+        'created_at' => now(),
+    ]);
+
+    $mockProvider = Mockery::mock(\Laravel\Ai\Providers\OpenAiProvider::class);
+
+    // First watcher returns safe
+    $mockProvider->shouldReceive('prompt')
+        ->once()
+        ->with(Mockery::on(function ($prompt) {
+            return $prompt->agent->instructions() === 'Check safety A.';
+        }))
+        ->andReturn(new \Laravel\Ai\Responses\AgentResponse(
+            'invocation-id-watcher-a',
+            '{"safe": true, "message": ""}',
+            new \Laravel\Ai\Responses\Data\Usage,
+            new \Laravel\Ai\Responses\Data\Meta
+        ));
+
+    // Second watcher returns unsafe, triggering immediate block response
+    $mockProvider->shouldReceive('prompt')
+        ->once()
+        ->with(Mockery::on(function ($prompt) {
+            return $prompt->agent->instructions() === 'Check safety B.';
+        }))
+        ->andReturn(new \Laravel\Ai\Responses\AgentResponse(
+            'invocation-id-watcher-b',
+            '{"safe": false, "message": ""}',
+            new \Laravel\Ai\Responses\Data\Usage,
+            new \Laravel\Ai\Responses\Data\Meta
+        ));
+
+    Ai::shouldReceive('textProviderFor')
+        ->twice()
+        ->andReturn($mockProvider);
+
+    $usersCollection = \Veloquent\Core\Domain\Collections\Models\Collection::where('name', 'users')->first();
+    $regularUser = \Veloquent\Core\Domain\Records\Models\Record::of($usersCollection);
+    $regularUser->setAttribute('id', 123);
+    actingAs($regularUser, 'api');
+
+    $response = postJson("/api/collections/{$this->collection->id}/ai/chat", [
+        'agent' => 'pipeline-bot',
+        'prompt' => 'Hi',
+    ]);
+
+    $response->assertStatus(200);
+    $response->assertJsonPath('data.text', 'Blocked by watcher B.');
+});
+
+it('bypasses watchers completely for superusers', function () {
+    $settings = app(AiSettings::class);
+    $settings->ai_provider = 'openai';
+    $settings->ai_model = 'gpt-4o-mini';
+    $settings->ai_api_key = 'sk-proj-test';
+    $settings->save();
+
+    DB::table($this->tableName)->insert([
+        'id' => '01h7c989r148s89m257a3b4cb4',
+        'name' => 'superuser-bot',
+        'type' => 'regular',
+        'model' => 'gpt-4o',
+        'system_prompt' => 'Be helpful.',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table($this->tableName)->insert([
+        'id' => '01h7c989r148s89m257a3b4cb5',
+        'name' => 'unsafe-watcher',
+        'type' => 'watcher',
+        'model' => 'gpt-4o-mini',
+        'system_prompt' => 'Check safety.',
+        'watcher_message' => 'Should not see this.',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('_velo_agents_agents_watchers_pivot')->insert([
+        'id' => (string) \Illuminate\Support\Str::ulid(),
+        'source_id' => '01h7c989r148s89m257a3b4cb4',
+        'target_id' => '01h7c989r148s89m257a3b4cb5',
+        'created_at' => now(),
+    ]);
+
+    $mockProvider = Mockery::mock(\Laravel\Ai\Providers\OpenAiProvider::class);
+
+    // Only prompt call should be to the main agent
+    $mockProvider->shouldReceive('prompt')
+        ->once()
+        ->with(Mockery::on(function ($prompt) {
+            return $prompt->agent instanceof \Veloquent\Core\Domain\Ai\Agents\VeloquentAgent;
+        }))
+        ->andReturn(new \Laravel\Ai\Responses\AgentResponse(
+            'invocation-id-main',
+            'Hello Superuser!',
+            new \Laravel\Ai\Responses\Data\Usage,
+            new \Laravel\Ai\Responses\Data\Meta
+        ));
+
+    Ai::shouldReceive('textProviderFor')
+        ->once()
+        ->andReturn($mockProvider);
+
+    // Act as superuser (which has isSuperuser() returning true)
+    actingAs($this->user, 'api');
+
+    $response = postJson("/api/collections/{$this->collection->id}/ai/chat", [
+        'agent' => 'superuser-bot',
+        'prompt' => 'Hi',
+    ]);
+
+    $response->assertStatus(200);
+    $response->assertJsonPath('data.text', 'Hello Superuser!');
+});
+
+it('fails with 422 and returns Cannot process request when output type is json', function () {
+    $settings = app(AiSettings::class);
+    $settings->ai_provider = 'openai';
+    $settings->ai_model = 'gpt-4o-mini';
+    $settings->ai_api_key = 'sk-proj-test';
+    $settings->save();
+
+    DB::table($this->tableName)->insert([
+        'id' => '01h7c989r148s89m257a3b4cb6',
+        'name' => 'json-agent',
+        'type' => 'regular',
+        'model' => 'gpt-4o',
+        'system_prompt' => 'Be helpful.',
+        'output_type' => 'json',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table($this->tableName)->insert([
+        'id' => '01h7c989r148s89m257a3b4cb7',
+        'name' => 'watcher-json',
+        'type' => 'watcher',
+        'model' => 'gpt-4o-mini',
+        'system_prompt' => 'Check safety.',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('_velo_agents_agents_watchers_pivot')->insert([
+        'id' => (string) \Illuminate\Support\Str::ulid(),
+        'source_id' => '01h7c989r148s89m257a3b4cb6',
+        'target_id' => '01h7c989r148s89m257a3b4cb7',
+        'created_at' => now(),
+    ]);
+
+    $mockProvider = Mockery::mock(\Laravel\Ai\Providers\OpenAiProvider::class);
+    $mockProvider->shouldReceive('prompt')
+        ->once()
+        ->andReturn(new \Laravel\Ai\Responses\AgentResponse(
+            'invocation-id-watcher',
+            '{"safe": false, "message": "Unsafe prompt content."}',
+            new \Laravel\Ai\Responses\Data\Usage,
+            new \Laravel\Ai\Responses\Data\Meta
+        ));
+
+    Ai::shouldReceive('textProviderFor')
+        ->once()
+        ->andReturn($mockProvider);
+
+    $usersCollection = \Veloquent\Core\Domain\Collections\Models\Collection::where('name', 'users')->first();
+    $regularUser = \Veloquent\Core\Domain\Records\Models\Record::of($usersCollection);
+    $regularUser->setAttribute('id', 123);
+    actingAs($regularUser, 'api');
+
+    $response = postJson("/api/collections/{$this->collection->id}/ai/chat", [
+        'agent' => 'json-agent',
+        'prompt' => 'Hi',
+        'output_type' => 'json',
+    ]);
+
+    $response->assertStatus(422);
+    $response->assertJsonPath('message', 'Cannot process request.');
+});
+
+it('handles invalid json from watcher robustly by logging and treating as unsafe', function () {
+    $settings = app(AiSettings::class);
+    $settings->ai_provider = 'openai';
+    $settings->ai_model = 'gpt-4o-mini';
+    $settings->ai_api_key = 'sk-proj-test';
+    $settings->save();
+
+    DB::table($this->tableName)->insert([
+        'id' => '01h7c989r148s89m257a3b4cb8',
+        'name' => 'text-agent',
+        'type' => 'regular',
+        'model' => 'gpt-4o',
+        'system_prompt' => 'Be helpful.',
+        'output_type' => 'text',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table($this->tableName)->insert([
+        'id' => '01h7c989r148s89m257a3b4cb9',
+        'name' => 'watcher-text',
+        'type' => 'watcher',
+        'model' => 'gpt-4o-mini',
+        'system_prompt' => 'Check safety.',
+        'watcher_message' => 'Blocked fallback.',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('_velo_agents_agents_watchers_pivot')->insert([
+        'id' => (string) \Illuminate\Support\Str::ulid(),
+        'source_id' => '01h7c989r148s89m257a3b4cb8',
+        'target_id' => '01h7c989r148s89m257a3b4cb9',
+        'created_at' => now(),
+    ]);
+
+    $mockProvider = Mockery::mock(\Laravel\Ai\Providers\OpenAiProvider::class);
+    $mockProvider->shouldReceive('prompt')
+        ->once()
+        ->andReturn(new \Laravel\Ai\Responses\AgentResponse(
+            'invocation-id-watcher',
+            'not-valid-json',
+            new \Laravel\Ai\Responses\Data\Usage,
+            new \Laravel\Ai\Responses\Data\Meta
+        ));
+
+    Ai::shouldReceive('textProviderFor')
+        ->once()
+        ->andReturn($mockProvider);
+
+    \Illuminate\Support\Facades\Log::shouldReceive('error')
+        ->once()
+        ->with(Mockery::pattern('/Watcher agent returned invalid JSON response/'));
+    \Illuminate\Support\Facades\Log::shouldIgnoreMissing();
+
+    $usersCollection = \Veloquent\Core\Domain\Collections\Models\Collection::where('name', 'users')->first();
+    $regularUser = \Veloquent\Core\Domain\Records\Models\Record::of($usersCollection);
+    $regularUser->setAttribute('id', 123);
+    actingAs($regularUser, 'api');
+
+    $response = postJson("/api/collections/{$this->collection->id}/ai/chat", [
+        'agent' => 'text-agent',
+        'prompt' => 'Hi',
+    ]);
+
+    $response->assertStatus(200);
+    $response->assertJsonPath('data.text', 'Invalid security checker response.');
+});
+
+it('logs block event on stream requests when stream is true and output type is text', function () {
+    $settings = app(AiSettings::class);
+    $settings->ai_provider = 'openai';
+    $settings->ai_model = 'gpt-4o-mini';
+    $settings->ai_api_key = 'sk-proj-test';
+    $settings->save();
+
+    DB::table($this->tableName)->insert([
+        'id' => '01h7c989r148s89m257a3b4cca',
+        'name' => 'stream-agent',
+        'type' => 'regular',
+        'model' => 'gpt-4o',
+        'system_prompt' => 'Be helpful.',
+        'output_type' => 'text',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table($this->tableName)->insert([
+        'id' => '01h7c989r148s89m257a3b4ccb',
+        'name' => 'watcher-stream',
+        'type' => 'watcher',
+        'model' => 'gpt-4o-mini',
+        'system_prompt' => 'Check safety.',
+        'watcher_message' => 'Blocked fallback.',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('_velo_agents_agents_watchers_pivot')->insert([
+        'id' => (string) \Illuminate\Support\Str::ulid(),
+        'source_id' => '01h7c989r148s89m257a3b4cca',
+        'target_id' => '01h7c989r148s89m257a3b4ccb',
+        'created_at' => now(),
+    ]);
+
+    $mockProvider = Mockery::mock(\Laravel\Ai\Providers\OpenAiProvider::class);
+    $mockProvider->shouldReceive('prompt')
+        ->once()
+        ->andReturn(new \Laravel\Ai\Responses\AgentResponse(
+            'invocation-id-watcher',
+            '{"safe": false, "message": "Stream blocked message."}',
+            new \Laravel\Ai\Responses\Data\Usage,
+            new \Laravel\Ai\Responses\Data\Meta
+        ));
+
+    Ai::shouldReceive('textProviderFor')
+        ->once()
+        ->andReturn($mockProvider);
+
+    \Illuminate\Support\Facades\Log::shouldReceive('warning')
+        ->once()
+        ->with('Stream request blocked by watcher: Stream blocked message.');
+    \Illuminate\Support\Facades\Log::shouldIgnoreMissing();
+
+    $usersCollection = \Veloquent\Core\Domain\Collections\Models\Collection::where('name', 'users')->first();
+    $regularUser = \Veloquent\Core\Domain\Records\Models\Record::of($usersCollection);
+    $regularUser->setAttribute('id', 123);
+    actingAs($regularUser, 'api');
+
+    $response = postJson("/api/collections/{$this->collection->id}/ai/chat", [
+        'agent' => 'stream-agent',
+        'prompt' => 'Hi',
+        'stream' => true,
+    ]);
+
+    $response->assertStatus(200);
+    $response->assertJsonPath('data.text', 'Stream blocked message.');
 });

@@ -69,6 +69,9 @@ enum CollectionType: string
                 ['name' => 'length', 'type' => CollectionFieldType::Text->value, 'nullable' => true, 'unique' => false],
                 ['name' => 'output_type', 'type' => CollectionFieldType::Select->value, 'options' => ['text', 'json'], 'nullable' => true, 'unique' => false],
                 ['name' => 'schema', 'type' => CollectionFieldType::Json->value, 'nullable' => true, 'unique' => false],
+                ['name' => 'type', 'type' => CollectionFieldType::Select->value, 'options' => ['regular', 'watcher'], 'nullable' => true, 'unique' => false, 'default' => 'regular'],
+                ['name' => 'watcher_message', 'type' => CollectionFieldType::Text->value, 'nullable' => true, 'unique' => false],
+                ['name' => 'watchers', 'type' => CollectionFieldType::RelationMany->value, 'target_collection_id' => '@self', 'nullable' => true, 'unique' => false],
             ],
             default => [],
         };

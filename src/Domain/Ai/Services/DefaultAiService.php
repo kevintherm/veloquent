@@ -3,6 +3,7 @@
 namespace Veloquent\Core\Domain\Ai\Services;
 
 use Exception;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Ai\Messages\UserMessage;
 use Laravel\Ai\Messages\AssistantMessage;
@@ -61,6 +62,21 @@ class DefaultAiService implements AiService
 
         $payloadData = $hookPayload->data;
 
+        if (!empty($payloadData['blocked'])) {
+            $blockedMessage = $payloadData['blocked_message'] ?? "I'm sorry, I cannot do that.";
+
+            if (!empty($payloadData['stream'])) {
+                Log::warning("Stream request blocked by watcher: {$blockedMessage}");
+            } else {
+                Log::warning("Request blocked by watcher: {$blockedMessage}");
+            }
+
+            return [
+                'text' => $blockedMessage,
+                'json' => null,
+            ];
+        }
+
         $provider = $this->aiSettings->ai_provider;
         $apiKey = $this->aiSettings->ai_api_key;
         $defaultModel = $this->aiSettings->ai_model;
@@ -82,13 +98,6 @@ class DefaultAiService implements AiService
         if (!empty($agent->length)) {
             $systemPrompt .= "\nLength: Keep your response {$agent->length}.";
         }
-
-        config([
-            'ai.default' => $provider,
-            "ai.providers.{$provider}.driver" => $provider,
-            "ai.providers.{$provider}.key" => $apiKey,
-            "ai.providers.{$provider}.model" => $model,
-        ]);
 
         $attachments = $payloadData['attachments'] ?? [];
 

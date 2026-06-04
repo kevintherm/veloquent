@@ -59,6 +59,10 @@ class UpdateCollectionRequest extends FormRequest
             'options' => 'nullable|array',
         ];
 
+        $collection = $this->route('collection');
+        $collectionType = $this->input('type', $collection?->type?->value ?? $collection?->type);
+        $isAgentsCollection = ($collectionType === CollectionType::Agents->value);
+
         foreach ($this->input('fields', []) as $index => $field) {
             $type = CollectionFieldType::tryFrom($field['type'] ?? '');
 
@@ -66,7 +70,9 @@ class UpdateCollectionRequest extends FormRequest
                 continue;
             }
 
-            foreach ($type->typeValidationRules("fields.{$index}") as $key => $value) {
+            $skipRelationExists = ($isAgentsCollection && ($field['target_collection_id'] ?? '') === '@self');
+
+            foreach ($type->typeValidationRules("fields.{$index}", $skipRelationExists) as $key => $value) {
                 $rules[$key] = $value;
             }
         }

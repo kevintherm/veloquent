@@ -32,6 +32,7 @@ use Veloquent\Core\Domain\Hooks\Contracts\HookRegistry;
 use Veloquent\Core\Domain\OAuth\Contracts\OAuthService;
 use Veloquent\Core\Console\Commands\CreateTenantCommand;
 use Veloquent\Core\Console\Commands\DeleteTenantCommand;
+use Veloquent\Core\Domain\Ai\Hooks\WatchMaliciousPrompt;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Support\Http\Middleware\EnsureTenant;
 use Veloquent\Core\Console\Commands\ExtractTenantCommand;
@@ -133,6 +134,11 @@ class VeloquentServiceProvider extends ServiceProvider
         $this->app->make(HookRegistry::class)->register(
             'ai.generating',
             EvaluateChatApiRule::class
+        );
+
+        $this->app->make(HookRegistry::class)->register(
+            'ai.generating',
+            WatchMaliciousPrompt::class
         );
 
         if (file_exists(__DIR__ . '/../routes/channels.php')) {

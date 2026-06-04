@@ -3,9 +3,11 @@
 namespace Veloquent\Core\Domain\Collections\Observers;
 
 use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\Collections\Enums\CollectionType;
 use Veloquent\Core\Domain\SchemaManagement\Support\TableName;
-use Veloquent\Core\Domain\SchemaManagement\Enums\SchemaOperation;
 use Veloquent\Core\Support\Exceptions\InvalidArgumentException;
+use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
+use Veloquent\Core\Domain\SchemaManagement\Enums\SchemaOperation;
 use Veloquent\Core\Domain\SchemaManagement\Contracts\CollectionSyncService;
 use Veloquent\Core\Domain\SchemaManagement\Services\DefaultCollectionSyncService;
 
@@ -16,6 +18,7 @@ readonly class CollectionObserver
      */
     public function creating(Collection $collection): void
     {
+        $this->resolveSelfReferentialTargetCollections($collection);
         $this->validateApiRules($collection);
         $this->ensureTableNameIsSet($collection);
     }
@@ -32,6 +35,7 @@ readonly class CollectionObserver
      */
     public function updating(Collection $collection): void
     {
+        $this->resolveSelfReferentialTargetCollections($collection);
         $this->validateApiRules($collection);
         $this->ensureTypeIsNotChanged($collection);
     }
@@ -103,6 +107,32 @@ readonly class CollectionObserver
 
         if (! empty($invalidKeys)) {
             throw new InvalidArgumentException('Invalid api rules keys: '.implode(', ', $invalidKeys));
+        }
+    }
+
+    private function resolveSelfReferentialTargetCollections(Collection $collection): void
+    {
+        if ($collection->type !== CollectionType::Agents->value) {
+            return;
+        }
+
+        $fields = $collection->fields;
+        if (! is_array($fields)) {
+            return;
+        }
+        $modified = false;
+        foreach ($fields as &$field) {
+            if (($field['type'] ?? '') === CollectionFieldType::RelationMany->value
+                && ($field['target_collection_id'] ?? '') === '@self') {
+                if (empty($collection->id)) {
+                    $collection->id = (string) \Illuminate\Support\Str::ulid();
+                }
+                $field['target_collection_id'] = $collection->id;
+                $modified = true;
+            }
+        }
+        if ($modified) {
+            $collection->fields = $fields;
         }
     }
 }

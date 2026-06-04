@@ -3,11 +3,11 @@
 namespace Veloquent\Core\Domain\Ai\Hooks;
 
 use Closure;
+use Veloquent\Core\Domain\RuleEngine\RuleEngine;
 use Illuminate\Auth\Access\AuthorizationException;
 use Veloquent\Core\Domain\Hooks\Contracts\HookPipe;
 use Veloquent\Core\Domain\Hooks\ValueObjects\HookPayload;
 use Veloquent\Core\Domain\Ai\Services\ChatRuleContextBuilder;
-use Veloquent\Core\Domain\RuleEngine\RuleEngine;
 
 class EvaluateChatApiRule implements HookPipe
 {

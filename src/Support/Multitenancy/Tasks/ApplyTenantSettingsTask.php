@@ -2,6 +2,7 @@
 
 namespace Veloquent\Core\Support\Multitenancy\Tasks;
 
+use Veloquent\Core\Domain\Settings\AiSettings;
 use Veloquent\Core\Domain\Settings\EmailSettings;
 use Veloquent\Core\Domain\Settings\GeneralSettings;
 use Veloquent\Core\Support\Settings\SettingsContainer;
@@ -16,6 +17,9 @@ class ApplyTenantSettingsTask implements SwitchTenantTask
     {
         $this->clearSettingsContainerInstances();
 
+        $aiSettings = app(AiSettings::class);
+        $provider = $aiSettings->ai_provider;
+
         $this->originalConfig = [
             'app.name' => config('app.name'),
             'app.locale' => config('app.locale'),
@@ -27,7 +31,14 @@ class ApplyTenantSettingsTask implements SwitchTenantTask
             'mail.mailers.smtp.password' => config('mail.mailers.smtp.password'),
             'mail.from.address' => config('mail.from.address'),
             'mail.from.name' => config('mail.from.name'),
+            'ai.default' => config('ai.default'),
         ];
+
+        if ($provider) {
+            $this->originalConfig["ai.providers.{$provider}.driver"] = config("ai.providers.{$provider}.driver");
+            $this->originalConfig["ai.providers.{$provider}.key"] = config("ai.providers.{$provider}.key");
+            $this->originalConfig["ai.providers.{$provider}.model"] = config("ai.providers.{$provider}.model");
+        }
 
         $generalSettings = app(GeneralSettings::class);
         $emailSettings = app(EmailSettings::class);
@@ -44,6 +55,15 @@ class ApplyTenantSettingsTask implements SwitchTenantTask
             'mail.from.address' => $emailSettings->mail_from_address,
             'mail.from.name' => $emailSettings->mail_from_name,
         ]);
+
+        if ($provider && $aiSettings->ai_api_key) {
+            config([
+                'ai.default' => $provider,
+                "ai.providers.{$provider}.driver" => $provider,
+                "ai.providers.{$provider}.key" => $aiSettings->ai_api_key,
+                "ai.providers.{$provider}.model" => $aiSettings->ai_model,
+            ]);
+        }
 
         if (app()->bound('mailer')) {
             app()->forgetInstance('mailer');
