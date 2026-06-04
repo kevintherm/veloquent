@@ -61,6 +61,7 @@ class WatchMaliciousPrompt implements HookPipe
 
         $watchers = DB::table($pivotTable)
             ->where('source_id', $agent->getKey())
+            ->orderBy('created_at', 'asc')
             ->pluck('target_id')
             ->all();
 

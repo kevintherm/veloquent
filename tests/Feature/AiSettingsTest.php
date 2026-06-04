@@ -1354,8 +1354,8 @@ it('stops pipeline when any watcher in sequential chain fails', function () {
         'type' => 'watcher',
         'model' => 'gpt-4o-mini',
         'system_prompt' => 'Check safety A.',
-        'created_at' => now(),
-        'updated_at' => now(),
+        'created_at' => now()->subMinute(),
+        'updated_at' => now()->subMinute(),
     ]);
 
     DB::table($this->tableName)->insert([
@@ -1427,6 +1427,102 @@ it('stops pipeline when any watcher in sequential chain fails', function () {
 
     $response->assertStatus(200);
     $response->assertJsonPath('data.text', 'Blocked by watcher B.');
+});
+
+it('executes watchers in order of their created_at field', function () {
+    $settings = app(AiSettings::class);
+    $settings->ai_provider = 'openai';
+    $settings->ai_model = 'gpt-4o-mini';
+    $settings->ai_api_key = 'sk-proj-test';
+    $settings->save();
+
+    DB::table($this->tableName)->insert([
+        'id' => '01h7c989r148s89m257a3b4cb5',
+        'name' => 'pipeline-bot-2',
+        'type' => 'regular',
+        'model' => 'gpt-4o',
+        'system_prompt' => 'Be helpful.',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    // watcher-a record is older (created_at = now() - 20 mins)
+    DB::table($this->tableName)->insert([
+        'id' => '01h7c989r148s89m257a3b4cb6',
+        'name' => 'watcher-a',
+        'type' => 'watcher',
+        'model' => 'gpt-4o-mini',
+        'system_prompt' => 'Check safety A.',
+        'watcher_message' => 'Blocked by younger watcher A.',
+        'created_at' => now()->subMinutes(20),
+        'updated_at' => now()->subMinutes(20),
+    ]);
+
+    // watcher-b record is younger (created_at = now())
+    DB::table($this->tableName)->insert([
+        'id' => '01h7c989r148s89m257a3b4cb7',
+        'name' => 'watcher-b',
+        'type' => 'watcher',
+        'model' => 'gpt-4o-mini',
+        'system_prompt' => 'Check safety B.',
+        'watcher_message' => 'Blocked by older watcher B.',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    // watcher-a pivot is younger (created_at = now())
+    DB::table('_velo_agents_agents_watchers_pivot')->insert([
+        'id' => (string) \Illuminate\Support\Str::ulid(),
+        'source_id' => '01h7c989r148s89m257a3b4cb5',
+        'target_id' => '01h7c989r148s89m257a3b4cb6', // watcher-a
+        'created_at' => now(),
+    ]);
+
+    // watcher-b pivot is older (created_at = now() - 10 mins)
+    DB::table('_velo_agents_agents_watchers_pivot')->insert([
+        'id' => (string) \Illuminate\Support\Str::ulid(),
+        'source_id' => '01h7c989r148s89m257a3b4cb5',
+        'target_id' => '01h7c989r148s89m257a3b4cb7', // watcher-b
+        'created_at' => now()->subMinutes(10),
+    ]);
+
+    $mockProvider = Mockery::mock(\Laravel\Ai\Providers\OpenAiProvider::class);
+
+    // Older watcher (watcher-b) should receive the prompt first and fail
+    $mockProvider->shouldReceive('prompt')
+        ->once()
+        ->with(Mockery::on(function ($prompt) {
+            return $prompt->agent->instructions() === 'Check safety B.';
+        }))
+        ->andReturn(new \Laravel\Ai\Responses\AgentResponse(
+            'invocation-id-watcher-b',
+            '{"safe": false, "message": ""}',
+            new \Laravel\Ai\Responses\Data\Usage,
+            new \Laravel\Ai\Responses\Data\Meta
+        ));
+
+    // watcher-a should NOT be called at all because watcher-b blocked the prompt first
+    $mockProvider->shouldNotReceive('prompt')
+        ->with(Mockery::on(function ($prompt) {
+            return $prompt->agent->instructions() === 'Check safety A.';
+        }));
+
+    Ai::shouldReceive('textProviderFor')
+        ->once()
+        ->andReturn($mockProvider);
+
+    $usersCollection = \Veloquent\Core\Domain\Collections\Models\Collection::where('name', 'users')->first();
+    $regularUser = \Veloquent\Core\Domain\Records\Models\Record::of($usersCollection);
+    $regularUser->setAttribute('id', 123);
+    actingAs($regularUser, 'api');
+
+    $response = postJson("/api/collections/{$this->collection->id}/ai/chat", [
+        'agent' => 'pipeline-bot-2',
+        'prompt' => 'Hi',
+    ]);
+
+    $response->assertStatus(200);
+    $response->assertJsonPath('data.text', 'Blocked by older watcher B.');
 });
 
 it('bypasses watchers completely for superusers', function () {
