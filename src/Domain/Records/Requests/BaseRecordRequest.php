@@ -7,10 +7,27 @@ use Veloquent\Core\Domain\Collections\Enums\CollectionType;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Collections\ValueObjects\Field;
 use Veloquent\Core\Domain\Records\Models\Record;
+use Veloquent\Core\Domain\Records\Validators\RecordRelationValidator;
 use Illuminate\Foundation\Http\FormRequest;
 
 abstract class BaseRecordRequest extends FormRequest
 {
+    protected RecordRelationValidator $recordRelationValidator;
+
+    public function __construct(
+        ?RecordRelationValidator $recordRelationValidator = null,
+        array $query = [],
+        array $request = [],
+        array $attributes = [],
+        array $cookies = [],
+        array $files = [],
+        array $server = [],
+        $content = null
+    ) {
+        parent::__construct($query, $request, $attributes, $cookies, $files, $server, $content);
+        $this->recordRelationValidator = $recordRelationValidator ?? app(RecordRelationValidator::class);
+    }
+
     public function authorize(): bool
     {
         return true;
@@ -136,7 +153,7 @@ abstract class BaseRecordRequest extends FormRequest
 
             if ($fieldType === CollectionFieldType::RelationMany) {
                 $fieldRules[] = 'array';
-                $fieldRules[] = function (string $attribute, mixed $value, callable $fail) use ($field): void {
+                $fieldRules[] = function (string $attribute, mixed $value, callable $fail) use ($field, $collection): void {
                     if ($value === null || ! is_array($value)) {
                         return;
                     }
@@ -172,6 +189,12 @@ abstract class BaseRecordRequest extends FormRequest
 
                     if ($foundCount !== count(array_unique($ids))) {
                         $fail('One or more of the selected related records do not exist.');
+                        return;
+                    }
+
+                    $error = $this->recordRelationValidator->validate($collection, $field, $ids);
+                    if ($error !== null) {
+                        $fail($error);
                     }
                 };
 

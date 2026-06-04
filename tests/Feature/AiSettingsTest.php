@@ -938,6 +938,81 @@ it('resolves self-referential target_collection_id on agents collection create',
     expect(\Illuminate\Support\Facades\Schema::hasTable($pivotTable))->toBeTrue();
 });
 
+it('prevents adding a regular agent as a watcher', function () {
+    // 1. Create a regular agent and a watcher agent
+    $regularAgentId = '01h7c989r148s89m257a3b4c90';
+    $watcherAgentId = '01h7c989r148s89m257a3b4c91';
+    $mainAgentId = '01h7c989r148s89m257a3b4c92';
+
+    DB::table($this->tableName)->insert([
+        [
+            'id' => $regularAgentId,
+            'name' => 'regular-agent',
+            'type' => 'regular',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ],
+        [
+            'id' => $watcherAgentId,
+            'name' => 'watcher-agent',
+            'type' => 'watcher',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ],
+        [
+            'id' => $mainAgentId,
+            'name' => 'main-agent',
+            'type' => 'regular',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]
+    ]);
+
+    // Act as superuser to bypass auth rules on records API
+    $this->actingAs($this->user, 'api');
+
+    // Test A: Creating an agent with a regular agent as a watcher should fail validation
+    $response = $this->postJson("/api/collections/{$this->collection->id}/records", [
+        'name' => 'new-bot-with-invalid-watcher',
+        'type' => 'regular',
+        'watchers' => [$regularAgentId],
+    ]);
+
+    $response->assertStatus(422);
+    $response->assertJsonValidationErrors('watchers');
+
+    // Test B: Creating an agent with a watcher agent as a watcher should succeed
+    $response = $this->postJson("/api/collections/{$this->collection->id}/records", [
+        'name' => 'new-bot-with-valid-watcher',
+        'type' => 'regular',
+        'watchers' => [$watcherAgentId],
+    ]);
+
+    $response->assertStatus(201);
+
+    // Test C: Updating an agent with a regular agent as a watcher should fail validation
+    $response = $this->patchJson("/api/collections/{$this->collection->id}/records/{$mainAgentId}", [
+        'watchers' => [$regularAgentId],
+    ]);
+
+    $response->assertStatus(422);
+    $response->assertJsonValidationErrors('watchers');
+
+    // Test D: Direct relation sync with a regular agent as a watcher should fail
+    $response = $this->patchJson("/api/collections/{$this->collection->id}/records/{$mainAgentId}/relations/watchers", [
+        'ids' => [$regularAgentId],
+    ]);
+
+    $response->assertStatus(400);
+
+    // Test E: Direct relation sync with a watcher agent as a watcher should succeed
+    $response = $this->patchJson("/api/collections/{$this->collection->id}/records/{$mainAgentId}/relations/watchers", [
+        'ids' => [$watcherAgentId],
+    ]);
+
+    $response->assertStatus(200);
+});
+
 it('passes through and logs a warning if the pivot table does not exist', function () {
     $settings = app(AiSettings::class);
     $settings->ai_provider = 'openai';

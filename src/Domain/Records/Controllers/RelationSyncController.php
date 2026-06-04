@@ -7,15 +7,17 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
 use Veloquent\Core\Domain\Records\Models\Record;
 use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Support\Http\Controllers\ApiController;
 use Veloquent\Core\Domain\Records\Services\PivotSyncService;
 use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
-use Veloquent\Core\Support\Http\Controllers\ApiController;
 use Veloquent\Core\Domain\SchemaManagement\Support\PivotTableName;
+use Veloquent\Core\Domain\Records\Validators\RecordRelationValidator;
 
 class RelationSyncController extends ApiController
 {
     public function __construct(
-        private readonly PivotSyncService $pivotSyncService
+        private readonly PivotSyncService $pivotSyncService,
+        private readonly RecordRelationValidator $recordRelationValidator,
     ) {}
 
     /**
@@ -38,6 +40,23 @@ class RelationSyncController extends ApiController
         }
 
         $entries = $this->preparePivotEntries($request);
+
+        $ids = array_column($entries, 'id');
+        if (! empty($ids)) {
+            $foundCount = Record::of($targetCollection)
+                ->newQuery()
+                ->whereIn('id', $ids)
+                ->count();
+
+            if ($foundCount !== count(array_unique($ids))) {
+                return $this->errorResponse('One or more of the selected related records do not exist.', 400);
+            }
+
+            $error = $this->recordRelationValidator->validate($collection, $field, $ids);
+            if ($error !== null) {
+                return $this->errorResponse($error, 400);
+            }
+        }
 
         $pivotTable = PivotTableName::for($collection->getPhysicalTableName(), $targetCollection->getPhysicalTableName(), $fieldName);
         $this->pivotSyncService->sync(
@@ -88,7 +107,7 @@ class RelationSyncController extends ApiController
             return null;
         }
 
-        return $field;
+        return is_array($field) ? $field : $field->toArray();
     }
 
     private function resolveTargetCollection(array $field): ?Collection
