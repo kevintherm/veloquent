@@ -3,7 +3,7 @@
 namespace Veloquent\Core\Domain\Auth\Actions;
 
 use Illuminate\Support\Facades\DB;
-use Veloquent\Core\Domain\Hooks\HookRunner;
+use Veloquent\Core\Domain\Hooks\Contracts\HookRunner;
 use Illuminate\Auth\AuthenticationException;
 use Veloquent\Core\Domain\Hooks\ValueObjects\HookPayload;
 use Veloquent\Core\Domain\Otp\Enums\OtpAction;

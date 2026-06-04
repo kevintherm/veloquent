@@ -2,7 +2,7 @@
 
 namespace Veloquent\Core\Support\Http\Middleware;
 
-use Veloquent\Core\Domain\Auth\Services\TokenAuthService;
+use Veloquent\Core\Domain\Auth\Contracts\TokenAuthService;
 use Veloquent\Core\Support\Guards\TokenGuard;
 use Closure;
 use Illuminate\Http\Request;

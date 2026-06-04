@@ -12,28 +12,37 @@ use Illuminate\Cache\RateLimiting\Limit;
 use \Veloquent\Core\Support\Models\Tenant;
 use Illuminate\Support\Facades\RateLimiter;
 use Spatie\Multitenancy\Contracts\IsTenant;
-use Veloquent\Core\Domain\Hooks\HookRunner;
-use Veloquent\Core\Domain\Hooks\HookRegistry;
 use Veloquent\Core\Support\Guards\TokenGuard;
 use Veloquent\Core\Domain\Settings\AiSettings;
+use Veloquent\Core\Domain\Ai\Contracts\AiService;
 use Veloquent\Core\Domain\Settings\EmailSettings;
 use Veloquent\Core\Providers\LogsServiceProvider;
+use Veloquent\Core\Domain\Hooks\DefaultHookRunner;
 use Veloquent\Core\Console\Commands\InstallCommand;
 use Veloquent\Core\Domain\Settings\GeneralSettings;
 use Veloquent\Core\Domain\Settings\StorageSettings;
+use Veloquent\Core\Domain\Hooks\DefaultHookRegistry;
+use Veloquent\Core\Domain\Hooks\Contracts\HookRunner;
 use Veloquent\Core\Support\Settings\SettingsContainer;
 use Veloquent\Core\Console\Commands\ListTenantsCommand;
 use Veloquent\Core\Console\Commands\PurgeTenantCommand;
 use Veloquent\Core\Domain\Ai\Hooks\EvaluateChatApiRule;
+use Veloquent\Core\Domain\Ai\Services\DefaultAiService;
+use Veloquent\Core\Domain\Hooks\Contracts\HookRegistry;
+use Veloquent\Core\Domain\OAuth\Contracts\OAuthService;
 use Veloquent\Core\Console\Commands\CreateTenantCommand;
 use Veloquent\Core\Console\Commands\DeleteTenantCommand;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Support\Http\Middleware\EnsureTenant;
 use Veloquent\Core\Console\Commands\ExtractTenantCommand;
-use Veloquent\Core\Domain\Auth\Services\TokenAuthService;
 use Veloquent\Core\Support\Http\Middleware\SuperuserOnly;
+use Veloquent\Core\Domain\Auth\Contracts\TokenAuthService;
+use Veloquent\Core\Domain\OAuth\Services\DefaultOAuthService;
 use Veloquent\Core\Support\Http\Middleware\TokenAuthMiddleware;
+use Veloquent\Core\Domain\Auth\Services\DefaultTokenAuthService;
 use Veloquent\Core\Domain\Realtime\Providers\RealtimeServiceProvider;
+use Veloquent\Core\Domain\SchemaManagement\Contracts\CollectionSyncService;
+use Veloquent\Core\Domain\SchemaManagement\Services\DefaultCollectionSyncService;
 
 class VeloquentServiceProvider extends ServiceProvider
 {
@@ -49,8 +58,35 @@ class VeloquentServiceProvider extends ServiceProvider
             return $app->make(config('multitenancy.tenant_model'));
         });
 
-        $this->app->singleton(HookRegistry::class);
-        $this->app->singleton(HookRunner::class);
+        $this->app->singleton(DefaultHookRegistry::class);
+        $this->app->singletonIf(HookRegistry::class, function ($app) {
+            return $app->make(DefaultHookRegistry::class);
+        });
+
+        $this->app->singleton(DefaultHookRunner::class);
+        $this->app->singletonIf(HookRunner::class, function ($app) {
+            return $app->make(DefaultHookRunner::class);
+        });
+
+        $this->app->singleton(DefaultTokenAuthService::class);
+        $this->app->singletonIf(TokenAuthService::class, function ($app) {
+            return $app->make(DefaultTokenAuthService::class);
+        });
+
+        $this->app->singleton(DefaultAiService::class);
+        $this->app->singletonIf(AiService::class, function ($app) {
+            return $app->make(DefaultAiService::class);
+        });
+
+        $this->app->singleton(DefaultOAuthService::class);
+        $this->app->singletonIf(OAuthService::class, function ($app) {
+            return $app->make(DefaultOAuthService::class);
+        });
+
+        $this->app->singleton(DefaultCollectionSyncService::class);
+        $this->app->singletonIf(CollectionSyncService::class, function ($app) {
+            return $app->make(DefaultCollectionSyncService::class);
+        });
 
         $veloAuth = config('velo.auth', []);
         config(['auth.guards' => array_merge(config('auth.guards', []), $veloAuth['guards'] ?? [])]);

@@ -2,7 +2,7 @@
 
 namespace Veloquent\Core\Domain\Auth\Actions;
 
-use Veloquent\Core\Domain\Auth\Services\TokenAuthService;
+use Veloquent\Core\Domain\Auth\Contracts\TokenAuthService;
 use Veloquent\Core\Domain\Realtime\Contracts\RealtimeBusDriver;
 use Veloquent\Core\Domain\Realtime\Models\RealtimeSubscription;
 use Veloquent\Core\Domain\Records\Models\Record;

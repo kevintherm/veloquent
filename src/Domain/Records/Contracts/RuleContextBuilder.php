@@ -5,7 +5,7 @@ namespace Veloquent\Core\Domain\Records\Contracts;
 use Illuminate\Http\Request;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 
-interface RuleContextBuilderInterface
+interface RuleContextBuilder
 {
     /**
      * Build the evaluation context for a rule.

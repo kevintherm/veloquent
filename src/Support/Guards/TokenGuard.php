@@ -2,7 +2,7 @@
 
 namespace Veloquent\Core\Support\Guards;
 
-use Veloquent\Core\Domain\Auth\Services\TokenAuthService;
+use Veloquent\Core\Domain\Auth\Contracts\TokenAuthService;
 use Illuminate\Auth\GuardHelpers;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\Guard;

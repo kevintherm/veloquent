@@ -9,7 +9,8 @@ use Veloquent\Core\Domain\Realtime\Commands\InstallRealtimeSupervisor;
 use Veloquent\Core\Domain\Realtime\Commands\PruneExpiredRealtimeSubscriptions;
 use Veloquent\Core\Domain\Realtime\Commands\RealtimeWorker;
 use Veloquent\Core\Domain\Realtime\Contracts\RealtimeBusDriver;
-use Veloquent\Core\Domain\Realtime\Services\RealtimeDispatcher;
+use Veloquent\Core\Domain\Realtime\Contracts\RealtimeDispatcher;
+use Veloquent\Core\Domain\Realtime\Services\DefaultRealtimeDispatcher;
 use Veloquent\Core\Domain\Realtime\Services\RealtimeBuffer;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
@@ -19,7 +20,10 @@ class RealtimeServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->singleton(RealtimeDispatcher::class);
+        $this->app->singleton(DefaultRealtimeDispatcher::class);
+        $this->app->singletonIf(RealtimeDispatcher::class, function ($app) {
+            return $app->make(DefaultRealtimeDispatcher::class);
+        });
         $this->app->singleton(RealtimeBuffer::class);
 
         $this->app->singleton(RealtimeBusDriver::class, function (): RealtimeBusDriver {

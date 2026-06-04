@@ -1,7 +1,7 @@
 <?php
 
 use Veloquent\Core\Domain\Auth\Models\Superuser;
-use Veloquent\Core\Domain\Auth\Services\TokenAuthService;
+use Veloquent\Core\Domain\Auth\Contracts\TokenAuthService;
 use Veloquent\Core\Domain\Collections\Actions\CreateCollectionAction;
 use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
 use Veloquent\Core\Domain\Collections\Enums\CollectionType;

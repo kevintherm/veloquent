@@ -11,13 +11,14 @@ use Veloquent\Core\Domain\RuleEngine\RuleEngine;
 use Veloquent\Core\Support\Models\Tenant;
 use Veloquent\Core\Domain\Records\Events\RecordChanged;
 use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\Realtime\Contracts\RealtimeDispatcher;
 use Veloquent\Core\Domain\Realtime\Events\RealtimeRecordEvent;
 use Veloquent\Core\Domain\Realtime\Contracts\RealtimeBusDriver;
 use Veloquent\Core\Domain\Realtime\Models\RealtimeSubscription;
 use Veloquent\Core\Domain\Realtime\Jobs\ProcessRealtimeEventJob;
 use Veloquent\Core\Domain\Records\Services\CreateRuleContextBuilder;
 
-class RealtimeDispatcher
+class DefaultRealtimeDispatcher implements RealtimeDispatcher
 {
     public function __construct(
         protected CreateRuleContextBuilder $contextBuilder,

@@ -6,7 +6,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Http\Request;
 use Illuminate\Contracts\Support\Responsable;
 use Symfony\Component\HttpFoundation\Response;
-use Veloquent\Core\Domain\Ai\Services\AiService;
+use Veloquent\Core\Domain\Ai\Contracts\AiService;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Support\Http\Controllers\ApiController;
 use Veloquent\Core\Domain\Collections\Enums\CollectionType;

@@ -4,11 +4,11 @@ namespace Veloquent\Core\Domain\Ai\Services;
 
 use Illuminate\Http\Request;
 use Veloquent\Core\Domain\Collections\Models\Collection;
-use Veloquent\Core\Domain\Records\Contracts\RuleContextBuilderInterface;
+use Veloquent\Core\Domain\Records\Contracts\RuleContextBuilder as RuleContextBuilderContract;
 use Veloquent\Core\Domain\Records\Services\ResolvesRuleContextRelations;
 use Veloquent\Core\Domain\Records\Services\RuleContextBuilder;
 
-class ChatRuleContextBuilder implements RuleContextBuilderInterface
+class ChatRuleContextBuilder implements RuleContextBuilderContract
 {
     public function __construct(
         private readonly RuleContextBuilder $baseBuilder,

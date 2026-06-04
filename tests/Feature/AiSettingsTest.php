@@ -790,12 +790,12 @@ it('triggers ai.generating and ai.generated hooks during chat', function () {
         'updated_at' => now(),
     ]);
 
-    app(\Veloquent\Core\Domain\Hooks\HookRegistry::class)->register(
+    app(\Veloquent\Core\Domain\Hooks\Contracts\HookRegistry::class)->register(
         'ai.generating',
         fn (\Veloquent\Core\Domain\Hooks\ValueObjects\HookPayload $payload, Closure $next): mixed => $next($payload->withData(array_merge($payload->data, ['prompt' => $payload->data['prompt'] . ' modified by hook'])))
     );
 
-    app(\Veloquent\Core\Domain\Hooks\HookRegistry::class)->register(
+    app(\Veloquent\Core\Domain\Hooks\Contracts\HookRegistry::class)->register(
         'ai.generated',
         fn (\Veloquent\Core\Domain\Hooks\ValueObjects\HookPayload $payload, Closure $next): mixed => $next($payload->withData(array_merge($payload->data, ['text' => $payload->data['text'] . ' post-processed'])))
     );

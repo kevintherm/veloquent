@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 use Veloquent\Core\Domain\Records\Models\Record;
 use Veloquent\Core\Domain\SchemaManagement\Support\PivotTableName;
-use Veloquent\Core\Domain\SchemaManagement\Services\CollectionSyncService;
+use Veloquent\Core\Domain\SchemaManagement\Contracts\CollectionSyncService;
 
 class ManyToManyTypeChangeTest extends TestCase
 {

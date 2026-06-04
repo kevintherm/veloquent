@@ -1,7 +1,7 @@
 <?php
 
 use Veloquent\Core\Domain\Auth\Actions\LogoutAllAction;
-use Veloquent\Core\Domain\Auth\Services\TokenAuthService;
+use Veloquent\Core\Domain\Auth\Services\DefaultTokenAuthService;
 use Veloquent\Core\Domain\Collections\Enums\CollectionType;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Realtime\Contracts\RealtimeBusDriver;
@@ -55,7 +55,7 @@ afterEach(function (): void {
 it('deletes realtime subscriptions only for current tenant on logout-all', function () {
     $publishedPayloads = [];
 
-    $tokenService = new class extends TokenAuthService
+    $tokenService = new class extends DefaultTokenAuthService
     {
         /** @var list<array{collection_id: string, record_id: string}> */
         public array $calls = [];

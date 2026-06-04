@@ -6,7 +6,8 @@ use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\SchemaManagement\Support\TableName;
 use Veloquent\Core\Domain\SchemaManagement\Enums\SchemaOperation;
 use Veloquent\Core\Support\Exceptions\InvalidArgumentException;
-use Veloquent\Core\Domain\SchemaManagement\Services\CollectionSyncService;
+use Veloquent\Core\Domain\SchemaManagement\Contracts\CollectionSyncService;
+use Veloquent\Core\Domain\SchemaManagement\Services\DefaultCollectionSyncService;
 
 readonly class CollectionObserver
 {
@@ -21,7 +22,7 @@ readonly class CollectionObserver
 
     public function created(Collection $collection): void
     {
-        if (! CollectionSyncService::isSyncing()) {
+        if (! DefaultCollectionSyncService::isSyncing()) {
             app(CollectionSyncService::class)->sync($collection, SchemaOperation::Create);
         }
     }
@@ -37,14 +38,14 @@ readonly class CollectionObserver
 
     public function updated(Collection $collection): void
     {
-        if (! CollectionSyncService::isSyncing()) {
+        if (! DefaultCollectionSyncService::isSyncing()) {
             app(CollectionSyncService::class)->sync($collection, SchemaOperation::Update);
         }
     }
 
     public function deleted(Collection $collection): void
     {
-        if (! CollectionSyncService::isSyncing()) {
+        if (! DefaultCollectionSyncService::isSyncing()) {
             app(CollectionSyncService::class)->drop($collection);
         }
     }

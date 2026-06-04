@@ -2,7 +2,7 @@
 
 namespace Veloquent\Core\Domain\Realtime\Jobs;
 
-use Veloquent\Core\Domain\Realtime\Services\RealtimeDispatcher;
+use Veloquent\Core\Domain\Realtime\Contracts\RealtimeDispatcher;
 use Veloquent\Core\Domain\Realtime\Events\RealtimeRecordEvent;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;

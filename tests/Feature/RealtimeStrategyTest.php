@@ -5,7 +5,8 @@ namespace Tests\Feature;
 use Veloquent\Core\Domain\Collections\Enums\CollectionType;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Realtime\Services\RealtimeBuffer;
-use Veloquent\Core\Domain\Realtime\Services\RealtimeDispatcher;
+use Veloquent\Core\Domain\Realtime\Contracts\RealtimeDispatcher;
+use Veloquent\Core\Domain\Realtime\Services\DefaultRealtimeDispatcher;
 use Veloquent\Core\Domain\Records\Models\Record;
 use Veloquent\Core\Domain\Records\Observers\RecordObserver;
 use Veloquent\Core\Domain\Realtime\Events\RealtimeRecordEvent;
@@ -39,6 +40,7 @@ beforeEach(function (): void {
 
 afterEach(function (): void {
     app()->forgetInstance((string) config('multitenancy.current_tenant_container_key'));
+    app()->forgetInstance(RealtimeDispatcher::class);
     Mockery::close();
 });
 
@@ -59,7 +61,7 @@ it('buffers events in after_response strategy', function () {
     expect($buffer->isEmpty())->toBeFalse();
     
     // Test flushing
-    $dispatcher = Mockery::mock(RealtimeDispatcher::class);
+    $dispatcher = Mockery::mock(DefaultRealtimeDispatcher::class);
     $dispatcher->shouldReceive('dispatch')->with(Mockery::type(RealtimeRecordEvent::class))->once();
     
     $buffer->flush($dispatcher);
@@ -69,7 +71,7 @@ it('buffers events in after_response strategy', function () {
 it('dispatches events immediately in sync strategy', function () {
     config(['velo.realtime.strategy' => 'sync']);
     
-    $dispatcher = Mockery::mock(RealtimeDispatcher::class)->makePartial();
+    $dispatcher = Mockery::mock(DefaultRealtimeDispatcher::class)->makePartial();
     $dispatcher->shouldReceive('dispatch')->with(Mockery::type(RealtimeRecordEvent::class))->once();
     app()->instance(RealtimeDispatcher::class, $dispatcher);
     
@@ -88,7 +90,7 @@ it('dispatches retry job on failure in sync strategy', function () {
     Bus::fake();
     config(['velo.realtime.strategy' => 'sync']);
     
-    $dispatcher = Mockery::mock(RealtimeDispatcher::class)->makePartial();
+    $dispatcher = Mockery::mock(DefaultRealtimeDispatcher::class)->makePartial();
     // Use shouldAllowMockingProtectedMethods() to mock protected method
     $dispatcher->shouldAllowMockingProtectedMethods();
     $dispatcher->shouldReceive('loadSubscriptionsFromLandlord')->andThrow(new Exception('DB failed'));

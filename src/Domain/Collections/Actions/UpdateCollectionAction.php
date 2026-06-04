@@ -8,7 +8,7 @@ use Veloquent\Core\Domain\Collections\Validators\ApiRulesValidator;
 use Veloquent\Core\Domain\Collections\Validators\AuthOptionsValidator;
 use Veloquent\Core\Domain\Collections\Validators\CollectionFieldValidator;
 use Veloquent\Core\Domain\Collections\Validators\CollectionValidator;
-use Veloquent\Core\Domain\SchemaManagement\Services\CollectionSyncService;
+use Veloquent\Core\Domain\SchemaManagement\Contracts\CollectionSyncService;
 use Veloquent\Core\Domain\SchemaManagement\Services\SchemaChange;
 use Illuminate\Support\Arr;
 use Illuminate\Validation\ValidationException;

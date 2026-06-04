@@ -7,8 +7,8 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use Veloquent\Core\Domain\Realtime\Events\RealtimeRecordEvent;
 use Veloquent\Core\Domain\Realtime\Contracts\RealtimeBusDriver;
+use Veloquent\Core\Domain\Realtime\Contracts\RealtimeDispatcher;
 use Veloquent\Core\Domain\Realtime\Models\RealtimeSubscription;
-use Veloquent\Core\Domain\Realtime\Services\RealtimeDispatcher;
 
 class RealtimeWorker extends Command
 {

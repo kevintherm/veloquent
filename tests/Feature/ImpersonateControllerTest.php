@@ -1,7 +1,8 @@
 <?php
 
 use Veloquent\Core\Domain\Auth\Models\Superuser;
-use Veloquent\Core\Domain\Auth\Services\TokenAuthService;
+use Veloquent\Core\Domain\Auth\Contracts\TokenAuthService;
+use Veloquent\Core\Domain\Auth\Services\DefaultTokenAuthService;
 use Veloquent\Core\Domain\Collections\Actions\CreateCollectionAction;
 use Veloquent\Core\Domain\Collections\Enums\CollectionType;
 use Veloquent\Core\Domain\Records\Models\Record;
@@ -60,10 +61,11 @@ it('allows superuser to masquerade/generate a token for an auth record', functio
     $superuserRecord->forceFill($superuser->toArray());
     $superuserRecord->exists = true;
 
-    $this->mock(TokenAuthService::class, function (MockInterface $mock) use ($superuserRecord) {
+    $mock = Mockery::mock(DefaultTokenAuthService::class, function (MockInterface $mock) use ($superuserRecord) {
         $mock->shouldReceive('authenticate')->with('super-token')->andReturn($superuserRecord);
         $mock->shouldReceive('extractTokenFromRequest')->andReturn('super-token');
     })->makePartial();
+    app()->instance(TokenAuthService::class, $mock);
 
     $response = $this->withHeaders(['Authorization' => 'Bearer super-token'])
         ->postJson("/api/collections/{$this->authCollection->id}/auth/impersonate/{$this->user->id}");
@@ -96,10 +98,11 @@ it('rejects generating a token for a non-auth collection', function () {
     $superuserRecord->forceFill($superuser->toArray());
     $superuserRecord->exists = true;
 
-    $this->mock(TokenAuthService::class, function (MockInterface $mock) use ($superuserRecord) {
+    $mock = Mockery::mock(DefaultTokenAuthService::class, function (MockInterface $mock) use ($superuserRecord) {
         $mock->shouldReceive('authenticate')->with('super-token')->andReturn($superuserRecord);
         $mock->shouldReceive('extractTokenFromRequest')->andReturn('super-token');
     })->makePartial();
+    app()->instance(TokenAuthService::class, $mock);
 
     $response = $this->withHeaders(['Authorization' => 'Bearer super-token'])
         ->postJson("/api/collections/{$this->standardCollection->id}/auth/impersonate/{$this->post->id}");
@@ -114,10 +117,11 @@ it('returns 404 for non-existent record', function () {
     $superuserRecord->forceFill($superuser->toArray());
     $superuserRecord->exists = true;
 
-    $this->mock(TokenAuthService::class, function (MockInterface $mock) use ($superuserRecord) {
+    $mock = Mockery::mock(DefaultTokenAuthService::class, function (MockInterface $mock) use ($superuserRecord) {
         $mock->shouldReceive('authenticate')->with('super-token')->andReturn($superuserRecord);
         $mock->shouldReceive('extractTokenFromRequest')->andReturn('super-token');
     })->makePartial();
+    app()->instance(TokenAuthService::class, $mock);
 
     $fakeId = Str::uuid()->toString();
 

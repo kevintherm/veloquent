@@ -2,7 +2,9 @@
 
 namespace Veloquent\Core\Domain\Hooks;
 
-class HookRegistry
+use Veloquent\Core\Domain\Hooks\Contracts\HookRegistry;
+
+class DefaultHookRegistry implements HookRegistry
 {
     private array $pipes = [];
 
@@ -93,5 +95,40 @@ class HookRegistry
         }
 
         return false;
+    }
+
+    /**
+     * Unregister pipes for a specific event.
+     * If $pipe is null, all pipes for that event are removed.
+     */
+    public function unregister(string $event, string|callable|null $pipe = null): void
+    {
+        if ($pipe === null) {
+            unset($this->pipes[$event]);
+            return;
+        }
+
+        if (isset($this->pipes[$event])) {
+            $this->pipes[$event] = array_values(array_filter(
+                $this->pipes[$event],
+                fn ($p) => $p !== $pipe
+            ));
+        }
+    }
+
+    /**
+     * Get all currently registered pipes.
+     */
+    public function all(): array
+    {
+        return $this->pipes;
+    }
+
+    /**
+     * Explicitly set/overwrite the pipes for a specific event.
+     */
+    public function set(string $event, array $pipes): void
+    {
+        $this->pipes[$event] = $pipes;
     }
 }

@@ -1,6 +1,6 @@
 <?php
 
-use Veloquent\Core\Domain\Auth\Services\TokenAuthService;
+use Veloquent\Core\Domain\Auth\Contracts\TokenAuthService;
 use Veloquent\Core\Domain\Collections\Actions\CreateCollectionAction;
 use Veloquent\Core\Domain\Collections\Enums\CollectionType;
 use Veloquent\Core\Domain\Otp\Enums\OtpAction;

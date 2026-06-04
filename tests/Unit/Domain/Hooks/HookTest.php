@@ -1,35 +1,35 @@
 <?php
 
 use Veloquent\Core\Domain\Hooks\ValueObjects\HookPayload;
-use Veloquent\Core\Domain\Hooks\HookRegistry;
-use Veloquent\Core\Domain\Hooks\HookRunner;
+use Veloquent\Core\Domain\Hooks\DefaultHookRegistry;
+use Veloquent\Core\Domain\Hooks\DefaultHookRunner;
 use Veloquent\Core\Domain\Hooks\Contracts\HookPipe;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Illuminate\Support\Facades\Facade;
 
 it('can register and retrieve pipes', function () {
-    $registry = new HookRegistry();
+    $registry = new DefaultHookRegistry();
     $registry->register('test.event', 'PipeClass');
 
     expect($registry->pipesFor('test.event'))->toBe(['PipeClass']);
 });
 
 it('supports event aliasing with before', function () {
-    $registry = new HookRegistry();
+    $registry = new DefaultHookRegistry();
     $registry->before('record.create', 'BeforePipe');
 
     expect($registry->pipesFor('record.creating'))->toBe(['BeforePipe']);
 });
 
 it('supports event aliasing with after', function () {
-    $registry = new HookRegistry();
+    $registry = new DefaultHookRegistry();
     $registry->after('record.create', 'AfterPipe');
 
     expect($registry->pipesFor('record.created'))->toBe(['AfterPipe']);
 });
 
 it('can run a pipeline and mutate data', function () {
-    $registry = new HookRegistry();
+    $registry = new DefaultHookRegistry();
     $registry->register('test.event', [
         new class implements HookPipe {
             public function handle(HookPayload $payload, Closure $next): mixed {
@@ -39,7 +39,7 @@ it('can run a pipeline and mutate data', function () {
         }
     ]);
 
-    $runner = new HookRunner($registry);
+    $runner = new DefaultHookRunner($registry);
     $collection = new Collection();
     $payload = new HookPayload('test.event', $collection, data: ['foo' => 'orig']);
 
@@ -49,7 +49,7 @@ it('can run a pipeline and mutate data', function () {
 });
 
 it('can halt a pipeline via exception', function () {
-    $registry = new HookRegistry();
+    $registry = new DefaultHookRegistry();
     $registry->register('test.event', [
         new class implements HookPipe {
             public function handle(HookPayload $payload, Closure $next): mixed {
@@ -58,7 +58,7 @@ it('can halt a pipeline via exception', function () {
         }
     ]);
 
-    $runner = new HookRunner($registry);
+    $runner = new DefaultHookRunner($registry);
     $collection = new Collection();
     $payload = new HookPayload('test.event', $collection);
 
@@ -66,7 +66,7 @@ it('can halt a pipeline via exception', function () {
 });
 
 it('silences and logs exceptions in after hooks', function () {
-    $registry = new HookRegistry();
+    $registry = new DefaultHookRegistry();
     $registry->after('record.create', [
         new class implements \Veloquent\Core\Domain\Hooks\Contracts\HookPipe {
             public function handle(HookPayload $payload, Closure $next): mixed {
@@ -79,7 +79,7 @@ it('silences and logs exceptions in after hooks', function () {
         ->once()
         ->withArgs(fn($message) => str_contains($message, 'After Hook Failed'));
 
-    $runner = new HookRunner($registry);
+    $runner = new DefaultHookRunner($registry);
     $collection = new Collection();
     $payload = new HookPayload('record.created', $collection);
 

@@ -2,6 +2,7 @@
 
 namespace Veloquent\Core\Domain\Realtime\Services;
 
+use Veloquent\Core\Domain\Realtime\Contracts\RealtimeDispatcher;
 use Veloquent\Core\Domain\Realtime\Events\RealtimeRecordEvent;
 
 class RealtimeBuffer

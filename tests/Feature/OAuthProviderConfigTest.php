@@ -2,7 +2,7 @@
 
 namespace Veloquent\Core\Tests\Feature;
 
-use Veloquent\Core\Domain\Auth\Services\TokenAuthService;
+use Veloquent\Core\Domain\Auth\Contracts\TokenAuthService;
 use Veloquent\Core\Domain\Collections\Enums\CollectionType;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\OAuth\Models\OAuthProvider;

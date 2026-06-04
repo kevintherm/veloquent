@@ -4,9 +4,9 @@ namespace Veloquent\Core\Domain\Records\Services;
 
 use Illuminate\Http\Request;
 use Veloquent\Core\Domain\Collections\Models\Collection;
-use Veloquent\Core\Domain\Records\Contracts\RuleContextBuilderInterface;
+use Veloquent\Core\Domain\Records\Contracts\RuleContextBuilder as RuleContextBuilderContract;
 
-class UpdateRuleContextBuilder implements RuleContextBuilderInterface
+class UpdateRuleContextBuilder implements RuleContextBuilderContract
 {
     public function __construct(
         private readonly RuleContextBuilder $baseBuilder,

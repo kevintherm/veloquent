@@ -2,15 +2,16 @@
 
 namespace Veloquent\Core\Domain\Auth\Services;
 
-use Veloquent\Core\Domain\Auth\Models\AuthToken;
-use Veloquent\Core\Domain\Auth\ValueObjects\TokenData;
-use Veloquent\Core\Domain\Collections\Models\Collection;
-use Veloquent\Core\Domain\Records\Models\Record;
-use Veloquent\Core\Support\Models\Tenant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Veloquent\Core\Support\Models\Tenant;
+use Veloquent\Core\Domain\Auth\Models\AuthToken;
+use Veloquent\Core\Domain\Records\Models\Record;
+use Veloquent\Core\Domain\Auth\ValueObjects\TokenData;
+use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\Auth\Contracts\TokenAuthService;
 
-class TokenAuthService
+class DefaultTokenAuthService implements TokenAuthService
 {
     public function extractTokenFromRequest(Request $request): ?string
     {

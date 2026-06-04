@@ -11,7 +11,7 @@ use Veloquent\Core\Domain\Auth\Actions\LogoutAllAction;
 use Veloquent\Core\Domain\Auth\Actions\RequestEmailChangeAction;
 use Veloquent\Core\Domain\Auth\Actions\RequestEmailVerificationAction;
 use Veloquent\Core\Domain\Auth\Actions\RequestPasswordResetAction;
-use Veloquent\Core\Domain\Auth\Services\TokenAuthService;
+use Veloquent\Core\Domain\Auth\Contracts\TokenAuthService;
 use Veloquent\Core\Domain\Auth\ValueObjects\TokenData;
 use Veloquent\Core\Domain\Collections\Enums\CollectionType;
 use Veloquent\Core\Domain\Collections\Models\Collection;

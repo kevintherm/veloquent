@@ -11,7 +11,7 @@ use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Collections\Enums\CollectionType;
 use Veloquent\Core\Domain\Realtime\Events\RealtimeRecordEvent;
 use Veloquent\Core\Domain\Realtime\Models\RealtimeSubscription;
-use Veloquent\Core\Domain\Realtime\Services\RealtimeDispatcher;
+use Veloquent\Core\Domain\Realtime\Contracts\RealtimeDispatcher;
 
 uses(RefreshDatabase::class);
 

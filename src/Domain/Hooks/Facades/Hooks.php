@@ -3,7 +3,7 @@
 namespace Veloquent\Core\Domain\Hooks\Facades;
 
 use Illuminate\Support\Facades\Facade;
-use Veloquent\Core\Domain\Hooks\HookRegistry;
+use Veloquent\Core\Domain\Hooks\Contracts\HookRegistry;
 
 /**
  * @method static void register(string $event, string|array|callable $pipes) Register one or more pipes for a specific event.
@@ -11,7 +11,7 @@ use Veloquent\Core\Domain\Hooks\HookRegistry;
  * @method static void after(string $alias, string|array|callable $pipes) Register one or more "after" pipes using a human-readable alias.
  * @method static array pipesFor(string $event) Get all pipes registered for a specific internal event.
  *
- * @see \Veloquent\Core\Domain\Hooks\HookRegistry
+ * @see \Veloquent\Core\Domain\Hooks\Contracts\HookRegistry
  */
 class Hooks extends Facade
 {

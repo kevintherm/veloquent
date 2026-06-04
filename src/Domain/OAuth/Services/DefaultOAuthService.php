@@ -2,24 +2,25 @@
 
 namespace Veloquent\Core\Domain\OAuth\Services;
 
-use Veloquent\Core\Domain\Auth\Services\TokenAuthService;
-use Veloquent\Core\Domain\Auth\ValueObjects\TokenData;
-use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
-use Veloquent\Core\Domain\Collections\Enums\CollectionType;
-use Veloquent\Core\Domain\Collections\Models\Collection;
-use Veloquent\Core\Domain\OAuth\Factory\OAuthDriverFactory;
-use Veloquent\Core\Domain\OAuth\Models\OAuthAccount;
-use Veloquent\Core\Domain\OAuth\Models\OAuthProvider;
-use Veloquent\Core\Domain\Records\Models\Record;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Cache;
 use Laravel\Socialite\Two\User as SocialiteUser;
+use Veloquent\Core\Domain\Records\Models\Record;
+use Veloquent\Core\Domain\OAuth\Models\OAuthAccount;
+use Veloquent\Core\Domain\OAuth\Models\OAuthProvider;
+use Veloquent\Core\Domain\Auth\ValueObjects\TokenData;
+use Veloquent\Core\Domain\OAuth\Contracts\OAuthService;
+use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\Auth\Contracts\TokenAuthService;
+use Veloquent\Core\Domain\Collections\Enums\CollectionType;
+use Veloquent\Core\Domain\OAuth\Factory\OAuthDriverFactory;
+use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
 
-class OAuthService
+class DefaultOAuthService implements OAuthService
 {
     public function __construct(
         private OAuthDriverFactory $driverFactory,

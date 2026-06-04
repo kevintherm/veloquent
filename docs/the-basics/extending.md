@@ -110,6 +110,88 @@ For detailed information on how to register and implement custom hook pipes, see
 
 ---
 
+## Overriding Core Services
+
+Veloquent resolves all of its core services via the Laravel Service Container using interface contracts. This allows developers to easily swap out default framework behavior with custom implementations.
+
+### Service Contracts & Defaults
+
+The following core services can be overridden by rebinding their interface contract in your application's service provider (e.g., `AppServiceProvider`):
+
+| Service Contract | Default Implementation | Description |
+|---|---|---|
+| `Veloquent\Core\Domain\Auth\Contracts\TokenAuthService` | `DefaultTokenAuthService` | Manages authentication token generation, resolution, and revocation. |
+| `Veloquent\Core\Domain\Auth\Contracts\OAuthService` | `DefaultOAuthService` | Handles OAuth provider flows and user matching. |
+| `Veloquent\Core\Domain\Hooks\Contracts\HookRegistry` | `DefaultHookRegistry` | Stores registered hooks for collection events. |
+| `Veloquent\Core\Domain\Hooks\Contracts\HookRunner` | `DefaultHookRunner` | Executes hook pipelines during record operations. |
+| `Veloquent\Core\Domain\Records\Contracts\RuleContextBuilder` | `DefaultRuleContextBuilder` | Constructs evaluation contexts for API rules. |
+| `Veloquent\Core\Domain\SchemaManagement\Contracts\CollectionSyncService` | `DefaultCollectionSyncService` | Handles database schema migrations and indexing. |
+| `Veloquent\Core\Domain\Ai\Contracts\AiService` | `DefaultAiService` | Coordinates the AI agent execution and chat interactions. |
+| `Veloquent\Core\Domain\Realtime\Contracts\RealtimeDispatcher` | `DefaultRealtimeDispatcher` | Dispatches realtime database changes to subscribers. |
+
+### How to Override a Service
+
+To override a service:
+1. Create a class that implements the respective service contract.
+2. Register your custom class in your service provider's `register` method using the interface contract.
+
+#### Example: Custom Token Authentication Service
+
+Suppose you want to customize how tokens are generated or verified (for example, to integrate with an external Auth Token provider):
+
+```php
+namespace App\Services;
+
+use Veloquent\Core\Domain\Auth\Contracts\TokenAuthService;
+use Veloquent\Core\Domain\Auth\ValueObjects\TokenData;
+use Veloquent\Core\Domain\Records\Models\Record;
+use Illuminate\Http\Request;
+
+class CustomTokenAuthService implements TokenAuthService
+{
+    public function extractTokenFromRequest(Request $request): ?string
+    {
+        return $request->bearerToken();
+    }
+
+    public function generateToken(Record $user, ?int $expiresIn = null): TokenData
+    {
+        // Custom generation logic
+    }
+
+    public function authenticate(string $token): ?Record
+    {
+        // Custom authentication logic
+    }
+
+    public function revokeToken(string $token): bool
+    {
+        // Custom revocation logic
+    }
+
+    public function revokeRecordTokens(string $collectionId, string $recordId, ?string $tokenHash = null): bool
+    {
+        // Custom bulk revocation logic
+    }
+}
+```
+
+Then bind it in your `app/Providers/AppServiceProvider.php`:
+
+```php
+use Veloquent\Core\Domain\Auth\Contracts\TokenAuthService;
+use App\Services\CustomTokenAuthService;
+
+public function register(): void
+{
+    $this->app->singleton(TokenAuthService::class, CustomTokenAuthService::class);
+}
+```
+
+Veloquent will automatically resolve and use your `CustomTokenAuthService` everywhere instead of the default implementation.
+
+---
+
 ## Current Architecture & Future Plans
 
 Beyond custom routes, custom middleware, and lifecycle hooks, Veloquent provides everything you need in a cohesive package out of the box, meaning there are few other areas that require manual extension. 

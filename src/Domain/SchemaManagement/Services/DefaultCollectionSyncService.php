@@ -22,11 +22,12 @@ use Veloquent\Core\Domain\SchemaManagement\Pipeline\ComputeSchemaDiff;
 use Veloquent\Core\Domain\SchemaManagement\Pipeline\CreatePivotTables;
 use Veloquent\Core\Domain\SchemaManagement\Pipeline\SyncIndexMetadata;
 use Veloquent\Core\Domain\SchemaManagement\Pipeline\DropAffectedIndexes;
+use Veloquent\Core\Domain\SchemaManagement\Contracts\CollectionSyncService;
 use Veloquent\Core\Domain\SchemaManagement\Pipeline\AssertSchemaNotCorrupt;
 use Veloquent\Core\Domain\SchemaManagement\Pipeline\CreateCollectionRecord;
 use Veloquent\Core\Domain\SchemaManagement\Pipeline\SyncFieldUniqueMetadata;
 
-class CollectionSyncService
+class DefaultCollectionSyncService implements CollectionSyncService
 {
     private static bool $syncing = false;
 

@@ -6,10 +6,11 @@ use Exception;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Ai\Messages\UserMessage;
 use Laravel\Ai\Messages\AssistantMessage;
-use Veloquent\Core\Domain\Hooks\HookRunner;
 use Veloquent\Core\Domain\Settings\AiSettings;
 use Veloquent\Core\Domain\Records\Models\Record;
+use Veloquent\Core\Domain\Ai\Contracts\AiService;
 use Veloquent\Core\Domain\Ai\Agents\VeloquentAgent;
+use Veloquent\Core\Domain\Hooks\Contracts\HookRunner;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Hooks\ValueObjects\HookPayload;
 use Veloquent\Core\Domain\Ai\Agents\StructuredVeloquentAgent;
@@ -17,7 +18,7 @@ use Veloquent\Core\Domain\Ai\Exceptions\AgentNotFoundException;
 use Veloquent\Core\Domain\Ai\Exceptions\AiNotConfiguredException;
 use Veloquent\Core\Domain\Ai\Exceptions\MalformedResponseException;
 
-class AiService
+class DefaultAiService implements AiService
 {
     /**
      * Create a new AiService instance with injected settings and hook runner dependencies.

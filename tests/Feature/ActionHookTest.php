@@ -11,8 +11,8 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 
 beforeEach(function () {
-    app()->forgetInstance(\Veloquent\Core\Domain\Hooks\HookRegistry::class);
-    app()->singleton(\Veloquent\Core\Domain\Hooks\HookRegistry::class);
+    app()->forgetInstance(\Veloquent\Core\Domain\Hooks\Contracts\HookRegistry::class);
+    app()->singleton(\Veloquent\Core\Domain\Hooks\Contracts\HookRegistry::class, \Veloquent\Core\Domain\Hooks\DefaultHookRegistry::class);
 });
 
 it('executes before and after hooks in CreateRecordAction', function () {

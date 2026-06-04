@@ -1,7 +1,7 @@
 <?php
 
 use Veloquent\Core\Domain\Auth\Models\Superuser;
-use Veloquent\Core\Domain\Auth\Services\TokenAuthService;
+use Veloquent\Core\Domain\Auth\Contracts\TokenAuthService;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Records\Models\Record;
 use Veloquent\Core\Domain\SchemaManagement\Enums\SchemaOperation;

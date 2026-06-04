@@ -4,14 +4,14 @@ namespace Veloquent\Core\Domain\Auth\Actions;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Veloquent\Core\Domain\Hooks\HookRunner;
+use Veloquent\Core\Domain\Hooks\Contracts\HookRunner;
 use Illuminate\Auth\AuthenticationException;
 use Veloquent\Core\Domain\Hooks\ValueObjects\HookPayload;
 use Veloquent\Core\Domain\Records\Models\Record;
 use Illuminate\Auth\Access\AuthorizationException;
 use Veloquent\Core\Domain\Auth\ValueObjects\TokenData;
 use Veloquent\Core\Domain\Collections\Models\Collection;
-use Veloquent\Core\Domain\Auth\Services\TokenAuthService;
+use Veloquent\Core\Domain\Auth\Contracts\TokenAuthService;
 use Veloquent\Core\Domain\Collections\Enums\CollectionType;
 
 class LoginAction

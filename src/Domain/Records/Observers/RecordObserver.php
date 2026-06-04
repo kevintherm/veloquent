@@ -6,7 +6,7 @@ use Spatie\Multitenancy\Contracts\IsTenant;
 use Veloquent\Core\Domain\Records\Models\Record;
 use Veloquent\Core\Domain\Realtime\Events\RealtimeRecordEvent;
 use Veloquent\Core\Domain\Records\Services\FileFieldProcessor;
-use Veloquent\Core\Domain\Realtime\Services\RealtimeDispatcher;
+use Veloquent\Core\Domain\Realtime\Contracts\RealtimeDispatcher;
 use Veloquent\Core\Domain\Records\Services\RelationIntegrityService;
 
 class RecordObserver
