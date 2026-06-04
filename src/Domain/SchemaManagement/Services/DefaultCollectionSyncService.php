@@ -5,7 +5,9 @@ namespace Veloquent\Core\Domain\SchemaManagement\Services;
 use Illuminate\Pipeline\Pipeline;
 use Illuminate\Support\Facades\DB;
 use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\Collections\Enums\CollectionType;
 use Veloquent\Core\Domain\SchemaManagement\Pipeline\ClearCache;
+use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
 use Veloquent\Core\Domain\SchemaManagement\Pipeline\SyncContext;
 use Veloquent\Core\Domain\SchemaManagement\Pipeline\SyncIndexes;
 use Veloquent\Core\Domain\SchemaManagement\Enums\SchemaOperation;
@@ -53,6 +55,18 @@ class DefaultCollectionSyncService implements CollectionSyncService
 
     public function create(array $data): Collection
     {
+        if (empty($data['id'])) {
+            $data['id'] = (string) \Illuminate\Support\Str::ulid();
+        }
+
+        if (isset($data['fields'])) {
+            $data['fields'] = $this->resolveSelfReferentialTargetCollections(
+                $data['fields'],
+                $data['id'],
+                $data['type'] ?? null
+            );
+        }
+
         return $this->runSyncing(fn () => DB::transaction(function () use ($data) {
             $context = new SyncContext(
                 operation: SchemaOperation::Create,
@@ -81,6 +95,14 @@ class DefaultCollectionSyncService implements CollectionSyncService
 
     public function update(Collection $collection, array $data): Collection
     {
+        if (isset($data['fields'])) {
+            $data['fields'] = $this->resolveSelfReferentialTargetCollections(
+                $data['fields'],
+                $collection->id,
+                $collection->type
+            );
+        }
+
         return $this->runSyncing(fn () => DB::transaction(function () use ($collection, $data) {
             $context = new SyncContext(
                 operation: SchemaOperation::Update,
@@ -187,5 +209,21 @@ class DefaultCollectionSyncService implements CollectionSyncService
                 ->through($pipes)
                 ->thenReturn();
         }));
+    }
+
+    private function resolveSelfReferentialTargetCollections(array $fields, string $collectionId, mixed $type): array
+    {
+        if (CollectionType::parse($type) !== CollectionType::Agents) {
+            return $fields;
+        }
+
+        foreach ($fields as &$field) {
+            if (($field['type'] ?? '') === CollectionFieldType::RelationMany->value
+                && ($field['target_collection_id'] ?? '') === '@self') {
+                $field['target_collection_id'] = $collectionId;
+            }
+        }
+
+        return $fields;
     }
 }

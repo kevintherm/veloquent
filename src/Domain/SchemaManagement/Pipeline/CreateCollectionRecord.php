@@ -32,7 +32,7 @@ class CreateCollectionRecord
             'indexes' => $data['indexes'] ?? [],
         ]);
         
-        $context->newFields = $mergedFields;
+        $context->newFields = $context->collection->fields;
 
         return $next($context);
     }

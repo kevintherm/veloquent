@@ -18,7 +18,9 @@ class StructuredVeloquentAgent extends VeloquentAgent implements HasStructuredOu
 
         $properties = [];
         foreach ($this->schema as $key => $definition) {
-            $properties[$key] = $this->mapSchemaType($definition, $schema);
+            /** @var JsonSchema $schema */
+            $mapped = $this->mapSchemaType($definition, $schema);
+            $properties[$key] = $mapped->required();
         }
 
         return $properties;

@@ -886,7 +886,7 @@ it('merges agents collection with system fields when created with empty fields',
 
     $updateResponse = patchJson("/api/collections/{$collection->id}", $updatePayload);
     $updateResponse->assertStatus(422);
-    $updateResponse->assertJsonValidationErrors('fields.2');
+    $updateResponse->assertJsonValidationErrors('fields.3');
 
     // Try to update the collection and modify a reserved field type -> should fail
     $modifiedFields = collect($collection->fields)->map(function ($f) {
@@ -902,6 +902,40 @@ it('merges agents collection with system fields when created with empty fields',
     ];
 
     $updateResponse2 = patchJson("/api/collections/{$collection->id}", $updatePayload2);
+});
+
+it('resolves self-referential target_collection_id on agents collection create', function () {
+    $response = postJson('/api/collections', [
+        'type' => 'agents',
+        'is_system' => false,
+        'name' => 'test_self_agents',
+        'table_name' => '_velo_test_self_agents',
+        'description' => 'Test self-referential agents collection',
+        'fields' => [],
+        'api_rules' => [
+            'list' => '@request.auth.id != null',
+            'view' => '@request.auth.id != null',
+            'create' => '@request.auth.is_superuser = true',
+            'update' => '@request.auth.is_superuser = true',
+            'delete' => '@request.auth.is_superuser = true',
+            'chat' => '@request.auth.id != null',
+        ],
+    ]);
+
+    $response->assertStatus(200);
+
+    $collection = \Veloquent\Core\Domain\Collections\Models\Collection::where('name', 'test_self_agents')->first();
+    expect($collection)->not->toBeNull();
+
+    // Check target_collection_id in fields metadata
+    $watchersField = collect($collection->fields)->firstWhere('name', 'watchers');
+    expect($watchersField)->not->toBeNull();
+    expect($watchersField['target_collection_id'])->toBe($collection->id);
+    expect($watchersField['target_collection_id'])->not->toBe('@self');
+
+    // Check pivot table existence
+    $pivotTable = '_velo_test_self_agents_test_self_agents_watchers_pivot';
+    expect(\Illuminate\Support\Facades\Schema::hasTable($pivotTable))->toBeTrue();
 });
 
 it('passes through and logs a warning if the pivot table does not exist', function () {
@@ -1571,7 +1605,7 @@ it('logs block event on stream requests when stream is true and output type is t
 
     \Illuminate\Support\Facades\Log::shouldReceive('warning')
         ->once()
-        ->with('Stream request blocked by watcher: Stream blocked message.');
+        ->with('Request blocked by watcher', Mockery::type('array'));
     \Illuminate\Support\Facades\Log::shouldIgnoreMissing();
 
     $usersCollection = \Veloquent\Core\Domain\Collections\Models\Collection::where('name', 'users')->first();

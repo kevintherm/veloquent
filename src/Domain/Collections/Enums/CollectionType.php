@@ -62,6 +62,7 @@ enum CollectionType: string
             ],
             self::Agents => [
                 ['name' => 'name', 'type' => CollectionFieldType::Text->value, 'nullable' => false, 'unique' => true],
+                ['name' => 'type', 'type' => CollectionFieldType::Select->value, 'options' => ['regular', 'watcher'], 'nullable' => true, 'unique' => false, 'default' => 'regular'],
                 ['name' => 'system_prompt', 'type' => CollectionFieldType::LongText->value, 'nullable' => true, 'unique' => false],
                 ['name' => 'model', 'type' => CollectionFieldType::Text->value, 'nullable' => true, 'unique' => false],
                 ['name' => 'temperature', 'type' => CollectionFieldType::Number->value, 'allow_decimals' => true, 'min' => 0, 'max' => 1, 'nullable' => true, 'unique' => false],
@@ -69,7 +70,6 @@ enum CollectionType: string
                 ['name' => 'length', 'type' => CollectionFieldType::Text->value, 'nullable' => true, 'unique' => false],
                 ['name' => 'output_type', 'type' => CollectionFieldType::Select->value, 'options' => ['text', 'json'], 'nullable' => true, 'unique' => false],
                 ['name' => 'schema', 'type' => CollectionFieldType::Json->value, 'nullable' => true, 'unique' => false],
-                ['name' => 'type', 'type' => CollectionFieldType::Select->value, 'options' => ['regular', 'watcher'], 'nullable' => true, 'unique' => false, 'default' => 'regular'],
                 ['name' => 'watcher_message', 'type' => CollectionFieldType::Text->value, 'nullable' => true, 'unique' => false],
                 ['name' => 'watchers', 'type' => CollectionFieldType::RelationMany->value, 'target_collection_id' => '@self', 'nullable' => true, 'unique' => false],
             ],

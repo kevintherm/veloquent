@@ -65,11 +65,7 @@ class DefaultAiService implements AiService
         if (!empty($payloadData['blocked'])) {
             $blockedMessage = $payloadData['blocked_message'] ?? "I'm sorry, I cannot do that.";
 
-            if (!empty($payloadData['stream'])) {
-                Log::warning("Stream request blocked by watcher: {$blockedMessage}");
-            } else {
-                Log::warning("Request blocked by watcher: {$blockedMessage}");
-            }
+            Log::warning("Request blocked by watcher", compact('agent', 'user', 'collection', 'payload', 'blockedMessage'));
 
             return [
                 'text' => $blockedMessage,

@@ -112,7 +112,7 @@ readonly class CollectionObserver
 
     private function resolveSelfReferentialTargetCollections(Collection $collection): void
     {
-        if ($collection->type !== CollectionType::Agents->value) {
+        if ($collection->type !== CollectionType::Agents) {
             return;
         }
 
