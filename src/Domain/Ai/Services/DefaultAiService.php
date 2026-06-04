@@ -84,6 +84,12 @@ class DefaultAiService implements AiService
         $model = $agent->model ?: $defaultModel;
         $temperature = $agent->temperature !== null ? (float) $agent->temperature : 0.7;
         $outputType = $payloadData['output_type'] ?? ($agent->output_type ?: 'text');
+
+        if ($outputType === 'json' && !empty($payloadData['stream'])) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'stream' => ['Streaming is not supported when the output type is JSON.'],
+            ]);
+        }
         
         $schema = $payloadData['schema'] ?? (is_object($agent->schema) || is_array($agent->schema) ? (array) $agent->schema : json_decode((string) $agent->schema, true));
 
