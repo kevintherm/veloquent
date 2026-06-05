@@ -2,6 +2,58 @@
 
 All notable changes to Veloquent will be documented in this file.
 
+## [2.6.5] - 2026-06-04
+
+### Fixed
+- **Watcher Pipeline Execution**:
+    - Ensured watcher agents are executed in deterministic chronological order by sorting pivot records by the `created_at` timestamp.
+
+### Documentation
+- **AI & Watchers**:
+    - Added comprehensive documentation for watcher agents.
+    - Clarified the usage of chat API rule context variables.
+
+## [2.6.4] - 2026-06-04
+
+### Added
+- **Record Validation**:
+    - Implemented `RecordRelationValidator` to enforce watcher type constraints, ensuring only agent records are assigned to the watcher relationship.
+
+## [2.6.3] - 2026-06-04
+
+### Fixed
+- **AI Streaming & JSON**:
+    - Fixed list-based JSON schemas and blocked streaming for JSON output type agents.
+- **Self-Referential Collections**:
+    - Resolved `@self` referential failures on the agents collection by implementing self-referential collection ID resolution.
+
+### Changed
+- **AI Observability & Mapping**:
+    - Improved AI watcher logging and schema mapping.
+
+## [2.6.2] - 2026-06-04
+
+### Added
+- **AI Security**:
+    - Implemented malicious prompt detection and blocking via configurable watcher agents.
+
+## [2.6.1] - 2026-06-04
+
+### Changed
+- **Architecture Decoupling**:
+    - Refactored core domains to introduce interface contracts and default concrete implementations for services, enabling clean dependency injection and extensibility.
+
+## [2.6.0] - 2026-06-03
+
+### Added
+- **AI & Agents Infrastructure**:
+    - Implemented AI settings and agent configuration infrastructure.
+    - Converted the "agents" collection from a hardcoded system collection to a fully dynamic user-definable collection type.
+
+### Documentation
+- **AI Features**:
+    - Added documentation for the AI & Agents feature and updated documentation for collection types.
+
 ## [2.5.0] - 2026-05-16
 
 ### Added
