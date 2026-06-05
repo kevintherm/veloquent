@@ -2,11 +2,18 @@
 
 namespace Veloquent\Core\Domain\Auth\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Model;
 use Veloquent\Core\Support\Traits\HasUtcDates;
 
+/**
+ * @property string $collection_id
+ * @property string $record_id
+ * @property Carbon $expires_at
+ * @property string $token_hash
+ */
 class AuthToken extends Model
 {
     use HasUlids, HasUtcDates;

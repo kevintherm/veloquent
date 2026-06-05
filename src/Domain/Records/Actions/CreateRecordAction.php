@@ -143,6 +143,7 @@ class CreateRecordAction
 
         foreach ($manyData as $name => $entries) {
             $targetId = $fields->get($name)['target_collection_id'] ?? null;
+            /** @var Collection|null $target */
             $target = $targetId ? Collection::find($targetId) : null;
 
             if ($target) {

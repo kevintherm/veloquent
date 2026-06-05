@@ -34,6 +34,7 @@ class ConfirmPasswordResetAction
             throw new AuthorizationException('This collection does not support authentication.');
         }
 
+        /** @var Record|null */
         $user = Record::of($collection)->where('email', $payload['email'])->first();
 
         if (! $user) {

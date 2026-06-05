@@ -50,6 +50,7 @@ class LoginAction
             $identityFields = data_get($collection->options, 'auth_methods.standard.identity_fields', ['email']);
             $identityFields = is_array($identityFields) ? $identityFields : ['email'];
 
+            /** @var Record|null */
             $user = Record::of($collection)->where(function ($query) use ($identityFields, $identity) {
                 foreach ($identityFields as $field) {
                     $query->orWhere($field, $identity);

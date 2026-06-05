@@ -4,10 +4,12 @@ namespace Veloquent\Core\Domain\Collections\Models;
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Database\Eloquent\Model;
+use Veloquent\Core\Support\Traits\HasUtcDates;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Veloquent\Core\Database\Factories\CollectionFactory;
+use Veloquent\Core\Domain\Collections\ValueObjects\Field;
 use Veloquent\Core\Domain\Collections\Enums\CollectionType;
 use Illuminate\Database\Eloquent\Attributes\UseEloquentBuilder;
 use Veloquent\Core\Domain\Collections\Casts\FieldCollectionCast;
@@ -15,13 +17,17 @@ use Veloquent\Core\Domain\Collections\Casts\IndexCollectionCast;
 use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
 use Veloquent\Core\Domain\Collections\Observers\CollectionObserver;
 use Veloquent\Core\Domain\Collections\QueryBuilder\CollectionBuilder;
-use Veloquent\Core\Support\Traits\HasUtcDates;
 
 /**
  * @property string $name
  * @property CollectionType $type
  * @property bool $is_system
  * @property string|null $table_name
+ * @property array $options
+ * @property array $api_rules
+ * @property Field[] $fields
+ * @property string|null $description
+ * @property array $indexes
  */
 #[ObservedBy(CollectionObserver::class)]
 #[UseEloquentBuilder(CollectionBuilder::class)]
@@ -70,6 +76,7 @@ class Collection extends Model
             return (new self())->newFromBuilder($cached);
         }
 
+        /** @var Collection */
         $collection = self::find($id);
 
         if ($collection) {
@@ -91,6 +98,7 @@ class Collection extends Model
             return (new self())->newFromBuilder($cached);
         }
 
+        /** @var Collection */
         $collection = self::where('name', $name)->first();
 
         if ($collection) {

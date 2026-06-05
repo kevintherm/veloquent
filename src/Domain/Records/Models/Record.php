@@ -43,7 +43,7 @@ class Record extends Authenticatable
 
     public function __construct(array $attributes = [])
     {
-        if (! static::$allowDirectInstantiation) {
+        if (! self::$allowDirectInstantiation) {
             throw new RuntimeException('Record must be instantiated using Record::of($collection).');
         }
 
@@ -55,9 +55,9 @@ class Record extends Authenticatable
      */
     public static function fromTable(string $tableName): self
     {
-        static::$allowDirectInstantiation = true;
+        self::$allowDirectInstantiation = true;
         $instance = new self;
-        static::$allowDirectInstantiation = false;
+        self::$allowDirectInstantiation = false;
 
         $instance->setTable($tableName);
 
@@ -69,9 +69,9 @@ class Record extends Authenticatable
      */
     public static function of(Collection $collection): self
     {
-        static::$allowDirectInstantiation = true;
+        self::$allowDirectInstantiation = true;
         $instance = new self;
-        static::$allowDirectInstantiation = false;
+        self::$allowDirectInstantiation = false;
 
         $instance->collection = $collection;
         $instance->setTable($collection->getPhysicalTableName());

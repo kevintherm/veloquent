@@ -11,6 +11,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Veloquent\Core\Support\Traits\HasUtcDates;
 
+/**
+ * @property string $provider
+ * @property string $provider_user_id
+ * @property string $collection_id
+ * @property string $record_id
+ * @property string $email
+ */
 class OAuthAccount extends Model
 {
     use HasFactory, HasUlids, HasUtcDates;

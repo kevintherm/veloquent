@@ -47,6 +47,7 @@ class RecordExpansionService
 
         foreach ($relationFields as $fieldName => $field) {
             $fieldType = $field['type'] ?? '';
+            /** @var Collection|null $targetCollection */
             $targetCollection = $targetCollectionsById->get($field['target_collection_id'] ?? '');
 
             if (! $targetCollection) {

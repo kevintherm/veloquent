@@ -65,7 +65,10 @@ class RedisRealtimeBus implements RealtimeBusDriver
                 ]);
 
                 try {
-                    Redis::connection('realtime')->disconnect();
+                    $connection = Redis::connection('realtime');
+                    if (method_exists($connection, 'disconnect')) {
+                        $connection->disconnect();
+                    }
                 } catch (\Throwable) {
                 }
 

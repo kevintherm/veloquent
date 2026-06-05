@@ -2,14 +2,18 @@
 
 namespace Veloquent\Core\Support\Models;
 
-use Veloquent\Core\Observers\TenantObserver;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Database\Eloquent\Attributes\ObservedBy;
-use Spatie\Multitenancy\Models\Tenant as SpatieTenant;
+use Veloquent\Core\Observers\TenantObserver;
 use Veloquent\Core\Support\Traits\HasUtcDates;
+use Spatie\Multitenancy\Models\Tenant as SpatieTenant;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 
 /**
  * @property string|null $database
+ * @property string $name
+ * @property string $domain
+ * @property Carbon $created_at
  */
 #[ObservedBy(TenantObserver::class)]
 class Tenant extends SpatieTenant

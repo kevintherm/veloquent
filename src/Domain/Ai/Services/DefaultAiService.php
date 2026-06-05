@@ -41,6 +41,7 @@ class DefaultAiService implements AiService
     {
         $agentIdentifier = $payload['agent'];
 
+        /** @var Record|null */
         $agent = Record::of($collection)
             ->where('name', $agentIdentifier)
             ->orWhere('id', $agentIdentifier)

@@ -5,6 +5,7 @@ namespace Veloquent\Core\Domain\Records\QueryBuilder;
 use RuntimeException;
 use Illuminate\Support\Arr;
 use Illuminate\Database\Eloquent\Builder;
+use Veloquent\Core\Domain\Records\Models\Record;
 use Veloquent\Core\Domain\QueryCompiler\Services\QueryFilter;
 use Veloquent\Core\Domain\Records\Services\RuleContextBuilder;
 use Veloquent\Core\Domain\Records\Services\RelationJoinResolver;
@@ -14,7 +15,8 @@ class RecordBuilder extends Builder
 {
     public function applySorting(?string $sortParam): static
     {
-        if (! $collection = $this->getModel()?->collection) {
+        $model = $this->getModel();
+        if (! $model instanceof Record || ! $collection = $model->collection) {
             throw new RuntimeException("Model's collection is not set");
         }
 
@@ -39,7 +41,8 @@ class RecordBuilder extends Builder
 
     public function applyRule(string $action): static
     {
-        if (! $collection = $this->getModel()?->collection) {
+        $model = $this->getModel();
+        if (! $model instanceof Record || ! $collection = $model->collection) {
             throw new RuntimeException("Model's collection is not set");
         }
 
@@ -70,7 +73,8 @@ class RecordBuilder extends Builder
             return $this;
         }
 
-        if (! $collection = $this->getModel()?->collection) {
+        $model = $this->getModel();
+        if (! $model instanceof Record || ! $collection = $model->collection) {
             throw new RuntimeException("Model's collection is not set");
         }
 

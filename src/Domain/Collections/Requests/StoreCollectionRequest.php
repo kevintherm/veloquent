@@ -106,7 +106,10 @@ class StoreCollectionRequest extends FormRequest
 
                 if ($fieldType === CollectionFieldType::Relation || $fieldType === CollectionFieldType::RelationMany) {
                     $targetId = $field['target_collection_id'] ?? null;
-                    if ($targetId && Collection::find($targetId)?->is_system) {
+                    
+                    /** @var Collection */
+                    $targetCollection = Collection::find($targetId);
+                    if ($targetId && $targetCollection && $targetCollection->is_system) {
                         $validator->errors()->add("fields.{$index}.target_collection_id", 'Cannot relate to system collections.');
                     }
                 }

@@ -38,6 +38,7 @@ class UpdateRecordAction
     {
         Gate::authorize('update-records', $collection);
  
+        /** @var Record $record */
         $record = Record::of($collection)->findOrFail($recordId);
  
         $this->authorizeUpdate($collection, $record, $data, $request);
@@ -189,6 +190,7 @@ class UpdateRecordAction
  
         foreach ($manyData as $name => $entries) {
             $targetId = $fields->get($name)['target_collection_id'] ?? null;
+            /** @var Collection|null $target */
             $target = $targetId ? Collection::find($targetId) : null;
  
             if ($target) {

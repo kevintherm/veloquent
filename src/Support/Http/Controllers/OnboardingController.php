@@ -43,6 +43,7 @@ class OnboardingController extends ApiController
             'password' => ['required', 'string', 'min:8'],
         ]);
 
+        /** @var Record $superuser */
         $superuser = $superuser->create([
             'name' => $validated['name'],
             'email' => $validated['email'],

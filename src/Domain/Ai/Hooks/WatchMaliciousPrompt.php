@@ -77,6 +77,7 @@ class WatchMaliciousPrompt implements HookPipe
             return $next($payload);
         }
 
+        /** @var \Illuminate\Support\Collection<String, Record> */
         $watcherAgents = Record::of($collection)
             ->whereIn('id', $watchers)
             ->get()

@@ -53,6 +53,7 @@ class DeleteRecordAction
                 ->all();
 
             foreach ($relationManyFields as $field) {
+                /** @var Collection|null $targetCollection */
                 $targetCollection = Collection::find($field['target_collection_id'] ?? '');
                 if ($targetCollection) {
                     $pivotTable = PivotTableName::for($collection->getPhysicalTableName(), $targetCollection->getPhysicalTableName(), $field['name']);

@@ -42,6 +42,7 @@ class RelationIntegrityService
                 continue;
             }
 
+            /** @var Collection|null $targetCollection */
             $targetCollection = Collection::query()->find($targetCollectionId);
 
             if ($targetCollection === null) {

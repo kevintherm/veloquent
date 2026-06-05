@@ -85,7 +85,7 @@ class SchemaTransferService
             ->whereIn('name', $collectionNames);
 
         /**
-         * @var Collection[] $collections
+         * @var \Illuminate\Database\Eloquent\Collection<int, Collection> $collections
          */
         $collections = $collectionsQuery->get();
 
@@ -115,6 +115,7 @@ class SchemaTransferService
                 if (($field['type'] ?? '') === 'relation_many') {
                     $targetId = $field['target_collection_id'] ?? null;
                     if ($targetId) {
+                        /** @var Collection|null $targetCollection */
                         $targetCollection = Collection::query()->find($targetId);
                         if ($targetCollection) {
                             $pivotTable = PivotTableName::for(
@@ -624,6 +625,7 @@ class SchemaTransferService
             return collect($collection->fields ?? [])
                 ->filter(fn($field) => ($field['type'] ?? '') === 'relation_many' && !empty($field['target_collection_id']))
                 ->contains(function ($field) use ($collection, $tableName) {
+                    /** @var Collection|null $target */
                     $target = Collection::find($field['target_collection_id']);
                     return $target && PivotTableName::for($collection->name, $target->name, $field['name']) === $tableName;
                 });

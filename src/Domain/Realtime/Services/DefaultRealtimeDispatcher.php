@@ -157,6 +157,7 @@ class DefaultRealtimeDispatcher implements RealtimeDispatcher
                 return false;
             }
 
+            /** @var Record|null $subscriber */
             $subscriber = Record::of($subscriberCollection)->newQuery()->find($subscription['subscriber_id']);
             if (! $subscriber) {
                 return false;

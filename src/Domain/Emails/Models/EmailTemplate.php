@@ -5,6 +5,11 @@ namespace Veloquent\Core\Domain\Emails\Models;
 use Illuminate\Database\Eloquent\Model;
 use Veloquent\Core\Support\Traits\HasUtcDates;
 
+/**
+ * @property string $content
+ * @property string $action
+ * @property string $collection_id
+ */
 class EmailTemplate extends Model
 {
     use HasUtcDates;

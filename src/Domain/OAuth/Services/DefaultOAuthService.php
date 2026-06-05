@@ -65,6 +65,7 @@ class DefaultOAuthService implements OAuthService
         $collectionId = $payload['collection'] ?? null;
         $provider = $payload['provider'] ?? null;
 
+        /** @var Collection $collection */
         $collection = Collection::findOrFail($collectionId);
         $this->ensureOAuthEnabled($collection);
 
@@ -150,6 +151,8 @@ class DefaultOAuthService implements OAuthService
         );
 
         $email = $socialiteUser->getEmail();
+
+        /** @var Record|null $record */
         $record = null;
 
         if ($email) {
@@ -168,6 +171,8 @@ class DefaultOAuthService implements OAuthService
 
             $record->save();
         }
+
+        /** @var Record $record */
 
         OAuthAccount::updateOrCreate(
             [

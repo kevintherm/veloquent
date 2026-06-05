@@ -162,6 +162,7 @@ class CollectionValidator
                 continue;
             }
 
+            /** @var Collection */
             $targetCollection = Collection::query()->find($targetCollectionId);
             if ($targetCollection === null) {
                 $errors["fields.{$index}.target_collection_id"] = ['The selected target collection is invalid.'];

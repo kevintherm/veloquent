@@ -10,6 +10,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Veloquent\Core\Support\Traits\HasUtcDates;
 
+/**
+ * @property string $collection_id
+ * @property string $provider
+ * @property bool $enabled
+ * @property string $client_id
+ * @property string $client_secret
+ * @property string $redirect_uri
+ * @property array $scopes
+ */
 class OAuthProvider extends Model
 {
     use HasFactory, HasUtcDates;
