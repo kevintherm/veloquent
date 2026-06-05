@@ -2,12 +2,16 @@
 
 namespace Veloquent\Core\Domain\Auth\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Veloquent\Core\Database\Factories\SuperuserFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
+/**
+ * @property bool $is_superuser
+ */
 class Superuser extends Authenticatable
 {
     /** @use HasFactory<SuperuserFactory> */
@@ -31,6 +35,7 @@ class Superuser extends Authenticatable
         'password',
     ];
 
+    /** @phpstan-ignore rules.modelAppends */
     protected $appends = ['is_superuser'];
 
     /**

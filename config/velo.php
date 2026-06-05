@@ -161,4 +161,19 @@ return [
             'max_active_tokens' => env('VELO_AUTH_TOKEN_MAX_ACTIVE', 3) // 0: Unlimited
         ]
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Settings Cache Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for settings caching.
+    |
+    */
+    'settings' => [
+        'cache' => [
+            'enabled' => env('SETTINGS_CACHE_ENABLED', true),
+            'encrypted' => env('SETTINGS_CACHE_ENCRYPTED', false),
+        ],
+    ],
 ];

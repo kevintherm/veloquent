@@ -25,7 +25,7 @@ class RuleEngine
 
     protected ?Builder $query = null;
 
-    public function __construct() {}
+    final public function __construct() {}
 
     public static function make(array $allowedFields = []): static
     {

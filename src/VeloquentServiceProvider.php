@@ -94,8 +94,8 @@ class VeloquentServiceProvider extends ServiceProvider
         config(['auth.providers' => array_merge(config('auth.providers', []), $veloAuth['providers'] ?? [])]);
         config(['auth.defaults.guard' => $veloAuth['defaults']['guard'] ?? config('auth.defaults.guard')]);
 
-        config(['settings.cache.enabled' => env('SETTINGS_CACHE_ENABLED', true)]);
-        config(['settings.cache.encrypted' => env('SETTINGS_CACHE_ENCRYPTED', false)]);
+        config(['settings.cache.enabled' => config('velo.settings.cache.enabled', true)]);
+        config(['settings.cache.encrypted' => config('velo.settings.cache.encrypted', false)]);
 
         $this->app->singleton(SettingsContainer::class, function () {
             $container = new SettingsContainer();
@@ -200,7 +200,7 @@ class VeloquentServiceProvider extends ServiceProvider
         }
 
         foreach (['create', 'update', 'delete'] as $action) {
-            Gate::define("{$action}-collections", function ($user = null, $data = null) use ($action) {
+            Gate::define("{$action}-collections", function ($user = null, $data = null) {
                 if (! $user?->isSuperuser()) {
                     return false;
                 }

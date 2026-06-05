@@ -17,6 +17,12 @@ use Veloquent\Core\Domain\Collections\Observers\CollectionObserver;
 use Veloquent\Core\Domain\Collections\QueryBuilder\CollectionBuilder;
 use Veloquent\Core\Support\Traits\HasUtcDates;
 
+/**
+ * @property string $name
+ * @property CollectionType $type
+ * @property bool $is_system
+ * @property string|null $table_name
+ */
 #[ObservedBy(CollectionObserver::class)]
 #[UseEloquentBuilder(CollectionBuilder::class)]
 class Collection extends Model

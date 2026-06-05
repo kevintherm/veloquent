@@ -8,6 +8,9 @@ use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Spatie\Multitenancy\Models\Tenant as SpatieTenant;
 use Veloquent\Core\Support\Traits\HasUtcDates;
 
+/**
+ * @property string|null $database
+ */
 #[ObservedBy(TenantObserver::class)]
 class Tenant extends SpatieTenant
 {

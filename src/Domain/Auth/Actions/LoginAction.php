@@ -27,7 +27,8 @@ class LoginAction
      */
     public function execute(Collection $collection, array $payload): TokenData
     {
-        $result = DB::transaction(function () use ($collection, $payload) {
+        $result = null;
+        DB::transaction(function () use (&$result, $collection, $payload) {
             $payload = $this->hookRunner->run(new HookPayload(
                 event: 'auth.logging_in',
                 collection: $collection,
@@ -61,7 +62,7 @@ class LoginAction
 
             $tokenData = $this->tokenService->generateToken($user);
 
-            return [
+            $result = [
                 'tokenData' => $tokenData,
                 'user' => $user,
                 'payload' => $payload,

@@ -28,7 +28,7 @@ abstract class Settings
     /**
      * Create a new settings instance (lazily initialized).
      */
-    public function __construct()
+    final public function __construct()
     {
         $reflection = new ReflectionClass($this);
         $properties = $reflection->getProperties(ReflectionProperty::IS_PUBLIC);
