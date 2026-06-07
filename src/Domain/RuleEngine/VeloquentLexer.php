@@ -96,10 +96,7 @@ class VeloquentLexer extends Lexer
         // @sysvar.path → single IDENTIFIER token
         if ($char === '@') {
             $cursor++; // consume @
-            $path = '';
-            while ($cursor < $length && (ctype_alnum($input[$cursor]) || $input[$cursor] === '.' || $input[$cursor] === '_')) {
-                $path .= $input[$cursor++];
-            }
+            $path = $this->readSysvarPath($input, $cursor);
 
             return $this->token(Lexer::T_IDENTIFIER, '@' . $path, $position);
         }
@@ -243,6 +240,78 @@ class VeloquentLexer extends Lexer
             'yearsfromnow' => $now->addYears($value)->toDateTimeString(),
             default        => throw new RuntimeException("Unsupported date function: {$name}"),
         };
+    }
+
+    private function readSysvarPath(string $input, int &$cursor): string
+    {
+        $start = $cursor;
+        $length = strlen($input);
+        $bracketDepth = 0;
+        $quote = null;
+
+        while ($cursor < $length) {
+            $char = $input[$cursor];
+
+            if ($quote !== null) {
+                if ($char === '\\') {
+                    $cursor += 2;
+                    continue;
+                }
+
+                if ($char === $quote) {
+                    $quote = null;
+                }
+
+                $cursor++;
+                continue;
+            }
+
+            if ($char === '\'' || $char === '"') {
+                if ($bracketDepth === 0) {
+                    break;
+                }
+
+                $quote = $char;
+                $cursor++;
+                continue;
+            }
+
+            if ($char === '[') {
+                $bracketDepth++;
+                $cursor++;
+                continue;
+            }
+
+            if ($char === ']') {
+                if ($bracketDepth === 0) {
+                    break;
+                }
+
+                $bracketDepth--;
+                $cursor++;
+                continue;
+            }
+
+            if ($bracketDepth === 0 && (ctype_space($char) || str_contains('(),=<>!', $char))) {
+                break;
+            }
+
+            if (
+                $bracketDepth === 0
+                && !ctype_alnum($char)
+                && !in_array($char, ['_', '.'], true)
+            ) {
+                break;
+            }
+
+            $cursor++;
+        }
+
+        if ($bracketDepth !== 0 || $quote !== null) {
+            throw new \Kevintherm\Exprc\Exceptions\LexerException(sprintf('Malformed system variable path near position %d.', $start));
+        }
+
+        return substr($input, $start, $cursor - $start);
     }
 
     /** @return array{type: string, value: mixed, position: int} */

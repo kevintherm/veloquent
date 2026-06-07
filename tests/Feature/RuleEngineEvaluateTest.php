@@ -126,3 +126,23 @@ it('evaluates JSON has-key with ?&', function () {
     expect($engine->evaluate('settings ?& "theme"', $ctx))->toBeTrue();
     expect($engine->evaluate('settings ?& "missing_key"', $ctx))->toBeFalse();
 });
+
+it('evaluates system variable with bracket notation', function () {
+    $engine = RuleEngine::make();
+    $ctx = [
+        'request' => [
+            'body' => [
+                'attachments' => [
+                    ['id' => 1, 'name' => 'file1.txt'],
+                ],
+                'prompt' => '',
+            ],
+            'auth' => [
+                'id' => 'user_123',
+            ],
+        ],
+        'name' => 'some_other_agent',
+    ];
+    $rule = '@request.auth.id != "" && (name != "nutrients_agent_v1" || (@request.body.attachments[0] != null && @request.body.prompt = ""))';
+    expect($engine->evaluate($rule, $ctx))->toBeTrue();
+});

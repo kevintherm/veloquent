@@ -51,3 +51,16 @@ it('accepts = null as the null check', function () {
     expect(fn () => $engine->lint('id = null'))->not->toThrow(InvalidRuleExpressionException::class);
     expect(fn () => $engine->lint('id != null'))->not->toThrow(InvalidRuleExpressionException::class);
 });
+
+it('accepts bracket-notation system variable and complex rule in lint', function () {
+    $engine = RuleEngine::make(['name']);
+    $rule = '@request.auth.id != ""
+&& (
+    name != "nutrients_agent_v1"
+    || (
+        @request.body.attachments[0] != null
+        && @request.body.prompt = ""
+    )
+)';
+    expect(fn () => $engine->lint($rule))->not->toThrow(InvalidRuleExpressionException::class);
+});
