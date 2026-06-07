@@ -30,8 +30,6 @@ class AiController extends ApiController
             'messages.*.content' => 'required|string',
             'attachments' => 'nullable|array',
             'attachments.*' => 'file|max:10240', // 10MB
-            'output_type' => 'nullable|string|in:text,json',
-            'schema' => 'nullable|array',
             'stream' => 'nullable|boolean',
         ]);
 
