@@ -457,6 +457,10 @@ it('can chat with agent and enforce structured JSON output', function () {
         'length' => 'short',
         'temperature' => 0.5,
         'output_type' => 'json',
+        'schema' => json_encode([
+            'movies_count' => 'integer',
+            'movies' => 'array',
+        ]),
         'created_at' => now(),
         'updated_at' => now(),
     ]);
@@ -485,10 +489,6 @@ it('can chat with agent and enforce structured JSON output', function () {
     $response = postJson("/api/collections/{$this->collection->id}/ai/chat", [
         'agent' => 'json-bot',
         'prompt' => 'Give me top movies',
-        'schema' => [
-            'movies_count' => 'integer',
-            'movies' => 'array',
-        ]
     ]);
 
     $response->assertStatus(200);
@@ -1824,36 +1824,6 @@ it('fails validation when streaming is enabled on a JSON output agent via databa
     $response->assertJsonValidationErrors(['stream']);
 });
 
-it('fails validation when streaming and JSON output type are both requested in the payload', function () {
-    $settings = app(AiSettings::class);
-    $settings->ai_provider = 'openai';
-    $settings->ai_model = 'gpt-4o-mini';
-    $settings->ai_api_key = 'sk-proj-test';
-    $settings->save();
-
-    DB::table($this->tableName)->insert([
-        'id' => '01h7c989r148s89m257a3b4c1b',
-        'name' => 'payload-text-bot',
-        'model' => 'gpt-4o-mini',
-        'system_prompt' => 'You output text.',
-        'tone' => 'friendly',
-        'length' => 'short',
-        'temperature' => 0.7,
-        'output_type' => 'text',
-        'created_at' => now(),
-        'updated_at' => now(),
-    ]);
-
-    $response = postJson("/api/collections/{$this->collection->id}/ai/chat", [
-        'agent' => 'payload-text-bot',
-        'prompt' => 'Hello',
-        'output_type' => 'json',
-        'stream' => true,
-    ]);
-
-    $response->assertStatus(422);
-    $response->assertJsonValidationErrors(['stream']);
-});
 
 it('properly structures list schemas under items property', function () {
     $settings = app(AiSettings::class);
