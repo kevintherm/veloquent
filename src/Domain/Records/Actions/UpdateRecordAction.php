@@ -7,12 +7,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
-use Veloquent\Core\Domain\Hooks\Contracts\HookRunner;
-use Veloquent\Core\Domain\Hooks\ValueObjects\HookPayload;
 use Illuminate\Validation\ValidationException;
 use Veloquent\Core\Domain\Records\Models\Record;
+use Veloquent\Core\Domain\RuleEngine\RuleEngine;
 use Illuminate\Auth\Access\AuthorizationException;
+use Veloquent\Core\Domain\Hooks\Contracts\HookRunner;
 use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\Hooks\ValueObjects\HookPayload;
 use Veloquent\Core\Domain\Collections\Enums\CollectionType;
 use Veloquent\Core\Domain\Records\Services\PivotSyncService;
 use Veloquent\Core\Domain\QueryCompiler\Services\QueryFilter;
@@ -92,7 +93,7 @@ class UpdateRecordAction
         }
  
         $context = app(UpdateRuleContextBuilder::class)->build($collection, ['record' => $record, 'data' => $data], $user, $request ?? request(), $rule);
-        $allowed = QueryFilter::for($record->newQuery(), array_keys($context))->evaluate($rule, $context);
+        $allowed = RuleEngine::make(array_keys($context))->evaluate($rule, $context);
  
         if (! $allowed) {
             throw new AuthorizationException;
