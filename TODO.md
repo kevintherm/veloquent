@@ -1,5 +1,7 @@
 ## TODO
 
+- Convert all datetime to UTC on before request and after response SDKs (date field type unaffected)
+- Fix: converting date only to UTC datetime
 - Battle Testing
 
 ## Roadmap
