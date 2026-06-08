@@ -13,6 +13,7 @@ use function Pest\Laravel\actingAs;
 use function Pest\Laravel\getJson;
 use function Pest\Laravel\patchJson;
 use function Pest\Laravel\postJson;
+use function Pest\Laravel\post;
 use function Pest\Laravel\withoutMiddleware;
 
 beforeEach(function () {
@@ -1917,4 +1918,85 @@ it('properly structures list schemas under items property', function () {
     expect($serialized['properties'])->toBeArray()
         ->and(array_is_list($serialized['properties']))->toBeFalse()
         ->and($serialized['properties'])->toHaveKey('items');
+});
+
+it('can accept attachments as a single file or array of files', function () {
+    $settings = app(AiSettings::class);
+    $settings->ai_provider = 'openai';
+    $settings->ai_model = 'gpt-4o-mini';
+    $settings->ai_api_key = 'sk-proj-test';
+    $settings->save();
+
+    DB::table($this->tableName)->insert([
+        'id' => '01h7c989r148s89m257a3b4c1d',
+        'name' => 'attachment-bot',
+        'model' => 'gpt-4o',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    // Test 1: Single file attachment
+    $mockProvider1 = Mockery::mock(\Laravel\Ai\Providers\OpenAiProvider::class);
+    $mockProvider1->shouldReceive('prompt')
+        ->once()
+        ->with(Mockery::on(function ($prompt) {
+            $attachments = $prompt->attachments;
+            return count($attachments) === 1 
+                && $attachments[0] instanceof \Illuminate\Http\UploadedFile
+                && $attachments[0]->getClientOriginalName() === 'photo.jpg';
+        }))
+        ->andReturn(new \Laravel\Ai\Responses\AgentResponse(
+            'invocation-id-1',
+            'I received 1 file.',
+            new \Laravel\Ai\Responses\Data\Usage,
+            new \Laravel\Ai\Responses\Data\Meta
+        ));
+
+    Ai::shouldReceive('textProviderFor')
+        ->once()
+        ->andReturn($mockProvider1);
+
+    $response1 = post("/api/collections/{$this->collection->id}/ai/chat", [
+        'agent' => 'attachment-bot',
+        'prompt' => 'Look at this photo',
+        'attachments' => \Illuminate\Http\UploadedFile::fake()->image('photo.jpg'),
+    ]);
+
+    $response1->assertStatus(200);
+    $response1->assertJsonPath('data.text', 'I received 1 file.');
+
+    // Test 2: Array of files attachment
+    $mockProvider2 = Mockery::mock(\Laravel\Ai\Providers\OpenAiProvider::class);
+    $mockProvider2->shouldReceive('prompt')
+        ->once()
+        ->with(Mockery::on(function ($prompt) {
+            $attachments = $prompt->attachments;
+            return count($attachments) === 2 
+                && $attachments[0] instanceof \Illuminate\Http\UploadedFile
+                && $attachments[0]->getClientOriginalName() === 'doc1.pdf'
+                && $attachments[1] instanceof \Illuminate\Http\UploadedFile
+                && $attachments[1]->getClientOriginalName() === 'doc2.pdf';
+        }))
+        ->andReturn(new \Laravel\Ai\Responses\AgentResponse(
+            'invocation-id-2',
+            'I received 2 files.',
+            new \Laravel\Ai\Responses\Data\Usage,
+            new \Laravel\Ai\Responses\Data\Meta
+        ));
+
+    Ai::shouldReceive('textProviderFor')
+        ->once()
+        ->andReturn($mockProvider2);
+
+    $response2 = post("/api/collections/{$this->collection->id}/ai/chat", [
+        'agent' => 'attachment-bot',
+        'prompt' => 'Look at these files',
+        'attachments' => [
+            \Illuminate\Http\UploadedFile::fake()->create('doc1.pdf', 100, 'application/pdf'),
+            \Illuminate\Http\UploadedFile::fake()->create('doc2.pdf', 100, 'application/pdf'),
+        ],
+    ]);
+
+    $response2->assertStatus(200);
+    $response2->assertJsonPath('data.text', 'I received 2 files.');
 });

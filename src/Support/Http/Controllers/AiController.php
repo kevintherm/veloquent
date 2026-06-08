@@ -22,7 +22,12 @@ class AiController extends ApiController
             return $this->errorResponse('Collection is not of type agents.', Response::HTTP_BAD_REQUEST);
         }
 
-        $data = $request->validate([
+        $input = $request->all();
+        if ($request->hasFile('attachments') && !is_array($request->file('attachments'))) {
+            $input['attachments'] = [$request->file('attachments')];
+        }
+
+        $data = validator($input, [
             'agent' => 'required|string',
             'prompt' => 'present|nullable|string',
             'messages' => 'nullable|array',
@@ -31,7 +36,7 @@ class AiController extends ApiController
             'attachments' => 'nullable|array',
             'attachments.*' => 'file|max:10240', // 10MB
             'stream' => 'nullable|boolean',
-        ]);
+        ])->validate();
         
         $data['prompt'] = $data['prompt'] ?? '';
 
