@@ -24,7 +24,7 @@ class AiController extends ApiController
 
         $data = $request->validate([
             'agent' => 'required|string',
-            'prompt' => 'required|string',
+            'prompt' => 'present|nullable|string',
             'messages' => 'nullable|array',
             'messages.*.role' => 'required|string|in:system,user,assistant',
             'messages.*.content' => 'required|string',
@@ -32,6 +32,8 @@ class AiController extends ApiController
             'attachments.*' => 'file|max:10240', // 10MB
             'stream' => 'nullable|boolean',
         ]);
+        
+        $data['prompt'] = $data['prompt'] ?? '';
 
         if ($request->hasFile('attachments')) {
             $data['attachments'] = Arr::wrap($request->file('attachments'));

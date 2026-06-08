@@ -379,6 +379,61 @@ it('can chat with configured agent', function () {
     $response->assertJsonPath('data.text', 'Sure, how can I assist you today?');
 });
 
+it('requires prompt to be present but allows empty string', function () {
+    // 1. Seed tenant settings
+    $settings = app(AiSettings::class);
+    $settings->ai_provider = 'openai';
+    $settings->ai_model = 'gpt-4o-mini';
+    $settings->ai_api_key = 'sk-proj-test';
+    $settings->save();
+
+    DB::table($this->tableName)->insert([
+        'id' => '01h7c989r148s89m257a3b4cde',
+        'name' => 'support-bot',
+        'model' => 'gpt-4o',
+        'system_prompt' => 'You are a helpful customer service representative.',
+        'tone' => 'professional',
+        'length' => 'short',
+        'temperature' => 0.5,
+        'output_type' => 'text',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    // Test 1: prompt is missing -> fails validation
+    $response = postJson("/api/collections/{$this->collection->id}/ai/chat", [
+        'agent' => 'support-bot',
+    ]);
+    $response->assertStatus(422);
+    $response->assertJsonValidationErrors('prompt');
+
+    // Test 2: prompt is empty string -> passes validation
+    $mockProvider = Mockery::mock(\Laravel\Ai\Providers\OpenAiProvider::class);
+    $mockProvider->shouldReceive('prompt')
+        ->once()
+        ->with(Mockery::on(function ($prompt) {
+            return $prompt->prompt === '';
+        }))
+        ->andReturn(new \Laravel\Ai\Responses\AgentResponse(
+            'invocation-id',
+            'I received an empty prompt.',
+            new \Laravel\Ai\Responses\Data\Usage,
+            new \Laravel\Ai\Responses\Data\Meta
+        ));
+
+    Ai::shouldReceive('textProviderFor')
+        ->once()
+        ->andReturn($mockProvider);
+
+    $response = postJson("/api/collections/{$this->collection->id}/ai/chat", [
+        'agent' => 'support-bot',
+        'prompt' => '',
+    ]);
+
+    $response->assertStatus(200);
+    $response->assertJsonPath('data.text', 'I received an empty prompt.');
+});
+
 it('can chat with agent utilizing past conversation history', function () {
     $settings = app(AiSettings::class);
     $settings->ai_provider = 'openai';
