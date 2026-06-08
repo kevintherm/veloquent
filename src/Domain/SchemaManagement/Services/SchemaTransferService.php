@@ -351,6 +351,23 @@ class SchemaTransferService
         $isAuthCollection = $type === CollectionType::Auth->value;
 
         $rawFields = is_array($row['fields'] ?? null) ? $row['fields'] : [];
+        // Backward compatibility support: map 'timestamp' fields to 'datetime'
+        foreach ($rawFields as &$field) {
+            if (is_array($field) && isset($field['type'])) {
+                if ($field['type'] === 'timestamp') {
+                    $field['type'] = 'datetime';
+                }
+                if (isset($field['pivot_fields']) && is_array($field['pivot_fields'])) {
+                    foreach ($field['pivot_fields'] as &$pf) {
+                        if (is_array($pf) && isset($pf['type']) && $pf['type'] === 'timestamp') {
+                            $pf['type'] = 'datetime';
+                        }
+                    }
+                }
+            }
+        }
+        unset($field, $pf);
+
         $hasRelationFields = collect($rawFields)->contains(fn (mixed $f): bool => is_array($f) && in_array($f['type'] ?? '', ['relation', 'relation_many'], true));
 
         $filteredFields = collect($rawFields)

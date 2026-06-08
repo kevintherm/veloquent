@@ -411,4 +411,39 @@ it('exports and imports relation_many fields and their pivot table records succe
     expect(Illuminate\Support\Facades\DB::table($newPivotTable)->count())->toBe(2);
 });
 
+it('imports collection with timestamp field and maps it to datetime', function () {
+    $service = app(SchemaTransferService::class);
+
+    $payload = [
+        'version' => 1,
+        'metadata' => [
+            'collections' => [
+                [
+                    'name' => 'events',
+                    'type' => 'base',
+                    'fields' => [
+                        [
+                            'name' => 'occurred_at',
+                            'type' => 'timestamp',
+                        ],
+                    ],
+                ],
+            ],
+        ],
+    ];
+
+    $result = $service->import($payload);
+    $metadataRow = $result['metadata'][0];
+
+    expect($metadataRow['action'])->toBe('created');
+
+    $collection = Collection::query()->where('name', 'events')->first();
+    expect($collection)->not->toBeNull();
+    
+    $field = collect($collection->fields)->firstWhere('name', 'occurred_at');
+    expect($field)->not->toBeNull();
+    expect($field['type'])->toBe('datetime');
+});
+
+
 
