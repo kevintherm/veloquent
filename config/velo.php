@@ -157,7 +157,7 @@ return [
             ],
         ],
         'token' => [
-            'expiration' => env('VELO_AUTH_TOKEN_EXPIRATION', 3600),
+            'expiration' => env('VELO_AUTH_TOKEN_EXPIRATION', 3600 * 24 * 30), // Seconds
             'max_active_tokens' => env('VELO_AUTH_TOKEN_MAX_ACTIVE', 3) // 0: Unlimited
         ]
     ],
