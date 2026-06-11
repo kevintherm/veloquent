@@ -2,6 +2,7 @@
 
 namespace Veloquent\Core\Domain\Auth\Services;
 
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Veloquent\Core\Support\Models\Tenant;
@@ -62,46 +63,86 @@ class DefaultTokenAuthService implements TokenAuthService
         }
 
         $hashedToken = hash('sha256', $token);
-        $cacheKey = "velo:auth:{$hashedToken}";
+        $authData = $this->resolveAuthData($hashedToken);
 
+        if (! $authData) {
+            return null;
+        }
+
+        $user = $authData['user'];
+        $collection = $authData['collection'];
+        $expiresAt = $authData['expires_at'];
+        $expiresIn = $authData['expires_in'];
+        $fromCache = $authData['from_cache'];
+
+        $secondsRemaining = now()->diffInSeconds($expiresAt, false);
+        if ($secondsRemaining <= 0) {
+            Cache::forget("velo:auth:{$hashedToken}");
+            return null;
+        }
+
+        $slide = config('velo.auth.token.slide', true);
+        $slideRatio = (float) config('velo.auth.token.slide_ratio', 0.5);
+
+        if ($slide && $secondsRemaining < ($expiresIn * $slideRatio)) {
+            $newExpiresAt = now()->addSeconds($expiresIn);
+            $this->registerTerminatingUpdate($hashedToken, $newExpiresAt, $collection->id, $user->getAttributes(), $expiresIn);
+        } else {
+            if (! $fromCache) {
+                $this->registerTerminatingUpdate($hashedToken, null, $collection->id, $user->getAttributes(), $expiresIn, $expiresAt->timestamp, $secondsRemaining);
+            } else {
+                $this->registerTerminatingUpdate($hashedToken);
+            }
+        }
+
+        return $user;
+    }
+
+    protected function resolveAuthData(string $hashedToken): ?array
+    {
+        $cacheKey = "velo:auth:{$hashedToken}";
         $cachedData = Cache::get($cacheKey);
 
         if (is_array($cachedData)) {
             $collectionId = $cachedData['collection_id'] ?? null;
             $attributes = $cachedData['attributes'] ?? null;
+            $expiresAtTimestamp = $cachedData['expires_at'] ?? null;
+            $expiresIn = $cachedData['expires_in'] ?? null;
 
-            if ($collectionId && is_array($attributes)) {
+            if ($expiresAtTimestamp && now()->timestamp >= $expiresAtTimestamp) {
+                Cache::forget($cacheKey);
+                return null;
+            }
+
+            if ($collectionId && is_array($attributes) && $expiresAtTimestamp && $expiresIn) {
                 $collection = Collection::findByIdCached($collectionId);
                 if ($collection) {
                     $user = Record::of($collection)->newFromBuilder($attributes);
-                    return $user;
+                    return [
+                        'user' => $user,
+                        'collection' => $collection,
+                        'expires_at' => Carbon::createFromTimestamp($expiresAtTimestamp),
+                        'expires_in' => $expiresIn,
+                        'from_cache' => true,
+                    ];
                 }
             }
         }
 
-        try {
-            $authToken = AuthToken::query()
-                ->where('token_hash', $hashedToken)
-                ->active()
-                ->first();
-        } catch (\Illuminate\Database\QueryException $e) {
-            if (str_contains($e->getMessage(), 'no such table: auth_tokens')) {
-                return null;
-            }
-            throw $e;
-        }
+        $authToken = AuthToken::query()
+            ->where('token_hash', $hashedToken)
+            ->active()
+            ->first();
 
         if (! $authToken) {
             return null;
         }
 
         $collection = Collection::findByIdCached($authToken->collection_id);
-
         if (! $collection) {
             return null;
         }
 
-        /** @var Record */
         $user = Record::of($collection)
             ->where('id', $authToken->record_id)
             ->first();
@@ -113,21 +154,97 @@ class DefaultTokenAuthService implements TokenAuthService
         $user->setAttribute('collection_id', $collection->id);
         $user->setAttribute('collection_name', $collection->name);
 
-        $authToken->update(['last_used_at' => now()]);
-
         $expiresAt = $authToken->expires_at;
-        if ($expiresAt) {
-            $secondsRemaining = now()->diffInSeconds($expiresAt, false);
-            if ($secondsRemaining > 0) {
-                Cache::put($cacheKey, [
-                    'collection_id' => $collection->id,
-                    'attributes' => $user->getAttributes(),
-                ], min($secondsRemaining, (int) config('velo.auth.token.expiration', 3600)));
-            }
+        if (! $expiresAt) {
+            return null;
         }
 
-        return $user;
+        $expiresIn = $authToken->created_at 
+            ? $authToken->expires_at->diffInSeconds($authToken->created_at) 
+            : (int) config('velo.auth.token.expiration', 3600);
+        if ($expiresIn <= 0) {
+            $expiresIn = (int) config('velo.auth.token.expiration', 3600);
+        }
+
+        return [
+            'user' => $user,
+            'collection' => $collection,
+            'expires_at' => $expiresAt,
+            'expires_in' => $expiresIn,
+            'from_cache' => false,
+        ];
     }
+
+    protected function registerTerminatingUpdate(
+        string $hashedToken,
+        ?Carbon $newExpiresAt = null,
+        ?string $collectionId = null,
+        ?array $attributes = null,
+        ?int $expiresIn = null,
+        ?int $expiresAtTimestamp = null,
+        ?int $secondsRemaining = null
+    ): void {
+        $executed = false;
+        $cacheKey = "velo:auth:{$hashedToken}";
+
+        app()->terminating(function () use (
+            &$executed,
+            $hashedToken,
+            $newExpiresAt,
+            $collectionId,
+            $attributes,
+            $expiresIn,
+            $expiresAtTimestamp,
+            $secondsRemaining,
+            $cacheKey
+        ) {
+            if ($executed) {
+                return;
+            }
+            $executed = true;
+
+            try {
+                if ($newExpiresAt) {
+                    $updated = AuthToken::where('token_hash', $hashedToken)
+                        ->whereNull('revoked_at')
+                        ->update([
+                            'expires_at' => $newExpiresAt,
+                            'last_used_at' => now(),
+                        ]);
+
+                    if ($updated && $collectionId && $attributes && $expiresIn) {
+                        Cache::put($cacheKey, [
+                            'collection_id' => $collectionId,
+                            'attributes' => $attributes,
+                            'expires_at' => $newExpiresAt->timestamp,
+                            'expires_in' => $expiresIn,
+                        ], $expiresIn);
+                    } else {
+                        Cache::forget($cacheKey);
+                    }
+                } else {
+                    $updated = AuthToken::where('token_hash', $hashedToken)
+                        ->whereNull('revoked_at')
+                        ->update(['last_used_at' => now()]);
+
+                    if ($updated) {
+                        if ($collectionId && $attributes && $expiresAtTimestamp && $expiresIn && $secondsRemaining) {
+                            Cache::put($cacheKey, [
+                                'collection_id' => $collectionId,
+                                'attributes' => $attributes,
+                                'expires_at' => $expiresAtTimestamp,
+                                'expires_in' => $expiresIn,
+                            ], min($secondsRemaining, (int) config('velo.auth.token.expiration', 3600)));
+                        }
+                    } else {
+                        Cache::forget($cacheKey);
+                    }
+                }
+            } catch (\Exception $e) {}
+        });
+    }
+
+
 
     public function revokeToken(string $token): bool
     {

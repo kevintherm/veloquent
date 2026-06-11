@@ -228,3 +228,116 @@ it('enforces max active tokens when set to one', function () {
         ->getJson("/api/collections/{$collection->name}/auth/me")
         ->assertSuccessful();
 });
+
+it('slides token expiration when remaining lifetime is below the threshold', function () {
+    Carbon\Carbon::setTestNow('2026-06-11 12:00:00');
+
+    config()->set('velo.auth.token.expiration', 60);
+    config()->set('velo.auth.token.slide', true);
+    config()->set('velo.auth.token.slide_ratio', 0.5);
+
+    $collection = createAuthCollection('auth_users_sliding');
+    $user = createAuthRecord($collection, 'slide@example.test', 'password123');
+
+    $login = postJson("/api/collections/{$collection->name}/auth/login", [
+        'identity' => $user->email,
+        'password' => 'password123',
+    ]);
+
+    $token = $login->json('data.token');
+
+    // 1. Initial request (cache miss).
+    // This will write to cache with expires_at = 12:01:00.
+    Auth::guard('api')->forgetUser();
+    $this->withToken($token)
+        ->getJson("/api/collections/{$collection->name}/auth/me")
+        ->assertSuccessful();
+
+    // Verify initial expiration time in DB
+    $dbToken = AuthToken::where('token_hash', hash('sha256', $token))->first();
+    expect($dbToken->expires_at->toDateTimeString())->toBe('2026-06-11 12:01:00');
+
+    // 2. Request at 12:00:20 (remaining = 40s, which is > 50% threshold of 30s).
+    // It should NOT slide.
+    Carbon\Carbon::setTestNow('2026-06-11 12:00:20');
+    Auth::guard('api')->forgetUser();
+    $this->withToken($token)
+        ->getJson("/api/collections/{$collection->name}/auth/me")
+        ->assertSuccessful();
+
+    $dbToken = AuthToken::where('token_hash', hash('sha256', $token))->first();
+    expect($dbToken->expires_at->toDateTimeString())->toBe('2026-06-11 12:01:00');
+
+    // 3. Request at 12:00:40 (remaining = 20s, which is < 50% threshold of 30s).
+    // It SHOULD slide by 60s to 12:01:40.
+    Carbon\Carbon::setTestNow('2026-06-11 12:00:40');
+    Auth::guard('api')->forgetUser();
+    $this->withToken($token)
+        ->getJson("/api/collections/{$collection->name}/auth/me")
+        ->assertSuccessful();
+
+    $dbToken = AuthToken::where('token_hash', hash('sha256', $token))->first();
+    expect($dbToken->expires_at->toDateTimeString())->toBe('2026-06-11 12:01:40');
+
+    // 4. Request at 12:01:10 (past the original 12:01:00 expiration).
+    // Because it slid to 12:01:40, this should still be successful!
+    Carbon\Carbon::setTestNow('2026-06-11 12:01:10');
+    Auth::guard('api')->forgetUser();
+    $this->withToken($token)
+        ->getJson("/api/collections/{$collection->name}/auth/me")
+        ->assertSuccessful();
+
+    // 5. Request at 12:02:00 (past the slid 12:01:40 expiration).
+    // This should fail (unauthorized).
+    Carbon\Carbon::setTestNow('2026-06-11 12:02:00');
+    Auth::guard('api')->forgetUser();
+
+    $this->withToken($token)
+        ->getJson("/api/collections/{$collection->name}/auth/me")
+        ->assertUnauthorized();
+
+    Carbon\Carbon::setTestNow();
+});
+
+it('synchronizes revocation immediately and clears the cache if DB update fails', function () {
+    $collection = createAuthCollection('auth_users_sync');
+    $user = createAuthRecord($collection, 'sync@example.test', 'password123');
+
+    $login = postJson("/api/collections/{$collection->name}/auth/login", [
+        'identity' => $user->email,
+        'password' => 'password123',
+    ]);
+
+    $token = $login->json('data.token');
+    $hashedToken = hash('sha256', $token);
+    $cacheKey = "velo:auth:{$hashedToken}";
+
+    // 1. Initial request to ensure the token gets cached.
+    Auth::guard('api')->forgetUser();
+    $this->withToken($token)
+        ->getJson("/api/collections/{$collection->name}/auth/me")
+        ->assertSuccessful();
+
+    // Verify cache hit exists
+    expect(Cache::has($cacheKey))->toBeTrue();
+
+    // 2. Simulate revocation directly in the database (e.g. by another process or admin).
+    AuthToken::where('token_hash', $hashedToken)->update(['revoked_at' => now()]);
+
+    // 3. Make another request. The request gets a cache hit, but its terminating callback
+    // detects that the DB update failed (due to revoked_at not being null) and evicts the cache.
+    Auth::guard('api')->forgetUser();
+    $this->withToken($token)
+        ->getJson("/api/collections/{$collection->name}/auth/me")
+        ->assertSuccessful();
+
+    // The cache must be cleared now
+    expect(Cache::has($cacheKey))->toBeFalse();
+
+    // 4. A subsequent request must be rejected instantly because the cache is cleared.
+    Auth::guard('api')->forgetUser();
+    $this->withToken($token)
+        ->getJson("/api/collections/{$collection->name}/auth/me")
+        ->assertUnauthorized();
+});
+

@@ -273,7 +273,7 @@ class VeloquentServiceProvider extends ServiceProvider
                 return Limit::none();
             }
 
-            if ($request->user() instanceof Record && $request->user()->isSuperuser()) {
+            if ($request->user() && method_exists($request->user(), 'isSuperuser') && $request->user()->isSuperuser()) {
                 return Limit::none();
             }
 
@@ -288,7 +288,7 @@ class VeloquentServiceProvider extends ServiceProvider
                 return Limit::none();
             }
 
-            if ($request->user() instanceof Record && $request->user()->isSuperuser()) {
+            if ($request->user() && method_exists($request->user(), 'isSuperuser') && $request->user()->isSuperuser()) {
                 return Limit::none();
             }
 
@@ -303,7 +303,7 @@ class VeloquentServiceProvider extends ServiceProvider
                 return Limit::none();
             }
 
-            if ($request->user() instanceof Record && $request->user()->isSuperuser()) {
+            if ($request->user() && method_exists($request->user(), 'isSuperuser') && $request->user()->isSuperuser()) {
                 return Limit::none();
             }
 

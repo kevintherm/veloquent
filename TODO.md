@@ -1,6 +1,5 @@
 ## TODO
 
-- Session sliding
 - Pass device fingerprint / ID in first-party SDKs for new login detection
 - Offline supports for SDK
 - Convert all datetime to UTC on before request and after response SDKs (date field type unaffected)
@@ -9,6 +8,8 @@
 
 ## Roadmap
 
+- Implement model observer on user records to invalidate cached tokens on profile/attribute updates
+- Implement explicit database check for sensitive operations (bypassing the token cache)
 - Add support for :changed, :isset, :length for api rules
 - Add expand option to realtime
 - Add support for indexing json and file field
