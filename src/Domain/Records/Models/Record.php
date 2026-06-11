@@ -5,6 +5,7 @@ namespace Veloquent\Core\Domain\Records\Models;
 use RuntimeException;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
+use Veloquent\Core\Support\Traits\HasUtcDates;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -16,8 +17,10 @@ use Veloquent\Core\Domain\Records\Resources\RecordResource;
 use Veloquent\Core\Domain\Records\QueryBuilder\RecordBuilder;
 use Illuminate\Database\Eloquent\Attributes\UseEloquentBuilder;
 use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
-use Veloquent\Core\Support\Traits\HasUtcDates;
 
+/**
+ * @property string $id
+ */
 #[UseResource(RecordResource::class)]
 #[UseEloquentBuilder(RecordBuilder::class)]
 #[ObservedBy([RecordObserver::class])]
@@ -257,6 +260,7 @@ class Record extends Authenticatable
             return $path;
         }
 
+        /** @var Illuminate\Contracts\Filesystem\Filesystem $disk */
         $disk = Storage::disk((string) config('filesystems.default', 'local'));
 
         if (Arr::get($disk->getConfig(), 'driver') === 'local') {

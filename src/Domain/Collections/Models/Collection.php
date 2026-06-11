@@ -4,6 +4,7 @@ namespace Veloquent\Core\Domain\Collections\Models;
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Database\Eloquent\Model;
+use Veloquent\Core\Domain\SchemaManagement\Support\TableName;
 use Veloquent\Core\Support\Traits\HasUtcDates;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -19,6 +20,7 @@ use Veloquent\Core\Domain\Collections\Observers\CollectionObserver;
 use Veloquent\Core\Domain\Collections\QueryBuilder\CollectionBuilder;
 
 /**
+ * @property string $id
  * @property string $name
  * @property CollectionType $type
  * @property bool $is_system
@@ -157,7 +159,7 @@ class Collection extends Model
      */
     public function getPhysicalTableName(): string
     {
-        return $this->table_name ?? self::formatTableName($this->name, $this->is_system);
+        return $this->table_name ?? TableName::for($this->name, $this->is_system);
     }
 
     /**

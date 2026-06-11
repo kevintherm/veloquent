@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use Veloquent\Core\Domain\Auth\ValueObjects\TokenData;
 use Veloquent\Core\Domain\Records\Models\Record;
 
+use Veloquent\Core\Domain\Auth\ValueObjects\RequestMetadata;
+
 interface TokenAuthService
 {
     /**
@@ -16,7 +18,7 @@ interface TokenAuthService
     /**
      * Generate an authentication token for the given user record.
      */
-    public function generateToken(Record $user, ?int $expiresIn = null): TokenData;
+    public function generateToken(Record $user, ?int $expiresIn = null, ?RequestMetadata $metadata = null): TokenData;
 
     /**
      * Authenticate and resolve a user record by their token.

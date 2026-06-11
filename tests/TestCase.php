@@ -70,6 +70,8 @@ abstract class TestCase extends OrchestraTestCase
         $app['config']->set('multitenancy.tenant_model', Tenant::class);
         $app['config']->set('multitenancy.landlord_database_connection_name', 'testbench');
         $app['config']->set('multitenancy.tenant_database_connection_name', 'testbench');
+
+        $app['config']->set('mail.default', 'array');
     }
 
     protected function tearDown(): void

@@ -10,6 +10,7 @@ use Veloquent\Core\Domain\Records\Models\Record;
 use Veloquent\Core\Domain\Auth\ValueObjects\TokenData;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Auth\Contracts\TokenAuthService;
+use Veloquent\Core\Domain\Auth\ValueObjects\RequestMetadata;
 
 class DefaultTokenAuthService implements TokenAuthService
 {
@@ -18,8 +19,11 @@ class DefaultTokenAuthService implements TokenAuthService
         return $request->bearerToken() ?? $request->input('token');
     }
 
-    public function generateToken(Record $user, ?int $expiresIn = null): TokenData
+    public function generateToken(Record $user, ?int $expiresIn = null, ?RequestMetadata $metadata = null): TokenData
     {
+        /**
+         * @var Collection|null
+         */
         $collection = $user->collection;
 
         if (! $collection) {
@@ -35,6 +39,9 @@ class DefaultTokenAuthService implements TokenAuthService
             'record_id' => (string) $user->id,
             'token_hash' => hash('sha256', $token),
             'expires_at' => now()->addSeconds($expiresIn),
+            'ip_address' => $metadata?->ipAddress,
+            'user_agent' => $metadata?->userAgent,
+            'fingerprint' => $metadata?->fingerprint,
         ]);
 
         $this->enforceMaxTokens($user);
@@ -128,7 +135,7 @@ class DefaultTokenAuthService implements TokenAuthService
 
         Cache::forget("velo:auth:{$hashedToken}");
 
-        return (bool) AuthToken::where('token_hash', $hashedToken)->delete();
+        return (bool) AuthToken::where('token_hash', $hashedToken)->update(['revoked_at' => now()]);
     }
 
     public function revokeRecordTokens(string $collectionId, string $recordId, ?string $tokenHash = null): bool
@@ -148,7 +155,7 @@ class DefaultTokenAuthService implements TokenAuthService
             }
         }
 
-        return (bool) $query->delete();
+        return (bool) $query->update(['revoked_at' => now()]);
     }
 
     protected function enforceMaxTokens(Record $user): void
@@ -175,6 +182,6 @@ class DefaultTokenAuthService implements TokenAuthService
             Cache::forget("velo:auth:{$t->token_hash}");
         }
 
-        AuthToken::whereIn('id', $tokensToDelete->pluck('id'))->delete();
+        AuthToken::whereIn('id', $tokensToDelete->pluck('id'))->update(['revoked_at' => now()]);
     }
 }

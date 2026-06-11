@@ -2,31 +2,33 @@
 
 namespace Veloquent\Core\Domain\Auth\Controllers;
 
-use Veloquent\Core\Domain\Auth\Actions\ConfirmEmailChangeAction;
-use Veloquent\Core\Domain\Auth\Actions\ConfirmEmailVerificationAction;
-use Veloquent\Core\Domain\Auth\Actions\ConfirmPasswordResetAction;
-use Veloquent\Core\Domain\Auth\Actions\LoginAction;
-use Veloquent\Core\Domain\Auth\Actions\LogoutAction;
-use Veloquent\Core\Domain\Auth\Actions\LogoutAllAction;
-use Veloquent\Core\Domain\Auth\Actions\RequestEmailChangeAction;
-use Veloquent\Core\Domain\Auth\Actions\RequestEmailVerificationAction;
-use Veloquent\Core\Domain\Auth\Actions\RequestPasswordResetAction;
-use Veloquent\Core\Domain\Auth\Contracts\TokenAuthService;
-use Veloquent\Core\Domain\Auth\ValueObjects\TokenData;
-use Veloquent\Core\Domain\Collections\Enums\CollectionType;
-use Veloquent\Core\Domain\Collections\Models\Collection;
-use Veloquent\Core\Domain\Records\Models\Record;
-use Veloquent\Core\Domain\Auth\Requests\ConfirmEmailChangeRequest;
-use Veloquent\Core\Domain\Auth\Requests\ConfirmEmailVerificationRequest;
-use Veloquent\Core\Domain\Auth\Requests\ConfirmPasswordResetRequest;
-use Veloquent\Core\Domain\Auth\Requests\LoginRequest;
-use Veloquent\Core\Domain\Auth\Requests\RequestEmailChangeRequest;
-use Veloquent\Core\Domain\Auth\Requests\RequestPasswordResetRequest;
-use Veloquent\Core\Support\Http\Controllers\ApiController;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
+use Veloquent\Core\Domain\Records\Models\Record;
+use Veloquent\Core\Domain\Auth\Actions\LoginAction;
+use Veloquent\Core\Domain\Auth\Support\Fingerprint;
+use Veloquent\Core\Domain\Auth\Actions\LogoutAction;
+use Veloquent\Core\Domain\Auth\Requests\LoginRequest;
+use Veloquent\Core\Domain\Auth\ValueObjects\TokenData;
+use Veloquent\Core\Domain\Auth\ValueObjects\RequestMetadata;
+use Veloquent\Core\Domain\Auth\Actions\LogoutAllAction;
+use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\Auth\Contracts\TokenAuthService;
+use Veloquent\Core\Support\Http\Controllers\ApiController;
+use Veloquent\Core\Domain\Collections\Enums\CollectionType;
+use Veloquent\Core\Domain\Auth\Actions\ConfirmEmailChangeAction;
+use Veloquent\Core\Domain\Auth\Actions\RequestEmailChangeAction;
+use Veloquent\Core\Domain\Auth\Actions\ConfirmPasswordResetAction;
+use Veloquent\Core\Domain\Auth\Actions\RequestPasswordResetAction;
+use Veloquent\Core\Domain\Auth\Requests\ConfirmEmailChangeRequest;
+use Veloquent\Core\Domain\Auth\Requests\RequestEmailChangeRequest;
+use Veloquent\Core\Domain\Auth\Requests\ConfirmPasswordResetRequest;
+use Veloquent\Core\Domain\Auth\Requests\RequestPasswordResetRequest;
+use Veloquent\Core\Domain\Auth\Actions\ConfirmEmailVerificationAction;
+use Veloquent\Core\Domain\Auth\Actions\RequestEmailVerificationAction;
+use Veloquent\Core\Domain\Auth\Requests\ConfirmEmailVerificationRequest;
 
 class AuthController extends ApiController
 {
@@ -76,7 +78,9 @@ class AuthController extends ApiController
     {
         $tokenData = $this->loginAction->execute(
             $collection,
-            $request->only(['identity', 'password'])
+            $request->only(['identity', 'password']),
+            RequestMetadata::fromRequest($request),
+            $request
         );
 
         return $this->tokenResponse($tokenData);

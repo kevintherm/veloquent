@@ -203,6 +203,7 @@ const templates = ref({
   password_reset: { content: "", loading: false, saving: false },
   email_verification: { content: "", loading: false, saving: false },
   email_change: { content: "", loading: false, saving: false },
+  login: { content: "", loading: false, saving: false },
 });
 
 const fetchTemplate = async (action) => {
@@ -245,12 +246,23 @@ const saveTemplate = async (action, id = null, quiet = false) => {
   }
 };
 
-const TEMPLATE_PLACEHOLDERS = [
+const OTP_TEMPLATE_PLACEHOLDERS = [
   { code: "otp_code", label: "OTP Code (6 digits)" },
   { code: "action_label", label: "Action (e.g. Password Reset)" },
   { code: "collection_name", label: "Collection Name" },
   { code: "app_name", label: "App Name" },
 ];
+
+const LOGIN_TEMPLATE_PLACEHOLDERS = [
+  { code: "login_time", label: "Login Time" },
+  { code: "ip_address", label: "IP Address" },
+  { code: "collection_name", label: "Collection Name" },
+  { code: "app_name", label: "App Name" },
+];
+
+const getPlaceholdersForAction = (action) => {
+  return action === 'login' ? LOGIN_TEMPLATE_PLACEHOLDERS : OTP_TEMPLATE_PLACEHOLDERS;
+};
 
 const newField = ref({
   name: "",
@@ -416,6 +428,7 @@ watch(activeTab, (tab) => {
     void fetchTemplate('password_reset');
     void fetchTemplate('email_verification');
     void fetchTemplate('email_change');
+    void fetchTemplate('login');
     void fetchProviders();
   }
 });
@@ -916,7 +929,8 @@ const handleSave = async () => {
         await Promise.all([
           saveTemplate('password_reset', identifier, true),
           saveTemplate('email_verification', identifier, true),
-          saveTemplate('email_change', identifier, true)
+          saveTemplate('email_change', identifier, true),
+          saveTemplate('login', identifier, true)
         ]);
       }
 
@@ -2028,21 +2042,21 @@ onMounted(async () => {
                 </div>
               </div>
 
-              <!-- OTP Email Templates -->
+              <!-- Email Templates -->
               <div class="grid gap-4">
                 <div class="flex items-center gap-2 px-1">
                   <Mail class="w-4 h-4 text-muted-foreground mr-1" />
-                  <Label class="text-sm font-semibold">OTP Email Templates</Label>
+                  <Label class="text-sm font-semibold">Email Templates</Label>
                 </div>
 
-                <div v-for="action in ['password_reset', 'email_verification', 'email_change']" :key="action"
+                <div v-for="action in ['password_reset', 'email_verification', 'email_change', 'login']" :key="action"
                   class="border overflow-hidden bg-background">
                   <div class="p-4 border-b flex items-center justify-between bg-muted/20">
                     <div class="flex flex-col gap-0.5">
                       <span class="text-sm font-medium capitalize">{{ action.replace('_', ' ') }}</span>
                       <p class="text-[10px] text-muted-foreground flex flex-wrap items-center gap-x-1.5 gap-y-1 mt-0.5">
                         Placeholders:
-                        <code v-for="ph in TEMPLATE_PLACEHOLDERS" :key="ph.code" :title="ph.label"
+                        <code v-for="ph in getPlaceholdersForAction(action)" :key="ph.code" :title="ph.label"
                           class="bg-muted px-1 rounded font-mono cursor-default">&#123;&#123; {{ ph.code }} &#125;&#125;</code>
                       </p>
                     </div>
@@ -2070,7 +2084,7 @@ onMounted(async () => {
                       </p>
                     </div>
                     <CodeEditor v-if="!isCreating && activeTab === 'options' && !templates[action].loading"
-                      v-model="templates[action].content" :placeholders="TEMPLATE_PLACEHOLDERS"
+                      v-model="templates[action].content" :placeholders="getPlaceholdersForAction(action)"
                       placeholder="Write your email template content here..." />
                   </div>
                 </div>

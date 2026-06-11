@@ -42,6 +42,7 @@ use Veloquent\Core\Domain\Auth\Contracts\TokenAuthService;
 use Veloquent\Core\Domain\OAuth\Services\DefaultOAuthService;
 use Veloquent\Core\Support\Http\Middleware\TokenAuthMiddleware;
 use Veloquent\Core\Domain\Auth\Services\DefaultTokenAuthService;
+use Veloquent\Core\Console\Commands\PruneExpiredAuthTokensCommand;
 use Veloquent\Core\Domain\Realtime\Providers\RealtimeServiceProvider;
 use Veloquent\Core\Domain\SchemaManagement\Contracts\CollectionSyncService;
 use Veloquent\Core\Domain\SchemaManagement\Services\DefaultCollectionSyncService;
@@ -160,6 +161,7 @@ class VeloquentServiceProvider extends ServiceProvider
                 PurgeTenantCommand::class,
                 InstallCommand::class,
                 ExtractTenantCommand::class,
+                PruneExpiredAuthTokensCommand::class,
             ]);
 
             $this->publishes([

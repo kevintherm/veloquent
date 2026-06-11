@@ -2,19 +2,30 @@
 
 namespace Veloquent\Core\Domain\Emails\Services;
 
-use Veloquent\Core\Domain\Collections\Models\Collection;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Veloquent\Core\Domain\Emails\Mail\TemplateMail;
 use Veloquent\Core\Domain\Emails\Models\EmailTemplate;
-use Illuminate\Support\Facades\Mail;
+use Veloquent\Core\Domain\Collections\Models\Collection;
 
 class EmailService
 {
     public function send(string $to, string $action, Collection $collection, array $data): void
     {
         $html = $this->render($action, $collection, $data);
-        $subject = $data['subject'] ?? str($action)->replace('_', ' ')->title().' — Verification Code';
+        $subject = $data['subject'] ?? match ($action) {
+            'login' => 'New Login Detected',
+            default => str($action)->replace('_', ' ')->title().' — Verification Code',
+        };
 
         Mail::to($to)->send(new TemplateMail($subject, $html));
+
+        if ($action === 'login') {
+            Log::info('LOGIN_EMAIL_SENT', [
+                'to' => $to,
+                'collection' => $collection->name,
+            ]);
+        }
     }
 
     public function render(string $action, Collection $collection, array $data): string
@@ -70,6 +81,18 @@ HTML;
 
     public function getDefaultTemplate(string $action): string
     {
+        if ($action === 'login') {
+            return <<<HTML
+<h2 style="margin: 0 0 8px 0; font-size: 22px; color: #111;">New Login Detected</h2>
+<p style="margin: 0 0 24px 0; color: #666; font-size: 14px;">A new login was detected on your account.</p>
+<div style="background: #f8f8f8; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+    <p style="margin: 0 0 8px 0; font-size: 14px; color: #333;"><strong>Time:</strong> {{ login_time }}</p>
+    <p style="margin: 0; font-size: 14px; color: #333;"><strong>IP Address:</strong> {{ ip_address }}</p>
+</div>
+<p style="font-size: 14px; color: #666; margin: 0;">If this was not you, please secure your account immediately.</p>
+HTML;
+        }
+
         $actionLabel = str($action)->replace('_', ' ')->title();
 
         $bodyText = match ($action) {

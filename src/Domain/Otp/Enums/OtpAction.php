@@ -7,6 +7,7 @@ enum OtpAction: string
     case PasswordReset = 'password_reset';
     case EmailVerification = 'email_verification';
     case EmailChange = 'email_change';
+    case Login = 'login';
 
     public function label(): string
     {
@@ -14,6 +15,7 @@ enum OtpAction: string
             self::PasswordReset => 'Password Reset',
             self::EmailVerification => 'Email Verification',
             self::EmailChange => 'Email Change',
+            self::Login => 'Login Notification',
         };
     }
 }

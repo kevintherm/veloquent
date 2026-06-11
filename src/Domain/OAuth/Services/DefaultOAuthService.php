@@ -18,6 +18,7 @@ use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Auth\Contracts\TokenAuthService;
 use Veloquent\Core\Domain\Collections\Enums\CollectionType;
 use Veloquent\Core\Domain\OAuth\Factory\OAuthDriverFactory;
+use Veloquent\Core\Domain\Auth\ValueObjects\RequestMetadata;
 use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
 
 class DefaultOAuthService implements OAuthService
@@ -54,12 +55,12 @@ class DefaultOAuthService implements OAuthService
      *
      * @return array{code: string}
      */
-    public function handleCallback(string $state, bool $isNative = false): array
+    public function handleCallback(string $state, bool $isNative = false, ?RequestMetadata $metadata = null): array
     {
         $payload = Cache::pull("oauth_state:{$state}");
 
         if (! $payload) {
-            throw new InvalidArgumentException('Invalid or expired state.');
+            throw new InvalidArgumentException('Invalid or expired state parameter.');
         }
 
         $collectionId = $payload['collection'] ?? null;
@@ -87,7 +88,7 @@ class DefaultOAuthService implements OAuthService
                 return $this->findOrCreateRecord($collection, $provider, $socialiteUser);
             });
 
-            $tokenData = $this->tokenService->generateToken($record);
+            $tokenData = $this->tokenService->generateToken($record, null, $metadata);
             $exchangeCode = Str::random(60);
             Cache::put("oauth_exchange:{$exchangeCode}", $tokenData, now()->addSeconds(config('velo.oauth.exchange_ttl', 90)));
 

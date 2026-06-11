@@ -2,11 +2,12 @@
 
 namespace Veloquent\Core\Support\Http\Controllers;
 
-use Veloquent\Core\Domain\Collections\Models\Collection;
-use Veloquent\Core\Domain\OAuth\Contracts\OAuthService;
-use Veloquent\Core\Support\Http\Controllers\ApiController;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use Veloquent\Core\Domain\OAuth\Contracts\OAuthService;
+use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Support\Http\Controllers\ApiController;
+use Veloquent\Core\Domain\Auth\ValueObjects\RequestMetadata;
 
 class OAuthController extends ApiController
 {
@@ -50,6 +51,7 @@ class OAuthController extends ApiController
         $result = $this->oauthService->handleCallback(
             $request->input('state'),
             $request->boolean('native'),
+            RequestMetadata::fromRequest($request)
         );
 
         $payload = [

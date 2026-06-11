@@ -46,7 +46,7 @@ class ApplyTenantSettingsTask implements SwitchTenantTask
         config([
             'app.name' => $generalSettings->app_name,
             'app.locale' => $generalSettings->locale,
-            'mail.default' => $emailSettings->mail_driver,
+            'mail.default' => app()->environment('testing') ? 'array' : $emailSettings->mail_driver,
             'mail.mailers.smtp.host' => $emailSettings->mail_host,
             'mail.mailers.smtp.port' => $emailSettings->mail_port,
             'mail.mailers.smtp.encryption' => $emailSettings->mail_encryption,
