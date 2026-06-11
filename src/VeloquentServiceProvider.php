@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\RateLimiter;
 use Spatie\Multitenancy\Contracts\IsTenant;
 use Veloquent\Core\Support\Guards\TokenGuard;
 use Veloquent\Core\Domain\Settings\AiSettings;
+use Veloquent\Core\Domain\Records\Models\Record;
 use Veloquent\Core\Domain\Ai\Contracts\AiService;
 use Veloquent\Core\Domain\Settings\EmailSettings;
 use Veloquent\Core\Providers\LogsServiceProvider;
@@ -272,7 +273,7 @@ class VeloquentServiceProvider extends ServiceProvider
                 return Limit::none();
             }
 
-            if ($request->user()?->isSuperuser()) {
+            if ($request->user() instanceof Record && $request->user()->isSuperuser()) {
                 return Limit::none();
             }
 
@@ -287,7 +288,7 @@ class VeloquentServiceProvider extends ServiceProvider
                 return Limit::none();
             }
 
-            if ($request->user()?->isSuperuser()) {
+            if ($request->user() instanceof Record && $request->user()->isSuperuser()) {
                 return Limit::none();
             }
 
@@ -302,7 +303,7 @@ class VeloquentServiceProvider extends ServiceProvider
                 return Limit::none();
             }
 
-            if ($request->user()?->isSuperuser()) {
+            if ($request->user() instanceof Record && $request->user()->isSuperuser()) {
                 return Limit::none();
             }
 

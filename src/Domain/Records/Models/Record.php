@@ -260,7 +260,6 @@ class Record extends Authenticatable
             return $path;
         }
 
-        /** @var Illuminate\Contracts\Filesystem\Filesystem $disk */
         $disk = Storage::disk((string) config('filesystems.default', 'local'));
 
         if (Arr::get($disk->getConfig(), 'driver') === 'local') {
