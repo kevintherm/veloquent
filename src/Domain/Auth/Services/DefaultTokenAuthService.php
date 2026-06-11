@@ -143,6 +143,9 @@ class DefaultTokenAuthService implements TokenAuthService
             return null;
         }
 
+        /**
+         * @var Record
+         */
         $user = Record::of($collection)
             ->where('id', $authToken->record_id)
             ->first();
