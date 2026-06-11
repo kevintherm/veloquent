@@ -69,3 +69,24 @@ it('clears cache when tenant is deleted', function () {
 
     expect(Cache::has('velo:tenant:domain:del-domain.veloquent.test'))->toBeFalse();
 });
+
+it('returns virtual tenant on find when tenancy is disabled', function () {
+    config(['velo.tenancy_enabled' => false]);
+
+    $found = Tenant::find(1);
+
+    expect($found)->not->toBeNull();
+    expect($found->name)->toBe('Default Tenant');
+    expect($found->id)->toBe(1);
+});
+
+it('returns virtual tenant on find for any ID when tenancy is disabled', function () {
+    config(['velo.tenancy_enabled' => false]);
+
+    $found = Tenant::find(999);
+
+    expect($found)->not->toBeNull();
+    expect($found->name)->toBe('Default Tenant');
+    expect($found->id)->toBe(1);
+});
+

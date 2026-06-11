@@ -30,6 +30,24 @@ class EmailSettings extends Settings
         ];
     }
 
+    protected function ensureLoaded(): void
+    {
+        if ($this->loaded) {
+            return;
+        }
+
+        $this->defaults['mail_driver'] = config('mail.default') ?: 'smtp';
+        $this->defaults['mail_host'] = config('mail.mailers.smtp.host') ?: '127.0.0.1';
+        $this->defaults['mail_port'] = (int) (config('mail.mailers.smtp.port') ?: 1025);
+        $this->defaults['mail_encryption'] = config('mail.mailers.smtp.encryption') ?: 'tls';
+        $this->defaults['mail_username'] = config('mail.mailers.smtp.username');
+        $this->defaults['mail_password'] = config('mail.mailers.smtp.password');
+        $this->defaults['mail_from_address'] = config('mail.from.address') ?: 'noreply@example.com';
+        $this->defaults['mail_from_name'] = config('mail.from.name') ?: 'Veloquent';
+
+        parent::ensureLoaded();
+    }
+
     public static function group(): string
     {
         return 'email';

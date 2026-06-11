@@ -20,6 +20,18 @@ class Tenant extends SpatieTenant
 {
     use HasUtcDates;
 
+    /**
+     * Find a tenant by its primary key.
+     */
+    public static function find($id, $columns = ['*'])
+    {
+        if (! config('velo.tenancy_enabled', true)) {
+            return self::getVirtualTenant();
+        }
+
+        return static::query()->find($id, $columns);
+    }
+
     public static function findByIdCached(string $id): ?self
     {
         if (! config('velo.tenancy_enabled', true)) {

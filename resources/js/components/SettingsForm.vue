@@ -124,7 +124,7 @@ onMounted(() => {
           <Label>Contact Email</Label>
           <Input v-model="form.general.contact_email" type="email" placeholder="admin@example.com" />
           <p v-if="errors['general.contact_email']" class="text-xs text-red-500">{{ errors['general.contact_email'][0]
-          }}</p>
+            }}</p>
         </div>
 
         <label class="flex items-center gap-2 text-sm cursor-pointer py-2">
@@ -148,9 +148,10 @@ onMounted(() => {
             <option value="local">Local Disk</option>
             <option value="s3">S3</option>
           </select>
-          <p class="text-xs text-muted-foreground mt-1">Note: Switching the storage driver will not automatically move existing files. You must migrate your data manually.</p>
+          <p class="text-xs text-muted-foreground mt-1">Note: Switching the storage driver will not automatically move
+            existing files. You must migrate your data manually.</p>
           <p v-if="errors['storage.storage_driver']" class="text-xs text-red-500">{{ errors['storage.storage_driver'][0]
-          }}</p>
+            }}</p>
         </div>
 
         <div v-if="form.storage.storage_driver === 's3'" class="space-y-4 pt-4 border-t">
@@ -205,6 +206,7 @@ onMounted(() => {
               <option value="smtp">SMTP</option>
               <option value="sendmail">Sendmail</option>
               <option value="mailgun">Mailgun</option>
+              <option value="mailput">Mailpit</option>
             </select>
             <p v-if="errors['email.mail_driver']" class="text-xs text-red-500">{{ errors['email.mail_driver'][0] }}</p>
           </div>
@@ -216,7 +218,7 @@ onMounted(() => {
               <option value="ssl">SSL</option>
             </select>
             <p v-if="errors['email.mail_encryption']" class="text-xs text-red-500">{{ errors['email.mail_encryption'][0]
-            }}</p>
+              }}</p>
           </div>
         </div>
 
@@ -255,7 +257,7 @@ onMounted(() => {
             <Label>From Name</Label>
             <Input v-model="form.email.mail_from_name" placeholder="My App Support" />
             <p v-if="errors['email.mail_from_name']" class="text-xs text-red-500">{{ errors['email.mail_from_name'][0]
-            }}</p>
+              }}</p>
           </div>
           <div class="space-y-2">
             <Label>From Address</Label>
