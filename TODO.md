@@ -1,6 +1,5 @@
 ## TODO
 
-- Pass device fingerprint / ID in first-party SDKs for new login detection
 - Offline supports for SDK
 - Convert all datetime to UTC on before request and after response SDKs (date field type unaffected)
 - Fix: converting date only to UTC datetime
