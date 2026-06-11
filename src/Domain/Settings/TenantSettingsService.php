@@ -12,13 +12,15 @@ class TenantSettingsService
         GeneralSettings $generalSettings,
         StorageSettings $storageSettings,
         EmailSettings $emailSettings,
-        AiSettings $aiSettings
+        AiSettings $aiSettings,
+        RateLimitSettings $rateLimitSettings
     ) {
         $this->settings = [
             'general' => $generalSettings,
             'storage' => $storageSettings,
             'email' => $emailSettings,
             'ai' => $aiSettings,
+            'rate_limit' => $rateLimitSettings,
         ];
     }
 

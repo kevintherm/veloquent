@@ -4,6 +4,7 @@ use Veloquent\Core\Domain\Settings\EmailSettings;
 use Veloquent\Core\Domain\Settings\GeneralSettings;
 use Veloquent\Core\Domain\Settings\StorageSettings;
 use Veloquent\Core\Domain\Settings\AiSettings;
+use Veloquent\Core\Domain\Settings\RateLimitSettings;
 use Veloquent\Core\Domain\Settings\TenantSettingsService;
 use Illuminate\Support\Facades\Cache;
 use Mockery\MockInterface;
@@ -43,8 +44,11 @@ it('clears cache on update', function () {
     $ai = $this->mock(AiSettings::class, function (MockInterface $mock) {
         $mock->shouldReceive('save')->never();
     });
+    $rateLimit = $this->mock(RateLimitSettings::class, function (MockInterface $mock) {
+        $mock->shouldReceive('save')->never();
+    });
 
-    $service = new TenantSettingsService($general, $storage, $email, $ai);
+    $service = new TenantSettingsService($general, $storage, $email, $ai, $rateLimit);
 
     Cache::shouldReceive('forget')
         ->once()

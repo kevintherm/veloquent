@@ -101,6 +101,16 @@ class UpdateSettingsRequest extends FormRequest
             $rules['ai.ai_api_key'] = ['nullable', 'string'];
         }
 
+        if ($this->has('rate_limit')) {
+            $rules['rate_limit'] = ['array'];
+            $rules['rate_limit.rate_limit_enabled'] = ['required', 'boolean'];
+            $rules['rate_limit.rate_limit_rules'] = ['nullable', 'array'];
+            $rules['rate_limit.rate_limit_rules.*.label'] = ['required', 'string', 'max:255'];
+            $rules['rate_limit.rate_limit_rules.*.max_attempts'] = ['required', 'integer', 'min:1'];
+            $rules['rate_limit.rate_limit_rules.*.decay_minutes'] = ['required', 'integer', 'min:1'];
+            $rules['rate_limit.rate_limit_rules.*.audience'] = ['required', 'string', 'in:all,guest,auth'];
+        }
+
         return $rules;
     }
 

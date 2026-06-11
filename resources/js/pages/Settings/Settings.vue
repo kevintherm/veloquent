@@ -12,7 +12,8 @@ import SchemaMaintenance from "@/pages/Settings/SchemaMaintenance.vue";
 import SchemaTransfer from "@/pages/Settings/SchemaTransfer.vue";
 import SettingsForm from "@/components/SettingsForm.vue";
 import AiSettingsForm from "@/components/AiSettingsForm.vue";
-import { Database, FlaskConical, FileJson, Settings as SettingsIcon, Bot } from "lucide-vue-next";
+import RateLimitSettingsForm from "@/components/RateLimitSettingsForm.vue";
+import { Database, FlaskConical, FileJson, Settings as SettingsIcon, Bot, Shield } from "lucide-vue-next";
 </script>
 
 <template>
@@ -29,13 +30,13 @@ import { Database, FlaskConical, FileJson, Settings as SettingsIcon, Bot } from 
             <SettingsIcon class="h-4 w-4" />
             System
           </TabsTrigger>
+          <TabsTrigger value="rate-limit" class="gap-2">
+            <Shield class="h-4 w-4" />
+            Rate Limit
+          </TabsTrigger>
           <TabsTrigger value="ai" class="gap-2">
             <Bot class="h-4 w-4" />
             AI Config
-          </TabsTrigger>
-          <TabsTrigger value="tests" class="gap-2">
-            <FlaskConical class="h-4 w-4" />
-            Tests
           </TabsTrigger>
           <TabsTrigger value="maintenance" class="gap-2">
             <Database class="h-4 w-4" />
@@ -45,27 +46,35 @@ import { Database, FlaskConical, FileJson, Settings as SettingsIcon, Bot } from 
             <FileJson class="h-4 w-4" />
             Schema Transfer
           </TabsTrigger>
+          <TabsTrigger value="tests" class="gap-2">
+            <FlaskConical class="h-4 w-4" />
+            Tests
+          </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="tests" class="space-y-4">
-          <ApiTest />
-          <RealtimeTest />
-        </TabsContent>
-
-        <TabsContent value="maintenance" class="space-y-4">
-          <SchemaMaintenance />
-        </TabsContent>
 
         <TabsContent value="system" class="space-y-4">
           <SettingsForm />
+        </TabsContent>
+
+        <TabsContent value="rate-limit" class="space-y-4">
+          <RateLimitSettingsForm />
         </TabsContent>
 
         <TabsContent value="ai" class="space-y-4">
           <AiSettingsForm />
         </TabsContent>
 
+        <TabsContent value="maintenance" class="space-y-4">
+          <SchemaMaintenance />
+        </TabsContent>
+
         <TabsContent value="schema-transfer" class="space-y-4">
           <SchemaTransfer />
+        </TabsContent>
+
+        <TabsContent value="tests" class="space-y-4">
+          <ApiTest />
+          <RealtimeTest />
         </TabsContent>
       </Tabs>
     </div>

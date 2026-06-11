@@ -1,7 +1,6 @@
 ## TODO
 
 - First login email
-- Configurable Rate Limit by REST API
 - Offline supports for SDK
 - Convert all datetime to UTC on before request and after response SDKs (date field type unaffected)
 - Fix: converting date only to UTC datetime

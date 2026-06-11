@@ -58,6 +58,10 @@ it('can get settings', function () {
                 'mail_from_address',
                 'mail_from_name',
             ],
+            'rate_limit' => [
+                'rate_limit_enabled',
+                'rate_limit_rules',
+            ],
         ],
     ]);
 });
@@ -75,6 +79,10 @@ it('can validate settings payload', function () {
         'storage' => ['storage_driver' => 'invalid-driver'],
         'email' => ['mail_driver' => 'invalid-driver'],
         'ai' => ['ai_provider' => 'invalid-provider'],
+        'rate_limit' => [
+            'rate_limit_enabled' => 'not-a-boolean',
+            'rate_limit_rules' => 'not-an-array',
+        ],
     ]);
     $invalidResponse->assertStatus(422);
     $invalidResponse->assertJsonValidationErrors([
@@ -82,6 +90,30 @@ it('can validate settings payload', function () {
         'storage.storage_driver',
         'email.mail_driver',
         'ai.ai_provider',
+        'rate_limit.rate_limit_enabled',
+        'rate_limit.rate_limit_rules',
+    ]);
+
+    // Test invalid individual rules
+    $invalidRulesResponse = patchJson('/api/settings', [
+        'rate_limit' => [
+            'rate_limit_enabled' => true,
+            'rate_limit_rules' => [
+                [
+                    'label' => '',
+                    'max_attempts' => 0,
+                    'decay_minutes' => -1,
+                    'audience' => 'invalid-audience',
+                ]
+            ],
+        ],
+    ]);
+    $invalidRulesResponse->assertStatus(422);
+    $invalidRulesResponse->assertJsonValidationErrors([
+        'rate_limit.rate_limit_rules.0.label',
+        'rate_limit.rate_limit_rules.0.max_attempts',
+        'rate_limit.rate_limit_rules.0.decay_minutes',
+        'rate_limit.rate_limit_rules.0.audience',
     ]);
 });
 
@@ -135,6 +167,17 @@ it('can update settings', function () {
             'ai_model' => 'gpt-4o-mini',
             'ai_api_key' => 'secret-api-key',
         ],
+        'rate_limit' => [
+            'rate_limit_enabled' => true,
+            'rate_limit_rules' => [
+                [
+                    'label' => '/api/*',
+                    'max_attempts' => 120,
+                    'decay_minutes' => 2,
+                    'audience' => 'auth',
+                ]
+            ],
+        ],
     ]);
 
     $response->assertStatus(200);
@@ -142,6 +185,8 @@ it('can update settings', function () {
 
     // Check if it's saved in the object
     expect(app(GeneralSettings::class)->app_name)->toBe('Custom App Name');
+    expect(app(\Veloquent\Core\Domain\Settings\RateLimitSettings::class)->rate_limit_enabled)->toBeTrue();
+    expect(app(\Veloquent\Core\Domain\Settings\RateLimitSettings::class)->rate_limit_rules[0]['max_attempts'])->toBe(120);
 });
 
 it('denies non-superusers from managing settings', function () {

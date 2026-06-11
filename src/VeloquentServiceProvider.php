@@ -23,6 +23,7 @@ use Veloquent\Core\Domain\Settings\GeneralSettings;
 use Veloquent\Core\Domain\Settings\StorageSettings;
 use Veloquent\Core\Domain\Hooks\DefaultHookRegistry;
 use Veloquent\Core\Domain\Hooks\Contracts\HookRunner;
+use Veloquent\Core\Domain\Settings\RateLimitSettings;
 use Veloquent\Core\Support\Settings\SettingsContainer;
 use Veloquent\Core\Console\Commands\ListTenantsCommand;
 use Veloquent\Core\Console\Commands\PurgeTenantCommand;
@@ -103,6 +104,7 @@ class VeloquentServiceProvider extends ServiceProvider
             $container->register(StorageSettings::class);
             $container->register(EmailSettings::class);
             $container->register(AiSettings::class);
+            $container->register(RateLimitSettings::class);
             return $container;
         });
 
@@ -110,6 +112,7 @@ class VeloquentServiceProvider extends ServiceProvider
         $this->app->singleton(StorageSettings::class, fn () => StorageSettings::load());
         $this->app->singleton(EmailSettings::class, fn () => EmailSettings::load());
         $this->app->singleton(AiSettings::class, fn () => AiSettings::load());
+        $this->app->singleton(RateLimitSettings::class, fn () => RateLimitSettings::load());
 
         $this->app->register(LogsServiceProvider::class);
         $this->app->register(RealtimeServiceProvider::class);
@@ -262,15 +265,121 @@ class VeloquentServiceProvider extends ServiceProvider
     protected function registerRateLimiters(): void
     {
         RateLimiter::for('otp', function (Request $request) {
-            return Limit::perMinute(5)->by($request->user()?->id ?: $request->ip());
+            $settings = app(RateLimitSettings::class);
+            if (!$settings->rate_limit_enabled) {
+                return Limit::none();
+            }
+
+            if ($request->user()?->isSuperuser()) {
+                return Limit::none();
+            }
+
+            $rule = collect($settings->rate_limit_rules)->firstWhere('label', '*:otp');
+
+            return $rule ? ($this->resolveLimit($rule, $request) ?? Limit::none()) : Limit::none();
         });
 
         RateLimiter::for('auth', function (Request $request) {
-            return Limit::perMinute(10)->by($request->ip());
+            $settings = app(RateLimitSettings::class);
+            if (!$settings->rate_limit_enabled) {
+                return Limit::none();
+            }
+
+            if ($request->user()?->isSuperuser()) {
+                return Limit::none();
+            }
+
+            $rule = collect($settings->rate_limit_rules)->firstWhere('label', '*:auth');
+
+            return $rule ? ($this->resolveLimit($rule, $request) ?? Limit::none()) : Limit::none();
         });
 
         RateLimiter::for('api', function (Request $request) {
-            return Limit::perMinute(240)->by($request->user()?->id ?: $request->ip());
+            $settings = app(RateLimitSettings::class);
+            if (!$settings->rate_limit_enabled) {
+                return Limit::none();
+            }
+
+            if ($request->user()?->isSuperuser()) {
+                return Limit::none();
+            }
+
+            $rules = collect($settings->rate_limit_rules)
+                ->reject(fn (array $rule) => in_array($rule['label'], ['*:otp', '*:auth']));
+
+            $limits = [];
+            foreach ($rules as $rule) {
+                if ($this->ruleMatchesRequest($rule, $request)) {
+                    $limit = $this->resolveLimit($rule, $request);
+                    if ($limit) {
+                        $limits[] = $limit;
+                    }
+                }
+            }
+
+            return $limits ?: Limit::none();
         });
+    }
+
+    /**
+     * Resolve the rate limit instance for a given rule configuration and request.
+     */
+    protected function resolveLimit(array $rule, Request $request): ?Limit
+    {
+        $audience = $rule['audience'] ?? 'all';
+        $user = $request->user();
+
+        if ($audience === 'guest' && $user) {
+            return null;
+        }
+        if ($audience === 'auth' && !$user) {
+            return null;
+        }
+
+        $byKey = ($audience === 'guest')
+            ? $request->ip()
+            : (($audience === 'auth') ? $user->id : ($user?->id ?: $request->ip()));
+
+        return Limit::perMinutes($rule['decay_minutes'], $rule['max_attempts'])->by($byKey);
+    }
+
+    /**
+     * Determine if a rate limit rule pattern/tag matches the incoming request context.
+     */
+    protected function ruleMatchesRequest(array $rule, Request $request): bool
+    {
+        $label = $rule['label'];
+
+        if ($label === '*') {
+            return true;
+        }
+
+        if ($label === '*:create') {
+            return $request->isMethod('POST') && !Str::contains($request->getPathInfo(), '/auth/');
+        }
+
+        if ($label === '*:update') {
+            return ($request->isMethod('PUT') || $request->isMethod('PATCH')) && !Str::contains($request->getPathInfo(), '/auth/');
+        }
+
+        if ($label === '*:delete') {
+            return $request->isMethod('DELETE') && !Str::contains($request->getPathInfo(), '/auth/');
+        }
+
+        if ($label === '*:view') {
+            return $request->isMethod('GET') && Str::contains($request->route()?->getName() ?? '', '.show');
+        }
+
+        if ($label === '*:list') {
+            return $request->isMethod('GET') && Str::contains($request->route()?->getName() ?? '', '.index');
+        }
+
+        $pattern = '/' . ltrim($label, '/');
+        $path = '/' . ltrim($request->getPathInfo(), '/');
+        if (str_ends_with($pattern, '/')) {
+            $pattern .= '*';
+        }
+
+        return Str::is($pattern, $path);
     }
 }
