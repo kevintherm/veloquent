@@ -1,5 +1,6 @@
 ## TODO
 
+- Fix: Link to relation record does not work in the admin panel
 - Fix: Cannot update collection name nor collection description
 - Fix: Updating ai settings twice in admin panel sets the api key to null since the second time the api key is masked 
 - Battle Testing
