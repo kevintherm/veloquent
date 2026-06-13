@@ -49,8 +49,8 @@ return [
         SwitchTenantLogsTask::class,
         SwitchTenantAppUrlTask::class,
         SwitchTenantRedisPrefixTask::class,
-        ApplyTenantSettingsTask::class,
         PrefixCacheTask::class,
+        ApplyTenantSettingsTask::class,
         // \Spatie\Multitenancy\Tasks\SwitchRouteCacheTask::class,
     ],
 

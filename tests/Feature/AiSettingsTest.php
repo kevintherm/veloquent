@@ -277,6 +277,85 @@ it('can verify connection when updating AI settings', function () {
     $response->assertStatus(200);
 });
 
+it('properly configures AI provider and keys in laravel config after updating and reloading tenant', function () {
+    actingAs($this->user, 'api');
+
+    // 1. Initial settings
+    $settings = app(AiSettings::class);
+    $settings->ai_provider = 'openai';
+    $settings->ai_model = 'gpt-4o';
+    $settings->ai_api_key = 'initial-secret-key';
+    $settings->save();
+
+    // 2. Switch tenant so that config gets populated from initial settings
+    $tenant = Tenant::current();
+    $tenant->forget();
+    $tenant->makeCurrent();
+
+    expect(config('ai.default'))->toBe('openai');
+    expect(config('ai.providers.openai.key'))->toBe('initial-secret-key');
+
+    // Mock Provider verification for the update request
+    $mockProvider = Mockery::mock(\Laravel\Ai\Providers\OpenAiProvider::class);
+    $mockProvider->shouldReceive('prompt')
+        ->once()
+        ->andReturn(new \Laravel\Ai\Responses\AgentResponse(
+            'invocation-id',
+            'OK',
+            new \Laravel\Ai\Responses\Data\Usage,
+            new \Laravel\Ai\Responses\Data\Meta
+        ));
+
+    Ai::shouldReceive('textProviderFor')
+        ->once()
+        ->with(Mockery::type(\Veloquent\Core\Domain\Ai\Agents\VeloquentAgent::class), 'openai')
+        ->andReturn($mockProvider);
+
+    // 3. Update AI settings via API
+    $response = patchJson('/api/settings', [
+        'general' => [
+            'app_name' => 'Custom App Name',
+            'app_url' => 'http://localhost',
+            'locale' => 'en',
+            'contact_email' => 'admin@test.com',
+            'lock_schema_change' => false,
+        ],
+        'storage' => [
+            'storage_driver' => 'local',
+            's3_key' => '',
+            's3_secret' => '',
+            's3_region' => '',
+            's3_bucket' => '',
+            's3_endpoint' => '',
+        ],
+        'email' => [
+            'mail_driver' => 'smtp',
+            'mail_host' => '127.0.0.1',
+            'mail_port' => 1025,
+            'mail_encryption' => 'tls',
+            'mail_username' => '',
+            'mail_password' => '',
+            'mail_from_address' => 'hello@test.com',
+            'mail_from_name' => 'Support',
+        ],
+        'ai' => [
+            'ai_provider' => 'openai',
+            'ai_model' => 'gpt-4o-mini',
+            'ai_api_key' => 'updated-secret-key',
+        ],
+    ]);
+
+    $response->assertStatus(200);
+
+    // 4. Force a tenant switch/reload to simulate a new request
+    $tenant->forget();
+    $tenant->makeCurrent();
+
+    // Verify that the new settings are correctly reflected in Laravel's config
+    expect(config('ai.default'))->toBe('openai');
+    expect(config('ai.providers.openai.key'))->toBe('updated-secret-key');
+});
+
 it('fails settings update when AI connection test fails', function () {
     actingAs($this->user, 'api');
 
