@@ -1,6 +1,6 @@
 ## TODO
 
-- Offline supports for SDK
+- Fix: Updating ai settings twice in admin panel sets the api key to null since the second time the api key is masked 
 - Battle Testing
 
 ## Roadmap
