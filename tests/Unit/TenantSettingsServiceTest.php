@@ -58,6 +58,8 @@ it('clears cache on update', function () {
 });
 
 it('resolves dynamic defaults from config in EmailSettings', function () {
+    EmailSettings::clearCache();
+
     config([
         'mail.default' => 'custom_smtp',
         'mail.mailers.smtp.host' => 'custom-smtp-host.test',
