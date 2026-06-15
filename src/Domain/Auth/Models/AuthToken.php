@@ -11,8 +11,14 @@ use Illuminate\Database\Eloquent\Concerns\HasUlids;
 /**
  * @property string $collection_id
  * @property string $record_id
- * @property Carbon $expires_at
  * @property string $token_hash
+ * @property string|null $ip_adress
+ * @property string|null $user_agent
+ * @property string|null $fingerprint
+ * @property Carbon $revoked_at
+ * @property Carbon $expires_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
  */
 class AuthToken extends Model
 {

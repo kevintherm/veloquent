@@ -129,6 +129,9 @@ class DefaultTokenAuthService implements TokenAuthService
             }
         }
 
+        /**
+         * @var AuthToken|null $authToken
+         */
         $authToken = AuthToken::query()
             ->where('token_hash', $hashedToken)
             ->active()
