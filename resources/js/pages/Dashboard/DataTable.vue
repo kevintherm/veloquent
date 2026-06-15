@@ -471,7 +471,7 @@ const relationRecordUrl = (column, relationId, relationFields) => {
         return "#";
     }
 
-    return `/${encodeURIComponent(targetCollectionId)}?recordId=${encodeURIComponent(String(relationId))}`;
+    return `/collections/${encodeURIComponent(targetCollectionId)}?recordId=${encodeURIComponent(String(relationId))}`;
 };
 
 const relationLinkTitle = (column, relationFields) => {

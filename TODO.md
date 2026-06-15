@@ -1,7 +1,6 @@
 ## TODO
 
 - Improv: Make the header on logs page sticky
-- Fix: Link to relation record does not work in the admin panel
 - Fix: Cannot update collection name nor collection description
 - Battle Testing
 
