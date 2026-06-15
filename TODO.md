@@ -1,7 +1,6 @@
 ## TODO
 
 - Improv: Make the header on logs page sticky
-- Fix: Cannot update collection name nor collection description
 - Battle Testing
 
 ## Roadmap

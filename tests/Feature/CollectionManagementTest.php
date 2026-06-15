@@ -222,3 +222,22 @@ it('prevents schema changes when lock_schema_change is true', function () {
     $settings->lock_schema_change = false;
     $settings->save();
 });
+
+it('can update collection name and description', function () {
+    $collection = createManageCollection('posts');
+
+    Gate::shouldReceive('authorize')->andReturnNull();
+
+    $response = putJson("/api/collections/{$collection->id}", [
+        'name' => 'articles',
+        'description' => 'Updated articles collection description',
+        'fields' => $collection->fields,
+    ]);
+
+    $response->assertSuccessful();
+
+    $collection->refresh();
+    expect($collection->name)->toBe('articles');
+    expect($collection->description)->toBe('Updated articles collection description');
+});
+
