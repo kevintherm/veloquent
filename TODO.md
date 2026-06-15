@@ -1,6 +1,5 @@
 ## TODO
 
-- Improv: Make the header on logs page sticky
 - Battle Testing
 
 ## Roadmap

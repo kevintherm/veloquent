@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, watch, nextTick } from "vue";
 import { parseServerDate } from "@/lib/utils";
 import DashboardLayout from "@/layouts/DashboardLayout.vue";
 import axios from "axios";
@@ -51,6 +51,7 @@ const lastPage = ref(1);
 
 const selectedLog = ref(null);
 const isSheetOpen = ref(false);
+const tableRef = ref(null);
 
 const fetchDates = async () => {
     try {
@@ -86,6 +87,11 @@ const fetchLogs = async () => {
         lastPage.value = res.data.meta.last_page;
         stats.value = res.data.stats;
         toast.dismiss(toastId)
+        nextTick(() => {
+            if (tableRef.value?.$el) {
+                tableRef.value.$el.scrollTop = 0;
+            }
+        });
     } catch (e) {
         console.error("Failed to fetch logs", e);
         const errorMsg = e.response?.data?.message || "Failed to fetch logs";
@@ -263,7 +269,8 @@ const copyToClipboard = async (text) => {
                             </div>
                             <Button v-if="selectedHour !== null" variant="secondary" size="sm"
                                 @click="selectedHour = null" class="text-xs h-8">
-                                Clear {{ String(chartData.find((d) => d.hour === selectedHour)?.localHour ?? selectedHour).padStart(2, '0') }}:00 Filter
+                                Clear {{String(chartData.find((d) => d.hour === selectedHour)?.localHour ??
+                                    selectedHour).padStart(2, '0')}}:00 Filter
                             </Button>
                         </div>
                     </CardHeader>
@@ -319,57 +326,59 @@ const copyToClipboard = async (text) => {
             <!-- Logs Table -->
             <Card class="overflow-hidden shadow-sm">
                 <CardContent class="p-0">
-                    <div class="overflow-x-auto">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead class="w-[100px]">Time</TableHead>
-                                    <TableHead class="w-[120px]">Level</TableHead>
-                                    <TableHead>Message</TableHead>
-                                    <TableHead class="w-[80px] text-right">Details</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                <TableRow v-if="logs.length === 0">
-                                    <TableCell colspan="4" class="h-32 text-center text-muted-foreground">
-                                        No logs found for this filter.
-                                    </TableCell>
-                                </TableRow>
-                                <TableRow v-for="(log, idx) in logs" :key="idx" class="cursor-pointer hover:bg-muted/50"
-                                    @click="openLogDetails(log)">
-                                    <TableCell class="text-xs whitespace-nowrap text-muted-foreground py-4">
-                                        <div class="font-medium text-foreground">{{ formatDate(log.datetime) }}</div>
-                                        <div v-if="log.context?.duration || log.context?.time"
-                                            class="flex items-center gap-1 mt-1 text-[10px]">
-                                            <Timer class="h-3 w-3" />
-                                            {{ log.context?.duration || log.context?.time }}ms
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div class="flex items-center gap-2">
-                                            <component :is="getLevelIcon(log.level)"
-                                                :class="['h-4 w-4', getLevelColor(log.level)]" />
-                                            <span :class="['text-xs font-semibold', getLevelColor(log.level)]">{{
-                                                log.level }}</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell class="font-mono text-sm max-w-[500px]">
-                                        <div class="truncate" :title="log.message">{{ log.message }}</div>
-                                        <div v-if="log.message === 'HTTP_REQUEST' && log.context?.method"
-                                            class="text-[10px] text-muted-foreground mt-0.5 flex gap-1 items-center">
-                                            <span class="font-bold text-primary uppercase">{{ log.context.method
-                                                }}</span>
-                                            <span class="truncate">{{ getUrlPath(log.context.url) }}</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell class="text-right">
-                                        <Button variant="ghost" size="sm"
-                                            @click.stop="openLogDetails(log)">View</Button>
-                                    </TableCell>
-                                </TableRow>
-                            </TableBody>
-                        </Table>
-                    </div>
+                    <Table ref="tableRef" wrapper-class="max-h-[50dvh]">
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead class="sticky top-0 bg-background z-10 w-[100px] border-b border-border">Time
+                                </TableHead>
+                                <TableHead class="sticky top-0 bg-background z-10 w-[120px] border-b border-border">
+                                    Level</TableHead>
+                                <TableHead class="sticky top-0 bg-background z-10 border-b border-border">Message
+                                </TableHead>
+                                <TableHead
+                                    class="sticky top-0 bg-background z-10 w-[80px] text-right border-b border-border">
+                                    Details</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            <TableRow v-if="logs.length === 0">
+                                <TableCell colspan="4" class="h-32 text-center text-muted-foreground">
+                                    No logs found for this filter.
+                                </TableCell>
+                            </TableRow>
+                            <TableRow v-for="(log, idx) in logs" :key="idx" class="cursor-pointer hover:bg-muted/50"
+                                @click="openLogDetails(log)">
+                                <TableCell class="text-xs whitespace-nowrap text-muted-foreground py-4">
+                                    <div class="font-medium text-foreground">{{ formatDate(log.datetime) }}</div>
+                                    <div v-if="log.context?.duration || log.context?.time"
+                                        class="flex items-center gap-1 mt-1 text-[10px]">
+                                        <Timer class="h-3 w-3" />
+                                        {{ log.context?.duration || log.context?.time }}ms
+                                    </div>
+                                </TableCell>
+                                <TableCell>
+                                    <div class="flex items-center gap-2">
+                                        <component :is="getLevelIcon(log.level)"
+                                            :class="['h-4 w-4', getLevelColor(log.level)]" />
+                                        <span :class="['text-xs font-semibold', getLevelColor(log.level)]">{{
+                                            log.level }}</span>
+                                    </div>
+                                </TableCell>
+                                <TableCell class="font-mono text-sm max-w-[500px]">
+                                    <div class="truncate" :title="log.message">{{ log.message }}</div>
+                                    <div v-if="log.message === 'HTTP_REQUEST' && log.context?.method"
+                                        class="text-[10px] text-muted-foreground mt-0.5 flex gap-1 items-center">
+                                        <span class="font-bold text-primary uppercase">{{ log.context.method
+                                        }}</span>
+                                        <span class="truncate">{{ getUrlPath(log.context.url) }}</span>
+                                    </div>
+                                </TableCell>
+                                <TableCell class="text-right">
+                                    <Button variant="ghost" size="sm" @click.stop="openLogDetails(log)">View</Button>
+                                </TableCell>
+                            </TableRow>
+                        </TableBody>
+                    </Table>
 
                     <!-- Pagination Controls -->
                     <div class="p-4 border-t bg-muted/20 flex flex-col sm:flex-row gap-4 items-center justify-between"

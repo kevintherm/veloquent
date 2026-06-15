@@ -3,11 +3,12 @@ import { cn } from "@/lib/utils";
 
 const props = defineProps({
   class: { type: String, default: "" },
+  wrapperClass: { type: String, default: "" },
 });
 </script>
 
 <template>
-  <div class="w-full overflow-auto">
+  <div :class="cn('w-full overflow-auto', props.wrapperClass)">
     <table :class="cn('w-full caption-bottom text-sm', props.class)">
       <slot />
     </table>
