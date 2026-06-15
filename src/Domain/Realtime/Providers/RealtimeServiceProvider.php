@@ -26,11 +26,11 @@ class RealtimeServiceProvider extends ServiceProvider
         });
         $this->app->singleton(RealtimeBuffer::class);
 
-        $this->app->singleton(RealtimeBusDriver::class, function (): RealtimeBusDriver {
+        $this->app->singleton(RealtimeBusDriver::class, function ($app): RealtimeBusDriver {
             $driver = config('velo.realtime.bus', 'redis');
 
             if ($driver === 'redis' && ! class_exists('Redis')) {
-                if (! $this->app->runningUnitTests()) {
+                if (! $app->runningUnitTests()) {
                     Log::warning('Realtime bus configured for Redis, but Redis extension is not available. Falling back to filesystem bus.');
                 }
                 $driver = 'filesystem';

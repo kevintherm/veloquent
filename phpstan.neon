@@ -11,6 +11,8 @@ parameters:
 
     universalObjectCratesClasses:
         - Veloquent\Core\Domain\Records\Models\Record
+    
+    checkOctaneCompatibility: true
 
 #    ignoreErrors:
 #        - '#PHPDoc tag @var#'
