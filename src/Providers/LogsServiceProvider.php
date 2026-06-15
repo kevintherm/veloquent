@@ -128,7 +128,9 @@ class LogsServiceProvider extends ServiceProvider
                     ->toArray(),
                 'user' => $request->user()?->id,
                 'payload' => $payload,
-                'duration' => defined('LARAVEL_START') ? floor((microtime(true) - LARAVEL_START) * 1000) : null,
+                'duration' => floor(
+                    (microtime(true) - $event->request->server('REQUEST_TIME_FLOAT')) * 1000
+                ),
             ]);
         });
     }
