@@ -91,7 +91,7 @@ class LoginAction
             ]);
 
             if ($isNewSource && $user->email) {
-                dispatch_sync(new SendLoginEmailJob(
+                dispatch(new SendLoginEmailJob(
                     $user->email,
                     $collection,
                     now()->toDateTimeString(),
