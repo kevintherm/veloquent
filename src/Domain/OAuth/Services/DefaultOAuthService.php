@@ -90,7 +90,7 @@ class DefaultOAuthService implements OAuthService
 
             $tokenData = $this->tokenService->generateToken($record, null, $metadata);
             $exchangeCode = Str::random(60);
-            Cache::put("oauth_exchange:{$exchangeCode}", $tokenData, now()->addSeconds(config('velo.oauth.exchange_ttl', 90)));
+            Cache::put("oauth_exchange:{$exchangeCode}", $tokenData->toArray(), now()->addSeconds(config('velo.oauth.exchange_ttl', 90)));
 
             $oauthProvider = OAuthProvider::query()
                 ->where('collection_id', $collection->id)
@@ -112,6 +112,12 @@ class DefaultOAuthService implements OAuthService
     public function exchangeCode(string $code): TokenData
     {
         $tokenData = Cache::pull("oauth_exchange:{$code}");
+
+        if (is_array($tokenData)) {
+            $tokenData = TokenData::fromArray($tokenData);
+        } elseif ($tokenData instanceof \stdClass) {
+            $tokenData = TokenData::fromArray((array) $tokenData);
+        }
 
         if (! $tokenData instanceof TokenData) {
             throw new InvalidArgumentException('Invalid or expired exchange code.');
