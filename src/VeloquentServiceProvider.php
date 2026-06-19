@@ -231,8 +231,7 @@ class VeloquentServiceProvider extends ServiceProvider
                 $this->loadRoutesFrom(__DIR__ . '/../routes/api.php');
             });
 
-        Route::prefix(config('velo.admin_prefix'))
-            ->middleware(['needs.tenant', 'web'])
+        Route::middleware(['needs.tenant', 'web'])
             ->group(function () {
                 $this->loadRoutesFrom(__DIR__ . '/../routes/web.php');
             });
