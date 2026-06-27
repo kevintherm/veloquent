@@ -7,10 +7,12 @@ namespace Veloquent\Core\Domain\RuleEngine\Evaluators;
 use RuntimeException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Kevintherm\Exprc\Ast\LogicalNode;
 use Kevintherm\Exprc\Ast\ComparisonNode;
 use Kevintherm\Exprc\Ast\IdentifierNode;
 use Kevintherm\Exprc\Ast\NullComparisonNode;
 use Kevintherm\Exprc\Evaluators\InMemoryEvaluator;
+use Veloquent\Core\Domain\RuleEngine\VeloquentParser;
 use Veloquent\Core\Domain\Collections\Models\Collection;
 
 /**
@@ -82,18 +84,21 @@ class UnifiedInMemoryEvaluator extends InMemoryEvaluator
     protected function evaluateNullComparison(NullComparisonNode $node): bool
     {
         if ($this->isCollectionSysvar($node->field)) {
-            $parts = explode('.', $this->collectionPath($node->field), 2);
-            if (count($parts) < 2) {
-                return false;
-            }
+            $parsed = $this->parseCrossCollectionPath($this->collectionPath($node->field));
 
-            $collection = Collection::findByNameCached($parts[0]);
+            $collection = Collection::findByNameCached($parsed['name']);
             if (! $collection) {
                 return false;
             }
 
-            return DB::table($collection->getPhysicalTableName())
-                ->where($parts[1], $node->isNot ? '!=' : '=', null)
+            $query = DB::table($collection->getPhysicalTableName());
+
+            if ($parsed['filter'] !== null && $parsed['filter'] !== '') {
+                $this->applyFilterToQuery($query, $parsed['filter']);
+            }
+
+            return $query
+                ->where($parsed['field'], $node->isNot ? '!=' : '=', null)
                 ->exists();
         }
 
@@ -166,34 +171,114 @@ class UnifiedInMemoryEvaluator extends InMemoryEvaluator
         return data_get($this->context, $path);
     }
 
-    private function evaluateCrossCollectionExists(string $path, string $operator, mixed $otherValue): bool
+    /**
+     * Parse a cross-collection path into its components.
+     *
+     * Supports:
+     *  - `name.field`          → plain cross-collection field lookup
+     *  - `name[filter].field`  → filtered cross-collection lookup
+     *
+     * @return array{name: string, filter: string|null, field: string}
+     */
+    private function parseCrossCollectionPath(string $path): array
     {
-        $parts = explode('.', $path, 2);
-        if (count($parts) < 2) {
-            return false;
+        if (preg_match('/^([^\[.]+)\[([^\]]*)\]\.(.+)$/', $path, $m)) {
+            return ['name' => $m[1], 'filter' => $m[2], 'field' => $m[3]];
         }
 
-        $collection = Collection::findByNameCached($parts[0]);
+        $parts = explode('.', $path, 2);
+        if (count($parts) < 2) {
+            throw new RuntimeException('Invalid collection sysvar. Use @collection.name.field or @collection.name[filter].field');
+        }
+
+        return ['name' => $parts[0], 'filter' => null, 'field' => $parts[1]];
+    }
+
+    /**
+     * Apply a filter expression string to an existing DB query builder.
+     * Sysvars in the filter are resolved against $this->context.
+     */
+    private function applyFilterToQuery(\Illuminate\Database\Query\Builder $query, string $filterExpr): void
+    {
+        $filterAst = (new VeloquentParser)->parse($filterExpr);
+        $sysvars   = $this->context;
+
+        $this->applyAstToQueryBuilder($query, $filterAst);
+    }
+
+    /**
+     * Walk a simple AST and apply conditions to a plain DB query builder.
+     * Supports ComparisonNode with sysvar or literal values (the common filter case).
+     */
+    private function applyAstToQueryBuilder(\Illuminate\Database\Query\Builder $q, \Kevintherm\Exprc\Ast\Node $node): void
+    {
+        if ($node instanceof LogicalNode) {
+            $op = strtoupper($node->operator);
+            if ($op === 'AND') {
+                $this->applyAstToQueryBuilder($q, $node->left);
+                $this->applyAstToQueryBuilder($q, $node->right);
+            } elseif ($op === 'OR') {
+                $q->where(function ($sub) use ($node) {
+                    $this->applyAstToQueryBuilder($sub, $node->left);
+                    $sub->orWhere(function ($sub2) use ($node) {
+                        $this->applyAstToQueryBuilder($sub2, $node->right);
+                    });
+                });
+            }
+
+            return;
+        }
+
+        if ($node instanceof ComparisonNode) {
+            $field = $node->field;
+            $op    = $node->operator;
+            $val   = $node->value instanceof IdentifierNode
+                ? ($this->isSysvar($node->value->name)
+                    ? $this->sysvarValue($node->value->name)
+                    : data_get($this->context, $node->value->name))
+                : $node->value;
+
+            $q->where($field, $op, $val);
+
+            return;
+        }
+
+        if ($node instanceof NullComparisonNode) {
+            $node->isNot
+                ? $q->whereNotNull($node->field)
+                : $q->whereNull($node->field);
+        }
+    }
+
+    private function evaluateCrossCollectionExists(string $path, string $operator, mixed $otherValue): bool
+    {
+        $parsed = $this->parseCrossCollectionPath($path);
+
+        $collection = Collection::findByNameCached($parsed['name']);
         if (! $collection) {
-            throw new RuntimeException(sprintf('Collection "%s" not found for cross-collection lookup.', $parts[0]));
+            throw new RuntimeException(sprintf('Collection "%s" not found for cross-collection lookup.', $parsed['name']));
         }
 
         $query = DB::table($collection->getPhysicalTableName());
 
+        if ($parsed['filter'] !== null && $parsed['filter'] !== '') {
+            $this->applyFilterToQuery($query, $parsed['filter']);
+        }
+
         if ($operator === 'IN') {
-            $query->whereIn($parts[1], is_array($otherValue) ? $otherValue : [$otherValue]);
+            $query->whereIn($parsed['field'], is_array($otherValue) ? $otherValue : [$otherValue]);
         } elseif ($operator === 'NOT IN') {
-            $query->whereNotIn($parts[1], is_array($otherValue) ? $otherValue : [$otherValue]);
+            $query->whereNotIn($parsed['field'], is_array($otherValue) ? $otherValue : [$otherValue]);
         } elseif ($operator === 'CONTAINS') {
-            $query->whereJsonContains($parts[1], $otherValue);
+            $query->whereJsonContains($parsed['field'], $otherValue);
         } elseif ($operator === 'NOT CONTAINS') {
-            $query->whereJsonContains($parts[1], $otherValue, 'and', true);
+            $query->whereJsonContains($parsed['field'], $otherValue, 'and', true);
         } elseif ($operator === 'HASKEY') {
-            $query->whereJsonContainsKey($parts[1] . '->' . $otherValue);
+            $query->whereJsonContainsKey($parsed['field'] . '->' . $otherValue);
         } elseif ($operator === 'NOT HASKEY') {
-            $query->whereJsonContainsKey($parts[1] . '->' . $otherValue, 'and', true);
+            $query->whereJsonContainsKey($parsed['field'] . '->' . $otherValue, 'and', true);
         } else {
-            $query->where($parts[1], $operator, $otherValue);
+            $query->where($parsed['field'], $operator, $otherValue);
         }
 
         return $query->exists();

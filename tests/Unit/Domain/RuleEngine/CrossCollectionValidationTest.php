@@ -177,3 +177,94 @@ it('evaluates flipped cross collection validation with request body sysvars in D
     RuleEngine::for($query2)->run('@request.body.adminId = @collection.roles.user_id', $context2);
     expect($query2->count())->toBe(0);
 });
+
+// ── Filtered cross-collection lookup (@collection.name[filter].field) ──────────
+
+it('evaluates filtered cross-collection lookup using UnifiedInMemoryEvaluator', function () {
+    $engine = new RuleEngine;
+
+    // Scenario: "does a roles row with user_id=10 have name='admin'?"
+    // Expression: @collection.roles[user_id=10].name = 'admin'
+    expect($engine->evaluate("@collection.roles[user_id=10].name = 'admin'", []))->toBeTrue();
+
+    // False: no roles row with user_id=99
+    expect($engine->evaluate("@collection.roles[user_id=99].name = 'admin'", []))->toBeFalse();
+});
+
+it('evaluates filtered cross-collection lookup with sysvar filter using UnifiedInMemoryEvaluator', function () {
+    $engine = new RuleEngine;
+
+    // Scenario: validate that @request.body.client (user_id=10) has name='admin'
+    $context = [
+        'request' => [
+            'body' => ['client' => 10],
+        ],
+    ];
+
+    // @collection.roles[user_id=@request.body.client].name = 'admin'
+    expect($engine->evaluate("@collection.roles[user_id=@request.body.client].name = 'admin'", $context))->toBeTrue();
+
+    // False: client 20 is 'editor', not 'admin'
+    $context['request']['body']['client'] = 20;
+    expect($engine->evaluate("@collection.roles[user_id=@request.body.client].name = 'admin'", $context))->toBeFalse();
+
+    // False: client 99 does not exist
+    $context['request']['body']['client'] = 99;
+    expect($engine->evaluate("@collection.roles[user_id=@request.body.client].name = 'admin'", $context))->toBeFalse();
+});
+
+it('evaluates filtered cross-collection lookup in DB query using UnifiedEvaluator', function () {
+    DB::statement('DROP TABLE IF EXISTS _velo_invites');
+    DB::statement('CREATE TABLE _velo_invites (id INTEGER PRIMARY KEY, client_id INTEGER, coach_id INTEGER)');
+    DB::table('_velo_invites')->insert([
+        ['id' => 1, 'client_id' => 10, 'coach_id' => 99],
+        ['id' => 2, 'client_id' => 20, 'coach_id' => 99],
+        ['id' => 3, 'client_id' => 30, 'coach_id' => 88],
+    ]);
+
+    $model = new class extends \Illuminate\Database\Eloquent\Model {
+        protected $table = '_velo_invites';
+    };
+
+    // Rule: the invite's client_id must correspond to a roles row where name='admin'.
+    // Only user_id=10 has name='admin', so only invite 1 (client_id=10) matches.
+    // @collection.roles[name='admin'].user_id = client_id
+    $query = $model->newQuery();
+    RuleEngine::for($query)->run("@collection.roles[name='admin'].user_id = client_id");
+
+    $results = $query->orderBy('id')->get();
+    expect($results)->toHaveCount(1);
+    expect($results->first()->id)->toBe(1);
+});
+
+
+it('evaluates filtered cross-collection lookup with sysvar filter in DB query using UnifiedEvaluator', function () {
+    DB::statement('DROP TABLE IF EXISTS _velo_invites');
+    DB::statement('CREATE TABLE _velo_invites (id INTEGER PRIMARY KEY, client_id INTEGER, coach_id INTEGER)');
+    DB::table('_velo_invites')->insert([
+        ['id' => 1, 'client_id' => 10, 'coach_id' => 99],
+        ['id' => 2, 'client_id' => 20, 'coach_id' => 99],
+    ]);
+
+    $model = new class extends \Illuminate\Database\Eloquent\Model {
+        protected $table = '_velo_invites';
+    };
+
+    // Rule: "the invite must be for the client whose id is @request.body.client,
+    //        and that client must have a roles row"
+    // @collection.roles[user_id=@request.body.client].user_id = client_id
+    $context = ['request' => ['body' => ['client' => 10]]];
+
+    $query = $model->newQuery();
+    RuleEngine::for($query)->run('@collection.roles[user_id=@request.body.client].user_id = client_id', $context);
+    $results = $query->get();
+    expect($results)->toHaveCount(1);
+    expect($results->first()->id)->toBe(1);
+
+    // False: client 99 has no roles entry
+    $context2 = ['request' => ['body' => ['client' => 99]]];
+    $query2 = $model->newQuery();
+    RuleEngine::for($query2)->run('@collection.roles[user_id=@request.body.client].user_id = client_id', $context2);
+    expect($query2->count())->toBe(0);
+});
+

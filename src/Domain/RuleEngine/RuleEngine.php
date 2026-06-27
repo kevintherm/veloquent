@@ -11,6 +11,7 @@ use Kevintherm\Exprc\Ast\ComparisonNode;
 use Kevintherm\Exprc\Ast\IdentifierNode;
 use Illuminate\Database\Eloquent\Builder;
 use Kevintherm\Exprc\Ast\NullComparisonNode;
+use Veloquent\Core\Domain\Collections\Models\Collection;
 use Veloquent\Core\Domain\Records\Services\RelationJoinResolver;
 use Veloquent\Core\Domain\RuleEngine\Evaluators\UnifiedEvaluator;
 use Veloquent\Core\Domain\RuleEngine\Resolvers\UnifiedFieldResolver;
@@ -165,6 +166,28 @@ class RuleEngine
         }
     }
 
+    /**
+     * Validates a field reference used in an expression.
+     *
+     * Supported field formats:
+     * - Regular fields (e.g. `name`, `user.email`)
+     * - System variables prefixed with `@`
+     *   (`@request.*`, `@user.*`, `@auth.*`, `@collection.*`)
+     * - Internal numeric placeholders prefixed with `__numeric__`
+     *
+     * For `@collection` references, the method:
+     * - Removes any bracket filter (e.g. `users[id=@request.body.client].coach`
+     *   becomes `users.coach`) so the collection/field structure can be validated.
+     * - Verifies that the reference follows the
+     *   `@collection.name.field` or `@collection.name[filter].field` format.
+     * - Ensures the referenced collection exists.
+     *
+     * For normal fields, the root field name must exist in `$this->allowedFields`
+     * when field restrictions are enabled.
+     *
+     * @throws RuntimeException If the field namespace, collection reference,
+     *                          collection, or field name is invalid.
+     */
     private function validateField(string $field): void
     {
         $base = preg_replace('/__(date|year|month|day|time)$/i', '', $field);
@@ -178,14 +201,21 @@ class RuleEngine
 
                 if (str_starts_with($path, 'collection.')) {
                     $collectionPath = substr($path, strlen('collection.'));
-                    $parts = explode('.', $collectionPath, 2);
+
+                    $normalizedPath = preg_replace('/\[[^\]]*\]/', '', $collectionPath);
+
+                    $parts = explode('.', $normalizedPath ?? $collectionPath, 2);
                     if (count($parts) < 2) {
-                        throw new RuntimeException('Invalid collection sysvar format. Use @collection.name.field');
+                        throw new RuntimeException(
+                            'Invalid collection sysvar format. Use @collection.name.field or @collection.name[filter].field'
+                        );
                     }
 
-                    $collection = \Veloquent\Core\Domain\Collections\Models\Collection::findByNameCached($parts[0]);
+                    $collection = Collection::findByNameCached($parts[0]);
                     if (! $collection) {
-                        throw new RuntimeException(sprintf('Collection "%s" not found for cross-collection lookup.', $parts[0]));
+                        throw new RuntimeException(
+                            sprintf('Collection "%s" not found for cross-collection lookup.', $parts[0])
+                        );
                     }
                 }
             }

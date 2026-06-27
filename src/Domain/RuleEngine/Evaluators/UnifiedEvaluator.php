@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Veloquent\Core\Domain\RuleEngine\Evaluators;
 
 use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\RuleEngine\VeloquentParser;
 use Illuminate\Database\Eloquent\Builder;
 use Kevintherm\Exprc\Ast\ComparisonNode;
 use Kevintherm\Exprc\Ast\IdentifierNode;
@@ -283,14 +284,36 @@ class UnifiedEvaluator implements EvaluatorInterface, VisitorInterface
         ];
     }
 
-    private function applyCrossCollectionComparison(object $builder, string $collectionPath, string $operator, mixed $otherValue, bool $otherIsField, string $boolean): void
+    /**
+     * Parse a cross-collection path into its components.
+     *
+     * Supports two forms:
+     *  - `name.field`               → plain cross-collection field lookup
+     *  - `name[filter].field`        → filtered cross-collection lookup
+     *
+     * @return array{name: string, filter: string|null, field: string}
+     */
+    private function parseCrossCollectionPath(string $collectionPath): array
     {
+        // name[filter].field  (filter may contain dots and sysvars)
+        if (preg_match('/^([^\[.]+)\[([^\]]*)\]\.(.+)$/', $collectionPath, $m)) {
+            return ['name' => $m[1], 'filter' => $m[2], 'field' => $m[3]];
+        }
+
         $parts = explode('.', $collectionPath, 2);
         if (count($parts) < 2) {
-            throw new RuntimeException('Invalid collection sysvar.');
+            throw new RuntimeException('Invalid collection sysvar. Use @collection.name.field or @collection.name[filter].field');
         }
-        $collectionName = $parts[0];
-        $collectionField = $parts[1];
+
+        return ['name' => $parts[0], 'filter' => null, 'field' => $parts[1]];
+    }
+
+    private function applyCrossCollectionComparison(object $builder, string $collectionPath, string $operator, mixed $otherValue, bool $otherIsField, string $boolean): void
+    {
+        $parsed = $this->parseCrossCollectionPath($collectionPath);
+        $collectionName  = $parsed['name'];
+        $collectionField = $parsed['field'];
+        $filterExpr      = $parsed['filter'];
 
         $collection = Collection::findByNameCached($collectionName);
         if (! $collection) {
@@ -301,9 +324,39 @@ class UnifiedEvaluator implements EvaluatorInterface, VisitorInterface
         }
         $tableName = $collection->getPhysicalTableName();
 
+        $sysvars    = $this->sysvars;
+        $resolver   = $this->resolver;
+
         $method = $boolean === 'or' ? 'orWhereExists' : 'whereExists';
-        $builder->{$method}(function ($q) use ($builder, $tableName, $collectionField, $operator, $otherValue, $otherIsField) {
+        $builder->{$method}(function ($q) use ($builder, $tableName, $collectionField, $operator, $otherValue, $otherIsField, $filterExpr, $sysvars, $resolver) {
             $q->selectRaw('1')->from($tableName);
+
+            if ($filterExpr !== null && $filterExpr !== '') {
+                $filterAst = (new VeloquentParser)->parse($filterExpr);
+
+                $subResolver = new class($tableName, $resolver) implements FieldResolverInterface {
+                    public function __construct(
+                        private readonly string $table,
+                        private readonly FieldResolverInterface $parent
+                    ) {}
+
+                    public function resolve(string $field): string
+                    {
+                        if (str_starts_with($field, '@') || str_starts_with($field, '__numeric__')) {
+                            return $this->parent->resolve($field);
+                        }
+                        if (str_contains($field, '.')) {
+                            return $field;
+                        }
+
+                        return $this->table . '.' . $field;
+                    }
+                };
+
+                (new UnifiedEvaluator($q, $subResolver))
+                    ->withSysvars($sysvars)
+                    ->evaluate($filterAst);
+            }
 
             if ($operator === 'IN' || $operator === 'NOT IN') {
                 $inValues = is_array($otherValue) ? $otherValue : [$otherValue];
@@ -322,7 +375,7 @@ class UnifiedEvaluator implements EvaluatorInterface, VisitorInterface
                 $q->whereJsonContainsKey($tableName.'.'.$collectionField . '->' . $otherValue, 'and', true);
             } elseif ($otherIsField) {
                 $parentTable = $builder instanceof Builder ? $builder->getModel()->getTable() : null;
-                $resolvedOtherValue = $this->resolver->resolve((string) $otherValue);
+                $resolvedOtherValue = $resolver->resolve((string) $otherValue);
                 if ($parentTable && ! str_contains($resolvedOtherValue, '.')) {
                     $resolvedOtherValue = $parentTable.'.'.$resolvedOtherValue;
                 }
