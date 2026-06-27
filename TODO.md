@@ -1,9 +1,11 @@
 ## TODO
 
-- Support strongly typed argument for actions e.g UpdateCOllectionAction fields is accepting array instead of Field vo
-- PATCH supposed to modify only the field sent in the payload, while PUT is supposed to replace the entire resource. 
+- fix: Support strongly typed argument for actions e.g UpdateCOllectionAction fields is accepting array instead of Field vo
+- fix: PATCH supposed to modify only the field sent in the payload, while PUT is supposed to replace the entire resource. 
+- fix: Sending protected fields even with the same value triggers 422 status e.g Email -> Email change flow
+- fix: Viewing relation record produce invalid links because it doesn't account for admin prefix and the route
+
 - Battle Testing
-- Sending protected fields even with the same value triggers 422 status e.g Email -> Email change flow
 
 ## Roadmap
 
