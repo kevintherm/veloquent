@@ -231,5 +231,5 @@ it('blocks direct password update via records API on auth collection', function 
         ]);
 
     $response->assertUnprocessable();
-    $response->assertJsonValidationErrors(['password']);
+    $response->assertJsonValidationErrors(['old_password']);
 });

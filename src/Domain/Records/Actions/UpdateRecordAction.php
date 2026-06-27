@@ -2,26 +2,27 @@
  
 namespace Veloquent\Core\Domain\Records\Actions;
  
-use Throwable;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Gate;
-use Illuminate\Validation\ValidationException;
-use Veloquent\Core\Domain\Records\Models\Record;
-use Veloquent\Core\Domain\RuleEngine\RuleEngine;
 use Illuminate\Auth\Access\AuthorizationException;
-use Veloquent\Core\Domain\Hooks\Contracts\HookRunner;
-use Veloquent\Core\Domain\Collections\Models\Collection;
-use Veloquent\Core\Domain\Hooks\ValueObjects\HookPayload;
-use Veloquent\Core\Domain\Collections\Enums\CollectionType;
-use Veloquent\Core\Domain\Records\Services\PivotSyncService;
-use Veloquent\Core\Domain\QueryCompiler\Services\QueryFilter;
-use Veloquent\Core\Domain\Records\Services\FileFieldProcessor;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
+use Throwable;
 use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
-use Veloquent\Core\Domain\SchemaManagement\Support\PivotTableName;
+use Veloquent\Core\Domain\Collections\Enums\CollectionType;
+use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\Hooks\Contracts\HookRunner;
+use Veloquent\Core\Domain\Hooks\ValueObjects\HookPayload;
+use Veloquent\Core\Domain\QueryCompiler\Services\QueryFilter;
+use Veloquent\Core\Domain\Records\Models\Record;
+use Veloquent\Core\Domain\Records\Services\FileFieldProcessor;
+use Veloquent\Core\Domain\Records\Services\PivotSyncService;
 use Veloquent\Core\Domain\Records\Services\RelationIntegrityService;
 use Veloquent\Core\Domain\Records\Services\UpdateRuleContextBuilder;
+use Veloquent\Core\Domain\RuleEngine\RuleEngine;
+use Veloquent\Core\Domain\SchemaManagement\Support\PivotTableName;
  
 class UpdateRecordAction
 {
@@ -126,7 +127,10 @@ class UpdateRecordAction
                 throw ValidationException::withMessages(['email' => 'Email cannot be changed directly. Use the email change flow.']);
             }
             if (array_key_exists('password', $data)) {
-                throw ValidationException::withMessages(['password' => 'Password cannot be changed directly. Use the password reset flow.']);
+                if (! array_key_exists('old_password', $data) || ! Hash::check($data['old_password'], $record->password)) {
+                    throw ValidationException::withMessages(['old_password' => 'Incorrect old password.']);
+                }
+                unset($data['old_password']);
             }
             unset($data['verified']);
         }

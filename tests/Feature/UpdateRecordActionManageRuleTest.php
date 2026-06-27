@@ -39,7 +39,7 @@ it('prevents direct update of email and password when manage rule is null', func
         ->toThrow(ValidationException::class, 'Email cannot be changed directly. Use the email change flow.');
 
     expect(fn () => resolve(UpdateRecordAction::class)->execute($collection, $record->id, ['password' => 'newsecret']))
-        ->toThrow(ValidationException::class, 'Password cannot be changed directly. Use the password reset flow.');
+        ->toThrow(ValidationException::class, 'Incorrect old password.');
 });
 
 it('allows direct update of email and password when manage rule is empty string', function () {
@@ -72,6 +72,101 @@ it('allows direct update of email and password when manage rule is empty string'
     ]);
 
     expect($updatedRecord->email)->toBe('new@example.com');
+});
+
+it('allows password change with correct old_password when manage rule is null', function () {
+    $collection = app(CreateCollectionAction::class)->execute([
+        'name' => 'users_'.Str::random(5),
+        'type' => CollectionType::Auth->value,
+        'fields' => [],
+        'api_rules' => [
+            'list' => '',
+            'view' => '',
+            'create' => '',
+            'update' => '',
+            'delete' => '',
+            'manage' => null,
+        ],
+    ]);
+
+    $record = Record::of($collection)->create([
+        'email' => 'test@example.com',
+        'password' => 'secret123',
+        'email_visibility' => true,
+        'verified' => true,
+    ]);
+
+    Auth::setUser($record);
+
+    $updatedRecord = resolve(UpdateRecordAction::class)->execute($collection, $record->id, [
+        'password' => 'newsecret',
+        'old_password' => 'secret123',
+    ]);
+
+    expect($updatedRecord->password)->not->toBe('secret123');
+});
+
+it('allows password change with correct old_password when manage rule evaluates to false', function () {
+    $collection = app(CreateCollectionAction::class)->execute([
+        'name' => 'users_'.Str::random(5),
+        'type' => CollectionType::Auth->value,
+        'fields' => [],
+        'api_rules' => [
+            'list' => '',
+            'view' => '',
+            'create' => '',
+            'update' => '',
+            'delete' => '',
+            'manage' => null, // Explicitly null — short-circuits canManageAuth without hitting context builder
+        ],
+    ]);
+
+    $record = Record::of($collection)->create([
+        'email' => 'test@example.com',
+        'password' => 'secret123',
+        'email_visibility' => true,
+        'verified' => true,
+    ]);
+
+    Auth::setUser($record);
+
+    $updatedRecord = resolve(UpdateRecordAction::class)->execute($collection, $record->id, [
+        'password' => 'newsecret',
+        'old_password' => 'secret123',
+    ]);
+
+    expect($updatedRecord->password)->not->toBe('secret123');
+});
+
+it('rejects password change when old_password is incorrect', function () {
+    $collection = app(CreateCollectionAction::class)->execute([
+        'name' => 'users_'.Str::random(5),
+        'type' => CollectionType::Auth->value,
+        'fields' => [],
+        'api_rules' => [
+            'list' => '',
+            'view' => '',
+            'create' => '',
+            'update' => '',
+            'delete' => '',
+            'manage' => null,
+        ],
+    ]);
+
+    $record = Record::of($collection)->create([
+        'email' => 'test@example.com',
+        'password' => 'secret123',
+        'email_visibility' => true,
+        'verified' => true,
+    ]);
+
+    Auth::setUser($record);
+
+    expect(fn () => resolve(UpdateRecordAction::class)->execute($collection, $record->id, [
+        'password' => 'newsecret',
+        'old_password' => 'wrongpassword',
+    ]))
+        ->toThrow(ValidationException::class, 'Incorrect old password.');
 });
 
 it('evaluates manage rule correctly to allow or deny update', function () {
