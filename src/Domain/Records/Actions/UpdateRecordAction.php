@@ -2,27 +2,27 @@
  
 namespace Veloquent\Core\Domain\Records\Actions;
  
-use Illuminate\Auth\Access\AuthorizationException;
+use Throwable;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
-use Throwable;
-use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
-use Veloquent\Core\Domain\Collections\Enums\CollectionType;
-use Veloquent\Core\Domain\Collections\Models\Collection;
-use Veloquent\Core\Domain\Hooks\Contracts\HookRunner;
-use Veloquent\Core\Domain\Hooks\ValueObjects\HookPayload;
-use Veloquent\Core\Domain\QueryCompiler\Services\QueryFilter;
 use Veloquent\Core\Domain\Records\Models\Record;
-use Veloquent\Core\Domain\Records\Services\FileFieldProcessor;
+use Veloquent\Core\Domain\RuleEngine\RuleEngine;
+use Illuminate\Auth\Access\AuthorizationException;
+use Veloquent\Core\Domain\Hooks\Contracts\HookRunner;
+use Veloquent\Core\Domain\Collections\Models\Collection;
+use Veloquent\Core\Domain\Hooks\ValueObjects\HookPayload;
+use Veloquent\Core\Domain\Collections\Enums\CollectionType;
 use Veloquent\Core\Domain\Records\Services\PivotSyncService;
+use Veloquent\Core\Domain\QueryCompiler\Services\QueryFilter;
+use Veloquent\Core\Domain\Records\Services\FileFieldProcessor;
+use Veloquent\Core\Domain\Collections\Enums\CollectionFieldType;
+use Veloquent\Core\Domain\SchemaManagement\Support\PivotTableName;
 use Veloquent\Core\Domain\Records\Services\RelationIntegrityService;
 use Veloquent\Core\Domain\Records\Services\UpdateRuleContextBuilder;
-use Veloquent\Core\Domain\RuleEngine\RuleEngine;
-use Veloquent\Core\Domain\SchemaManagement\Support\PivotTableName;
  
 class UpdateRecordAction
 {
