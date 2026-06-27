@@ -7,7 +7,7 @@ use Veloquent\Core\Domain\Records\Services\RuleContextBuilder;
 use Veloquent\Core\Domain\Records\Services\UpdateRuleContextBuilder;
 use Illuminate\Http\Request;
 
-it('builds update rule context with record, request and merged data', function () {
+it('builds update rule context with record and request', function () {
     $collection = new Collection;
     $collection->fields = [
         ['name' => 'title', 'type' => 'text'],
@@ -41,7 +41,8 @@ it('builds update rule context with record, request and merged data', function (
         $request
     );
 
-    expect($context['title'])->toBe('New Title')
+    expect($context['title'])->toBe('Old Title')
+        ->and(data_get($context, 'request.body.title'))->toBe('New Title')
         ->and($context['status'])->toBe('draft')
         ->and(data_get($context, 'request.auth.id'))->toBe(99);
 });
