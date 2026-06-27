@@ -36,6 +36,7 @@ import {
 import { computed, ref, onUnmounted } from "vue";
 import { getAuthToken } from "@/lib/tokenAuth";
 import { stripHtml, parseServerDate } from "@/lib/utils";
+import { VELO_CONFIG } from "@/lib/config";
 
 const props = defineProps({
     records: {
@@ -471,7 +472,10 @@ const relationRecordUrl = (column, relationId, relationFields) => {
         return "#";
     }
 
-    return `/collections/${encodeURIComponent(targetCollectionId)}?recordId=${encodeURIComponent(String(relationId))}`;
+    const adminPrefix = VELO_CONFIG.admin_prefix || '/';
+    const prefixPath = adminPrefix === '/' ? '' : `/${adminPrefix}`;
+
+    return `${prefixPath}/collections/${encodeURIComponent(targetCollectionId)}?recordId=${encodeURIComponent(String(relationId))}`;
 };
 
 const relationLinkTitle = (column, relationFields) => {
