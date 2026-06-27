@@ -1,5 +1,7 @@
 ## TODO
 
+- Support strongly typed argument for actions e.g UpdateCOllectionAction fields is accepting array instead of Field vo
+- PATCH supposed to modify only the field sent in the payload, while PUT is supposed to replace the entire resource. 
 - Battle Testing
 
 ## Roadmap
