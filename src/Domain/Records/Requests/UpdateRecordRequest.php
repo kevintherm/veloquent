@@ -11,7 +11,7 @@ class UpdateRecordRequest extends BaseRecordRequest
     {
         $collection = $this->route('collection');
 
-        return $this->getDynamicValidationRules(
+        $rules = $this->getDynamicValidationRules(
             intervene: function ($fieldName, &$fieldRules) use ($collection) {
                 if ($collection->type === CollectionType::Auth
                     && in_array($fieldName, ['email', 'password'], true)
@@ -28,6 +28,12 @@ class UpdateRecordRequest extends BaseRecordRequest
                 });
             }
         );
+
+        if ($collection->type === CollectionType::Auth) {
+            $rules['old_password'] = ['nullable', 'string'];
+        }
+
+        return $rules;
     }
 
     public function getRecordData(): array
