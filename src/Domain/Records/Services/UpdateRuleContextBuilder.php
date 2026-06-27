@@ -30,7 +30,7 @@ class UpdateRuleContextBuilder implements RuleContextBuilderContract
         foreach ($collection->fields ?? [] as $field) {
             $fieldName = $field['name'];
             $context[$fieldName] = array_key_exists($fieldName, $data)
-                ? $data[$fieldName]
+                ? $recordData[$fieldName]
                 : ($recordData[$fieldName] ?? null);
         }
 
