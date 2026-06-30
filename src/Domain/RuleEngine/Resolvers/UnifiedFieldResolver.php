@@ -34,7 +34,7 @@ final class UnifiedFieldResolver implements FieldResolverInterface
             return $field;
         }
 
-        if ($this->joinResolver && str_contains($field, '.')) {
+        if ($this->joinResolver) {
             return $this->joinResolver->resolveField($field);
         }
 
